@@ -107,7 +107,8 @@ setTimeout(() => {
 
 ## Roadmap
 * Add support for Ethereum, Pocket, and many other chains
-* Use even listeners rather than callbacks to subscribe to node output and errors
+* Use event listeners rather than callbacks to subscribe to node output and errors
+* Create standard methods for getting memory usage and other metadata including block height and sync status
 * Publish comprehensive API docs
 * Reach 100% test coverage
 
