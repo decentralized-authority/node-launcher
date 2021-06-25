@@ -1,0 +1,52 @@
+import { ChildProcess } from 'child_process';
+import { Docker } from '../util/docker';
+
+export interface VersionDockerImage {
+  version: string;
+  image: string;
+  dataDir: string;
+  walletDir: string;
+  configPath: string;
+  generateRuntimeArgs(data: CryptoNodeData): string;
+}
+
+export interface CryptoNodeData {
+  id?: string;
+  ticker?: string;
+  version?: string;
+  dockerImage?: string;
+  peerPort?: number;
+  rpcPort?: number;
+  rpcUsername?: string;
+  rpcPassword?: string;
+  client?: string;
+  network?: string;
+  dockerCpus?: number;
+  dockerMem?: number;
+  dockerNetwork?: string;
+  dataDir?: string;
+  walletDir?: string;
+  configPath?: string;
+}
+
+export interface CryptoNode {
+  _docker: Docker,
+  _instance?: ChildProcess;
+  start(): Promise<ChildProcess>;
+  stop(): void;
+  // toObject(): CryptoNodeData;
+  generateConfig(): string;
+}
+
+export abstract class CryptoNodeStatic {
+  static versions: VersionDockerImage[];
+  static nodeTypes: string[];
+  static networkTypes: string[];
+  static defaultPeerPort: any;
+  static defaultRPCPort: any;
+  static defaultCPUs: number;
+  static defaultMem: number;
+  static generateConfig(client: string, network: string, peerPort: number, rpcPort: number, rpcUsername: string, rpcPassword: string): string {
+    return '';
+  }
+}
