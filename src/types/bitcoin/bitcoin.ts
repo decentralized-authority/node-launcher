@@ -4,14 +4,18 @@ import { generateRandom } from '../../util';
 import { Docker } from '../../util/docker';
 import { ChildProcess } from 'child_process';
 import { v4 as uuid} from 'uuid';
+import request from 'superagent';
+import fs from 'fs-extra';
+import path from 'path';
+import os from 'os';
 
 const coreConfig = `
 server=1
 listen=1
 txindex=1
+[{{NETWORK}}]
 datadir=/opt/blockchain/data
 walletdir=/opt/blockchain/wallets
-[{{NETWORK}}]
 rpcuser={{RPC_USERNAME}}
 rpcpassword={{RPC_PASSWORD}}
 rpcallowip=0.0.0.0/0
@@ -34,7 +38,7 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
             walletDir: '/opt/blockchain/wallets',
             configPath: '/opt/blockchain/bitcoin.conf',
             generateRuntimeArgs(data: CryptoNodeData): string {
-              return `bitcoind -conf=${this.configPath}` + (data.network === NetworkType.TESTNET ? ' -testnet' : '');
+              return ` bitcoind -conf=${this.configPath}` + (data.network === NetworkType.TESTNET ? ' -testnet' : '');
             },
           },
         ];
@@ -104,6 +108,7 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
 
   _docker = new Docker({});
   _instance?: ChildProcess;
+  _requestTimeout = 10000;
 
   constructor(data: CryptoNodeData, docker?: Docker) {
     this.id = data.id || uuid();
@@ -124,7 +129,7 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
     this.dockerImage = data.dockerImage || Bitcoin.versions(this.client)[0].image;
   }
 
-  async start(): Promise<ChildProcess> {
+  async start(onOutput?: (output: string)=>void, onError?: (err: Error)=>void): Promise<ChildProcess> {
     const versionData = Bitcoin.versions(this.client).find(({ version }) => version === this.version);
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
@@ -143,18 +148,27 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
       '-p', `${this.rpcPort}:${this.rpcPort}`,
       '-p', `${this.peerPort}:${this.peerPort}`,
     ];
-    if(this.dataDir)
-      args = [...args, '-v', `${this.dataDir}:${containerDataDir}`];
-    if(this.walletDir)
-      args = [...args, '-v', `${this.walletDir}:${containerWalletDir}`];
-    if(this.configPath)
-      args = [...args, '-v', `${this.configPath}:${containerConfigPath}`];
+    const tmpdir = os.tmpdir();
+    const dataDir = this.dataDir || path.join(tmpdir, uuid());
+    args = [...args, '-v', `${dataDir}:${containerDataDir}`];
+    await fs.ensureDir(dataDir);
+
+    const walletDir = this.walletDir || path.join(tmpdir, uuid());
+    args = [...args, '-v', `${walletDir}:${containerWalletDir}`];
+    await fs.ensureDir(walletDir);
+
+    const configPath = this.configPath || path.join(tmpdir, uuid());
+    const configExists = await fs.pathExists(configPath);
+    if(!configExists)
+      await fs.writeFile(configPath, this.generateConfig(), 'utf8');
+    args = [...args, '-v', `${configPath}:${containerConfigPath}`];
+
     await this._docker.createNetwork(this.dockerNetwork);
     const instance = this._docker.run(
       this.dockerImage + versionData.generateRuntimeArgs(this),
       args,
-      console.log,
-      console.error,
+      onOutput ? onOutput : ()=>{},
+      onError ? onError : ()=>{},
     );
     this._instance = instance;
     return instance;
@@ -208,6 +222,33 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
       this.rpcPort,
       this.rpcUsername,
       this.rpcPassword);
+  }
+
+  async rpcGetVersion(): Promise<string> {
+    if(!this._instance)
+      throw new Error('Instance must be running before you can call bitcoin.rpcGetVersion()');
+    try {
+      const { body } = await request
+        .post(`http://localhost:${this.rpcPort}/`)
+        .set('Accept', 'application/json')
+        .auth(this.rpcUsername, this.rpcPassword)
+        .timeout(this._requestTimeout)
+        .send({
+          id: '',
+          jsonrpc: '1.0',
+          method: 'getnetworkinfo',
+          params: [],
+        });
+      const matchPatt = /:(.+)\//;
+      if(body && body.result && body.result.subversion && matchPatt.test(body.result.subversion)) {
+        const matches = body.result.subversion.match(matchPatt);
+        return matches[1];
+      } else {
+        return '';
+      }
+    } catch(err) {
+      return '';
+    }
   }
 
 }

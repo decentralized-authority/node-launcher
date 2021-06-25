@@ -32,10 +32,12 @@ export interface CryptoNodeData {
 export interface CryptoNode {
   _docker: Docker,
   _instance?: ChildProcess;
+  _requestTimeout: number;
   start(): Promise<ChildProcess>;
   stop(): void;
-  // toObject(): CryptoNodeData;
+  toObject(): CryptoNodeData;
   generateConfig(): string;
+  rpcGetVersion(): Promise<string>;
 }
 
 export abstract class CryptoNodeStatic {
