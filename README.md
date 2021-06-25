@@ -1,7 +1,10 @@
 # da-node-runner
-Programmatically create, start, and stop crypto nodes in Node JS. Used in Node Pilot.
+Programmatically create, start, and stop crypto nodes in Node JS using Docker.
 
 ## Getting Started
+
+### Install Docker
+https://docs.docker.com/engine/install/
 
 #### Clone the library
 ```bash
