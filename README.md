@@ -80,7 +80,7 @@ if(fs.pathExistsSync(nodeJsonPath)) { // start using previous configuration and 
     configPath
   });
   // Persist node data
-  fs.writeJsonSync(nodeJsonPath, bitcoin.toObject());
+  fs.writeJsonSync(nodeJsonPath, bitcoin.toObject(), {spaces: 2});
 }
 
 // Start the node, logging to console
