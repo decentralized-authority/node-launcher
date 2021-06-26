@@ -38,6 +38,7 @@ export interface CryptoNode {
   toObject(): CryptoNodeData;
   generateConfig(): string;
   rpcGetVersion(): Promise<string>;
+  rpcGetBlockCount(): Promise<number>
 }
 
 export abstract class CryptoNodeStatic {

@@ -247,7 +247,28 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
         return '';
       }
     } catch(err) {
+      console.error(err);
       return '';
+    }
+  }
+
+  async rpcGetBlockCount(): Promise<number> {
+    try {
+      const { body } = await request
+        .post(`http://localhost:${this.rpcPort}/`)
+        .set('Accept', 'application/json')
+        .auth(this.rpcUsername, this.rpcPassword)
+        .timeout(this._requestTimeout)
+        .send({
+          id: '',
+          jsonrpc: '1.0',
+          method: 'getblockcount',
+          params: [],
+        });
+      return body.result;
+    } catch(err) {
+      console.error(err);
+      return 0;
     }
   }
 
