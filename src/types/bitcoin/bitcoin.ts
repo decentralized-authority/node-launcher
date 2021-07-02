@@ -109,8 +109,14 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
   _docker = new Docker({});
   _instance?: ChildProcess;
   _requestTimeout = 10000;
+  _logError(message: string): void {
+    console.error(message);
+  }
+  _logInfo(message: string): void {
+    console.log(message);
+  }
 
-  constructor(data: CryptoNodeData, docker?: Docker) {
+  constructor(data: CryptoNodeData, docker?: Docker, logInfo?: (message: string)=>void, logError?: (message: string)=>void) {
     this.id = data.id || uuid();
     this.network = data.network || NetworkType.MAINNET;
     this.peerPort = data.peerPort || Bitcoin.defaultPeerPort[this.network];
@@ -124,9 +130,14 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
     this.dataDir = data.dataDir || this.dataDir;
     this.walletDir = data.walletDir || this.dataDir;
     this.configPath = data.configPath || this.configPath;
-    this._docker = docker || this._docker;
     this.version = data.version || Bitcoin.versions(this.client)[0].version;
     this.dockerImage = data.dockerImage || Bitcoin.versions(this.client)[0].image;
+    if(docker)
+      this._docker = docker;
+    if(logError)
+      this._logError = logError;
+    if(logInfo)
+      this._logInfo = logInfo;
   }
 
   async start(onOutput?: (output: string)=>void, onError?: (err: Error)=>void): Promise<ChildProcess> {
@@ -185,7 +196,10 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
         const timeout = setTimeout(() => {
           this._docker.kill(this.id)
             .then(() => resolve())
-            .catch(() => resolve());
+            .catch(err => {
+              this._logError(`${err.message}\n${err.stack}`);
+              resolve();
+            });
         }, 30000);
       } else {
         resolve();
@@ -247,7 +261,7 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
         return '';
       }
     } catch(err) {
-      console.error(err);
+      this._logError(`${err.message}\n${err.stack}`);
       return '';
     }
   }
@@ -267,8 +281,46 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
         });
       return body.result;
     } catch(err) {
-      console.error(err);
+      this._logError(`${err.message}\n${err.stack}`);
       return 0;
+    }
+  }
+
+  async getMemUsage(): Promise<[usagePercent: string, used: string, allocated: string]> {
+    try {
+      const containerStats = await this._docker.containerStats(this.id);
+      const percent = containerStats.MemPerc;
+      const split = containerStats.MemUsage
+        .split('/')
+        .map((s: string): string => s.trim());
+      if(split.length > 1) {
+        return [percent, split[0], split[1]];
+      } else {
+        throw new Error('Split containerStats/MemUsage length less than two.');
+      }
+    } catch(err) {
+      this._logError(`${err.message}\n${err.stack}`);
+      return ['0', '0', '0'];
+    }
+  }
+
+  async getCPUUsage(): Promise<string> {
+    try {
+      const containerStats = await this._docker.containerStats(this.id);
+      return containerStats.CPUPerc;
+    } catch(err) {
+      this._logError(`${err.message}\n${err.stack}`);
+      return '0';
+    }
+  }
+
+  async getStartTime(): Promise<string> {
+    try {
+      const stats = await this._docker.containerInspect(this.id);
+      return stats.State.StartedAt;
+    } catch(err) {
+      this._logError(`${err.message}\n${err.stack}`);
+      return '';
     }
   }
 
