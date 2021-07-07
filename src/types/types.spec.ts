@@ -10,11 +10,13 @@ import { Bitcoin } from './bitcoin/bitcoin';
 import { Dash } from './dash/dash';
 import { BitcoinCash } from './bitcoin-cash/bitcoin-cash';
 import { LBRY } from './lbry/lbry';
+import { Ethereum } from './ethereum/ethereum';
 
 const chains: [{name: string, constructor: any}] = [
   {name: 'Bitcoin', constructor: Bitcoin},
   {name: 'BitcoinCash', constructor: BitcoinCash},
   {name: 'Dash', constructor: Dash},
+  {name: 'Ethereum', constructor: Ethereum},
   {name: 'LBRY', constructor: LBRY},
   {name: 'Litecoin', constructor: Litecoin},
 ];
