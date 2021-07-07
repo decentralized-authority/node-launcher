@@ -1,5 +1,5 @@
 import { CryptoNode, CryptoNodeData, CryptoNodeStatic, VersionDockerImage } from '../../interfaces/crypto-node';
-import { defaultDockerNetwork, NetworkType, NodeClient, NodeType } from '../../constants';
+import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Status } from '../../constants';
 import { generateRandom } from '../../util';
 import { Docker } from '../../util/docker';
 import { ChildProcess } from 'child_process';
@@ -26,7 +26,7 @@ rpcport={{RPC_PORT}}
 
 export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
 
-  static versions(client: string): VersionDockerImage[] {
+  static versions(client = Bitcoin.clients[0]): VersionDockerImage[] {
     client = client || Bitcoin.clients[0];
     switch(client) {
       case NodeClient.CORE:
@@ -110,10 +110,10 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
   _instance?: ChildProcess;
   _requestTimeout = 10000;
   _logError(message: string): void {
-    console.error(message);
+    // console.error(message);
   }
   _logInfo(message: string): void {
-    console.log(message);
+    // console.log(message);
   }
 
   constructor(data: CryptoNodeData, docker?: Docker, logInfo?: (message: string)=>void, logError?: (message: string)=>void) {
@@ -138,6 +138,37 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
       this._logError = logError;
     if(logInfo)
       this._logInfo = logInfo;
+  }
+
+  toObject(): CryptoNodeData {
+    return {
+      id: this.id,
+      ticker: this.ticker,
+      version: this.version,
+      dockerImage: this.dockerImage,
+      peerPort: this.peerPort,
+      rpcPort: this.rpcPort,
+      rpcUsername: this.rpcUsername,
+      rpcPassword: this.rpcPassword,
+      client: this.client,
+      network: this.network,
+      dockerCpus: this.dockerCpus,
+      dockerMem: this.dockerMem,
+      dockerNetwork: this.dockerNetwork,
+      dataDir: this.dataDir,
+      walletDir: this.walletDir,
+      configPath: this.configPath,
+    };
+  }
+
+  generateConfig(): string {
+    return Bitcoin.generateConfig(
+      this.client,
+      this.network,
+      this.peerPort,
+      this.rpcPort,
+      this.rpcUsername,
+      this.rpcPassword);
   }
 
   async start(onOutput?: (output: string)=>void, onError?: (err: Error)=>void): Promise<ChildProcess> {
@@ -207,40 +238,9 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
     });
   }
 
-  toObject(): CryptoNodeData {
-    return {
-      id: this.id,
-      ticker: this.ticker,
-      version: this.version,
-      dockerImage: this.dockerImage,
-      peerPort: this.peerPort,
-      rpcPort: this.rpcPort,
-      rpcUsername: this.rpcUsername,
-      rpcPassword: this.rpcPassword,
-      client: this.client,
-      network: this.network,
-      dockerCpus: this.dockerCpus,
-      dockerMem: this.dockerMem,
-      dockerNetwork: this.dockerNetwork,
-      dataDir: this.dataDir,
-      walletDir: this.walletDir,
-      configPath: this.configPath,
-    };
-  }
-
-  generateConfig(): string {
-    return Bitcoin.generateConfig(
-      this.client,
-      this.network,
-      this.peerPort,
-      this.rpcPort,
-      this.rpcUsername,
-      this.rpcPassword);
-  }
-
   async rpcGetVersion(): Promise<string> {
     if(!this._instance)
-      throw new Error('Instance must be running before you can call bitcoin.rpcGetVersion()');
+      throw new Error('Instance must be running before you can call rpcGetVersion()');
     try {
       const { body } = await request
         .post(`http://localhost:${this.rpcPort}/`)
@@ -253,7 +253,7 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
           method: 'getnetworkinfo',
           params: [],
         });
-      const matchPatt = /:(.+)\//;
+      const matchPatt = /:(.+?)[/(]/;
       if(body && body.result && body.result.subversion && matchPatt.test(body.result.subversion)) {
         const matches = body.result.subversion.match(matchPatt);
         return matches[1];
@@ -321,6 +321,15 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
     } catch(err) {
       this._logError(`${err.message}\n${err.stack}`);
       return '';
+    }
+  }
+
+  async getStatus(): Promise<string> {
+    try {
+      const stats = await this._docker.containerInspect(this.id);
+      return stats.State.Running ? Status.RUNNING : Status.STOPPED;
+    } catch(err) {
+      return Status.STOPPED;
     }
   }
 

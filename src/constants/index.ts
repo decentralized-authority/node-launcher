@@ -14,4 +14,10 @@ export const NodeClient = {
   GETH: 'GETH',
 };
 
+export const Status = {
+  STOPPED: 'STOPPED',
+  SYNCING: 'SYNCING',
+  RUNNING: 'RUNNING',
+};
+
 export const defaultDockerNetwork = 'da-node-runner-network';

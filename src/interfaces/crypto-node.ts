@@ -15,12 +15,12 @@ export interface CryptoNodeData {
   ticker?: string;
   version?: string;
   dockerImage?: string;
+  network?: string;
   peerPort?: number;
   rpcPort?: number;
   rpcUsername?: string;
   rpcPassword?: string;
   client?: string;
-  network?: string;
   dockerCpus?: number;
   dockerMem?: number;
   dockerNetwork?: string;
@@ -44,6 +44,7 @@ export interface CryptoNode {
   getCPUUsage(): Promise<string>;
   getMemUsage(): Promise<[usagePercent: string, used: string, allocated: string]>;
   getStartTime(): Promise<string>;
+  getStatus(): Promise<string>;
 }
 
 export abstract class CryptoNodeStatic {
