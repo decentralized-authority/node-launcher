@@ -12,14 +12,16 @@ import { BitcoinCash } from './bitcoin-cash/bitcoin-cash';
 import { LBRY } from './lbry/lbry';
 import { Ethereum } from './ethereum/ethereum';
 import { Xdai } from './xdai/xdai';
+import { BinanceSC } from './binance-sc/binance-sc';
 
 const chains: [{name: string, constructor: any}] = [
   {name: 'Bitcoin', constructor: Bitcoin},
   {name: 'BitcoinCash', constructor: BitcoinCash},
   {name: 'Dash', constructor: Dash},
-  {name: 'Ethereum', constructor: Ethereum},
   {name: 'LBRY', constructor: LBRY},
   {name: 'Litecoin', constructor: Litecoin},
+  {name: 'Ethereum', constructor: Ethereum},
+  {name: 'BinanceSC', constructor: BinanceSC},
   {name: 'Xdai', constructor: Xdai},
 ];
 
