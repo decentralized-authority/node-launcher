@@ -108,24 +108,14 @@ export class Ethereum extends Bitcoin {
   walletDir = '';
   configPath = '';
 
-  _docker = new Docker({});
-  _instance?: ChildProcess;
-  _requestTimeout = 10000;
-  _logError(message: string): void {
-    // console.error(message);
-  }
-  _logInfo(message: string): void {
-    // console.log(message);
-  }
-
   constructor(data: CryptoNodeData, docker?: Docker, logInfo?: (message: string)=>void, logError?: (message: string)=>void) {
     super(data, docker, logInfo, logError);
     this.id = data.id || uuid();
     this.network = data.network || NetworkType.MAINNET;
     this.peerPort = data.peerPort || Ethereum.defaultPeerPort[this.network];
     this.rpcPort = data.rpcPort || Ethereum.defaultRPCPort[this.network];
-    this.rpcUsername = data.rpcUsername || generateRandom();
-    this.rpcPassword = data.rpcPassword || generateRandom();
+    this.rpcUsername = data.rpcUsername || '';
+    this.rpcPassword = data.rpcPassword || '';
     this.client = data.client || Ethereum.clients[0];
     this.dockerCpus = data.dockerCpus || this.dockerCpus;
     this.dockerMem = data.dockerMem || this.dockerMem;
@@ -133,8 +123,9 @@ export class Ethereum extends Bitcoin {
     this.dataDir = data.dataDir || this.dataDir;
     this.walletDir = data.walletDir || this.dataDir;
     this.configPath = data.configPath || this.configPath;
-    this.version = data.version || Ethereum.versions(this.client)[0].version;
-    this.dockerImage = data.dockerImage || Ethereum.versions(this.client)[0].image;
+    const versions = Ethereum.versions(this.client);
+    this.version = data.version || (versions && versions[0] ? versions[0].version : '');
+    this.dockerImage = data.dockerImage || (versions && versions[0] ? versions[0].image : '');
     if(docker)
       this._docker = docker;
     if(logError)

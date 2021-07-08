@@ -4,6 +4,7 @@ import { Dash } from './types/dash/dash';
 import { Ethereum } from './types/ethereum/ethereum';
 import { LBRY } from './types/lbry/lbry';
 import { Litecoin } from './types/litecoin/litecoin';
+import { Xdai } from './types/xdai/xdai';
 import * as constants from './constants';
 
 export {
@@ -14,4 +15,5 @@ export {
   Ethereum,
   LBRY,
   Litecoin,
+  Xdai,
 };

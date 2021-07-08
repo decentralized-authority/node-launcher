@@ -11,6 +11,7 @@ import { Dash } from './dash/dash';
 import { BitcoinCash } from './bitcoin-cash/bitcoin-cash';
 import { LBRY } from './lbry/lbry';
 import { Ethereum } from './ethereum/ethereum';
+import { Xdai } from './xdai/xdai';
 
 const chains: [{name: string, constructor: any}] = [
   {name: 'Bitcoin', constructor: Bitcoin},
@@ -19,6 +20,7 @@ const chains: [{name: string, constructor: any}] = [
   {name: 'Ethereum', constructor: Ethereum},
   {name: 'LBRY', constructor: LBRY},
   {name: 'Litecoin', constructor: Litecoin},
+  {name: 'Xdai', constructor: Xdai},
 ];
 
 chains.forEach(({ name, constructor: NodeConstructor }) => {
