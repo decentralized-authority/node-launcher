@@ -6,6 +6,7 @@ export interface VersionDockerImage {
   image: string;
   dataDir: string;
   walletDir: string;
+  logDir?: string;
   configPath: string;
   generateRuntimeArgs(data: CryptoNodeData): string;
 }

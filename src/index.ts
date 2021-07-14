@@ -6,6 +6,7 @@ import { LBRY } from './types/lbry/lbry';
 import { Litecoin } from './types/litecoin/litecoin';
 import { Xdai } from './types/xdai/xdai';
 import { BinanceSC } from './types/binance-sc/binance-sc';
+import { Avalanche } from './types/avalanche/avalanche';
 import * as constants from './constants';
 
 export {
@@ -18,4 +19,5 @@ export {
   LBRY,
   Litecoin,
   Xdai,
+  Avalanche,
 };

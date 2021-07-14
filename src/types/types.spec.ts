@@ -13,6 +13,7 @@ import { LBRY } from './lbry/lbry';
 import { Ethereum } from './ethereum/ethereum';
 import { Xdai } from './xdai/xdai';
 import { BinanceSC } from './binance-sc/binance-sc';
+import { Avalanche } from './avalanche/avalanche';
 
 const chains: [{name: string, constructor: any}] = [
   {name: 'Bitcoin', constructor: Bitcoin},
@@ -23,6 +24,7 @@ const chains: [{name: string, constructor: any}] = [
   {name: 'Ethereum', constructor: Ethereum},
   {name: 'BinanceSC', constructor: BinanceSC},
   {name: 'Xdai', constructor: Xdai},
+  {name: 'Avalanche', constructor: Avalanche},
 ];
 
 chains.forEach(({ name, constructor: NodeConstructor }) => {
