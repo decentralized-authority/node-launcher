@@ -1,5 +1,5 @@
-# da-node-runner
-Programmatically create, start, and stop crypto nodes in Node JS using Docker.
+# Node Launcher
+Programmatically create, start, and stop crypto nodes in Node JS using Docker. Check out our [video demo](https://www.youtube.com/watch?v=T9Lm0iShA0I).
 
 ## Getting Started
 
