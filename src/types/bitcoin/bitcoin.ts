@@ -1,5 +1,5 @@
 import { CryptoNode, CryptoNodeData, CryptoNodeStatic, VersionDockerImage } from '../../interfaces/crypto-node';
-import { defaultDockerNetwork, NetworkType, NodeClient, NodeType } from '../../constants';
+import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Status } from '../../constants';
 import { generateRandom } from '../../util';
 import { Docker } from '../../util/docker';
 import { ChildProcess } from 'child_process';
@@ -26,7 +26,7 @@ rpcport={{RPC_PORT}}
 
 export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
 
-  static versions(client: string): VersionDockerImage[] {
+  static versions(client = Bitcoin.clients[0]): VersionDockerImage[] {
     client = client || Bitcoin.clients[0];
     switch(client) {
       case NodeClient.CORE:
@@ -109,8 +109,14 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
   _docker = new Docker({});
   _instance?: ChildProcess;
   _requestTimeout = 10000;
+  _logError(message: string): void {
+    // console.error(message);
+  }
+  _logInfo(message: string): void {
+    // console.log(message);
+  }
 
-  constructor(data: CryptoNodeData, docker?: Docker) {
+  constructor(data: CryptoNodeData, docker?: Docker, logInfo?: (message: string)=>void, logError?: (message: string)=>void) {
     this.id = data.id || uuid();
     this.network = data.network || NetworkType.MAINNET;
     this.peerPort = data.peerPort || Bitcoin.defaultPeerPort[this.network];
@@ -124,9 +130,46 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
     this.dataDir = data.dataDir || this.dataDir;
     this.walletDir = data.walletDir || this.dataDir;
     this.configPath = data.configPath || this.configPath;
-    this._docker = docker || this._docker;
-    this.version = data.version || Bitcoin.versions(this.client)[0].version;
-    this.dockerImage = data.dockerImage || Bitcoin.versions(this.client)[0].image;
+    const versions = Bitcoin.versions(this.client);
+    this.version = data.version || (versions && versions[0] ? versions[0].version : '');
+    this.dockerImage = data.dockerImage || (versions && versions[0] ? versions[0].image : '');
+    if(docker)
+      this._docker = docker;
+    if(logError)
+      this._logError = logError;
+    if(logInfo)
+      this._logInfo = logInfo;
+  }
+
+  toObject(): CryptoNodeData {
+    return {
+      id: this.id,
+      ticker: this.ticker,
+      version: this.version,
+      dockerImage: this.dockerImage,
+      peerPort: this.peerPort,
+      rpcPort: this.rpcPort,
+      rpcUsername: this.rpcUsername,
+      rpcPassword: this.rpcPassword,
+      client: this.client,
+      network: this.network,
+      dockerCpus: this.dockerCpus,
+      dockerMem: this.dockerMem,
+      dockerNetwork: this.dockerNetwork,
+      dataDir: this.dataDir,
+      walletDir: this.walletDir,
+      configPath: this.configPath,
+    };
+  }
+
+  generateConfig(): string {
+    return Bitcoin.generateConfig(
+      this.client,
+      this.network,
+      this.peerPort,
+      this.rpcPort,
+      this.rpcUsername,
+      this.rpcPassword);
   }
 
   async start(onOutput?: (output: string)=>void, onError?: (err: Error)=>void): Promise<ChildProcess> {
@@ -185,7 +228,10 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
         const timeout = setTimeout(() => {
           this._docker.kill(this.id)
             .then(() => resolve())
-            .catch(() => resolve());
+            .catch(err => {
+              this._logError(`${err.message}\n${err.stack}`);
+              resolve();
+            });
         }, 30000);
       } else {
         resolve();
@@ -193,40 +239,9 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
     });
   }
 
-  toObject(): CryptoNodeData {
-    return {
-      id: this.id,
-      ticker: this.ticker,
-      version: this.version,
-      dockerImage: this.dockerImage,
-      peerPort: this.peerPort,
-      rpcPort: this.rpcPort,
-      rpcUsername: this.rpcUsername,
-      rpcPassword: this.rpcPassword,
-      client: this.client,
-      network: this.network,
-      dockerCpus: this.dockerCpus,
-      dockerMem: this.dockerMem,
-      dockerNetwork: this.dockerNetwork,
-      dataDir: this.dataDir,
-      walletDir: this.walletDir,
-      configPath: this.configPath,
-    };
-  }
-
-  generateConfig(): string {
-    return Bitcoin.generateConfig(
-      this.client,
-      this.network,
-      this.peerPort,
-      this.rpcPort,
-      this.rpcUsername,
-      this.rpcPassword);
-  }
-
   async rpcGetVersion(): Promise<string> {
     if(!this._instance)
-      throw new Error('Instance must be running before you can call bitcoin.rpcGetVersion()');
+      throw new Error('Instance must be running before you can call rpcGetVersion()');
     try {
       const { body } = await request
         .post(`http://localhost:${this.rpcPort}/`)
@@ -239,7 +254,7 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
           method: 'getnetworkinfo',
           params: [],
         });
-      const matchPatt = /:(.+)\//;
+      const matchPatt = /:(.+?)[/(]/;
       if(body && body.result && body.result.subversion && matchPatt.test(body.result.subversion)) {
         const matches = body.result.subversion.match(matchPatt);
         return matches[1];
@@ -247,7 +262,75 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
         return '';
       }
     } catch(err) {
+      this._logError(`${err.message}\n${err.stack}`);
       return '';
+    }
+  }
+
+  async rpcGetBlockCount(): Promise<number> {
+    try {
+      const { body } = await request
+        .post(`http://localhost:${this.rpcPort}/`)
+        .set('Accept', 'application/json')
+        .auth(this.rpcUsername, this.rpcPassword)
+        .timeout(this._requestTimeout)
+        .send({
+          id: '',
+          jsonrpc: '1.0',
+          method: 'getblockcount',
+          params: [],
+        });
+      return body.result;
+    } catch(err) {
+      this._logError(`${err.message}\n${err.stack}`);
+      return 0;
+    }
+  }
+
+  async getMemUsage(): Promise<[usagePercent: string, used: string, allocated: string]> {
+    try {
+      const containerStats = await this._docker.containerStats(this.id);
+      const percent = containerStats.MemPerc;
+      const split = containerStats.MemUsage
+        .split('/')
+        .map((s: string): string => s.trim());
+      if(split.length > 1) {
+        return [percent, split[0], split[1]];
+      } else {
+        throw new Error('Split containerStats/MemUsage length less than two.');
+      }
+    } catch(err) {
+      this._logError(`${err.message}\n${err.stack}`);
+      return ['0', '0', '0'];
+    }
+  }
+
+  async getCPUUsage(): Promise<string> {
+    try {
+      const containerStats = await this._docker.containerStats(this.id);
+      return containerStats.CPUPerc;
+    } catch(err) {
+      this._logError(`${err.message}\n${err.stack}`);
+      return '0';
+    }
+  }
+
+  async getStartTime(): Promise<string> {
+    try {
+      const stats = await this._docker.containerInspect(this.id);
+      return stats.State.StartedAt;
+    } catch(err) {
+      this._logError(`${err.message}\n${err.stack}`);
+      return '';
+    }
+  }
+
+  async getStatus(): Promise<string> {
+    try {
+      const stats = await this._docker.containerInspect(this.id);
+      return stats.State.Running ? Status.RUNNING : Status.STOPPED;
+    } catch(err) {
+      return Status.STOPPED;
     }
   }
 
