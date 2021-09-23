@@ -18,6 +18,7 @@ export interface CryptoNodeData {
   dockerImage?: string;
   network?: string;
   peerPort?: number;
+  privKeyPass?: string;
   rpcPort?: number;
   rpcUsername?: string;
   rpcPassword?: string;
@@ -28,6 +29,8 @@ export interface CryptoNodeData {
   dataDir?: string;
   walletDir?: string;
   configPath?: string;
+  domain?: string;
+  address?: string;
 }
 
 export interface CryptoNode {

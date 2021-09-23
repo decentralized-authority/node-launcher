@@ -7,6 +7,7 @@ import { Litecoin } from './types/litecoin/litecoin';
 import { Xdai } from './types/xdai/xdai';
 import { BinanceSC } from './types/binance-sc/binance-sc';
 import { Avalanche } from './types/avalanche/avalanche';
+import { Pocket } from './types/pocket/pocket';
 import * as constants from './constants';
 
 export {
@@ -20,4 +21,5 @@ export {
   Litecoin,
   Xdai,
   Avalanche,
+  Pocket,
 };
