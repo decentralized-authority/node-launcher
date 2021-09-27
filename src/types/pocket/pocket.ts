@@ -243,7 +243,7 @@ export class Pocket extends Bitcoin {
   }
 
   id: string;
-  ticker = 'eth';
+  ticker = 'pokt';
   version: string;
   dockerImage: string;
   network: string;

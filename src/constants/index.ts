@@ -13,6 +13,7 @@ export const NodeClient = {
   CORE: 'CORE',
   GETH: 'GETH',
   OPEN_ETHEREUM: 'OPEN_ETHEREUM',
+  PARITY: 'PARITY',
 };
 
 export const Status = {

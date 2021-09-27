@@ -8,6 +8,7 @@ import { Xdai } from './types/xdai/xdai';
 import { BinanceSC } from './types/binance-sc/binance-sc';
 import { Avalanche } from './types/avalanche/avalanche';
 import { Pocket } from './types/pocket/pocket';
+import { Fuse } from './types/fuse/fuse';
 import * as constants from './constants';
 
 export {
@@ -22,4 +23,5 @@ export {
   Xdai,
   Avalanche,
   Pocket,
+  Fuse,
 };
