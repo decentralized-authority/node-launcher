@@ -226,7 +226,7 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
         });
         this._instance.kill();
         const timeout = setTimeout(() => {
-          this._docker.kill(this.id)
+          this._docker.stop(this.id)
             .then(() => resolve())
             .catch(err => {
               this._logError(`${err.message}\n${err.stack}`);

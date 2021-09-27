@@ -37,7 +37,7 @@ export class Fuse extends Ethereum {
       case NodeClient.PARITY:
         return [
           {
-            version: '1.0.0',
+            version: '2.5.13',
             image: 'fusenet/node:1.0.0',
             dataDir: '/root/data',
             walletDir: '/root/keystore',

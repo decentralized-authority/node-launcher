@@ -219,4 +219,18 @@ export class Docker {
     });
   }
 
+  public stop(name: string): Promise<string> {
+    return new Promise(resolve => {
+      execFile('docker', ['stop', name], {}, (err, output) => {
+        if(err) {
+          this._logError(err);
+          resolve('');
+        } else {
+          const outputStr = output.toString();
+          resolve(outputStr);
+        }
+      });
+    });
+  }
+
 }
