@@ -37,7 +37,8 @@ export interface CryptoNode {
   _docker: Docker,
   _instance?: ChildProcess;
   _logError(message: string): void;
-  _logInfo(message: string): void;
+  _logOutput(output: string): void;
+  _logClose(exitCode: number): void;
   _requestTimeout: number;
   start(): Promise<ChildProcess>;
   stop(): void;

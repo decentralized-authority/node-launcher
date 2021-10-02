@@ -2,7 +2,7 @@ import 'should';
 import { Litecoin } from './litecoin/litecoin';
 import { Docker } from '../util/docker';
 import { CryptoNodeData } from '../interfaces/crypto-node';
-import { NetworkType, NodeType, Status } from '../constants';
+import { NetworkType, NodeEvent, NodeType, Status } from '../constants';
 import { v4 as uuid } from 'uuid';
 import { ChildProcess } from 'child_process';
 import { timeout } from '../util';
@@ -37,7 +37,7 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
 
     this.timeout(30000);
 
-    const docker = new Docker({});
+    const docker = new Docker();
     let node;
     const initialNodeData: CryptoNodeData = {
       id: 'test-id',
@@ -203,6 +203,11 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
               client,
             });
             await node.start();
+            // node
+            //   .on(NodeEvent.ERROR, console.error)
+            //   .on(NodeEvent.OUTPUT, console.log)
+            //   .on(NodeEvent.CLOSE, (exitCode: number) => console.log(`Exited with code ${exitCode}`));
+
             // Give the node a little time to connect and get up and running
             await timeout(60000 * .5);
           });

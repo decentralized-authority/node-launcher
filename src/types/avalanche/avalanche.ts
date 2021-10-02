@@ -116,8 +116,8 @@ export class Avalanche extends Bitcoin {
   walletDir = '';
   configPath = '';
 
-  constructor(data: CryptoNodeData, docker?: Docker, logInfo?: (message: string)=>void, logError?: (message: string)=>void) {
-    super(data, docker, logInfo, logError);
+  constructor(data: CryptoNodeData, docker?: Docker) {
+    super(data, docker);
     this.id = data.id || uuid();
     this.network = data.network || NetworkType.MAINNET;
     this.peerPort = data.peerPort || Avalanche.defaultPeerPort[this.network];
@@ -136,10 +136,6 @@ export class Avalanche extends Bitcoin {
     this.dockerImage = data.dockerImage || (versions && versions[0] ? versions[0].image : '');
     if(docker)
       this._docker = docker;
-    if(logError)
-      this._logError = logError;
-    if(logInfo)
-      this._logInfo = logInfo;
   }
 
   async start(onOutput?: (output: string)=>void, onError?: (err: Error)=>void): Promise<ChildProcess> {
@@ -226,7 +222,7 @@ export class Avalanche extends Bitcoin {
         return '';
       }
     } catch(err) {
-      this._logError(`${err.message}\n${err.stack}`);
+      this._logError(err);
       return '';
     }
   }
@@ -251,7 +247,7 @@ export class Avalanche extends Bitcoin {
         return false;
       }
     } catch(err) {
-      this._logError(`${err.message}\n${err.stack}`);
+      this._logError(err);
       return false;
     }
   }
@@ -323,7 +319,7 @@ export class Avalanche extends Bitcoin {
       }
     } catch(err) {
       console.error(err);
-      this._logError(`${err.message}\n${err.stack}`);
+      this._logError(err);
       return 0;
     }
   }

@@ -1,5 +1,5 @@
 import { CryptoNode, CryptoNodeData, CryptoNodeStatic, VersionDockerImage } from '../../interfaces/crypto-node';
-import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Status } from '../../constants';
+import { defaultDockerNetwork, NetworkType, NodeClient, NodeEvent, NodeType, Status } from '../../constants';
 import { generateRandom } from '../../util';
 import { Docker } from '../../util/docker';
 import { ChildProcess } from 'child_process';
@@ -8,6 +8,7 @@ import request from 'superagent';
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
+import { EventEmitter } from 'events';
 
 const coreConfig = `
 server=1
@@ -24,7 +25,7 @@ port={{PEER_PORT}}
 rpcport={{RPC_PORT}}
 `;
 
-export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
+export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
 
   static versions(client = Bitcoin.clients[0]): VersionDockerImage[] {
     client = client || Bitcoin.clients[0];
@@ -106,17 +107,22 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
   walletDir = '';
   configPath = '';
 
-  _docker = new Docker({});
+  _docker = new Docker();
   _instance?: ChildProcess;
   _requestTimeout = 10000;
-  _logError(message: string): void {
-    // console.error(message);
+  _logError(err: string|Error): void {
+    err = typeof err === 'string' ? new Error(err) : err;
+    this.emit(NodeEvent.ERROR, err);
   }
-  _logInfo(message: string): void {
-    // console.log(message);
+  _logOutput(output: string): void {
+    this.emit(NodeEvent.OUTPUT, output);
+  }
+  _logClose(exitCode: number): void {
+    this.emit(NodeEvent.CLOSE, exitCode);
   }
 
-  constructor(data: CryptoNodeData, docker?: Docker, logInfo?: (message: string)=>void, logError?: (message: string)=>void) {
+  constructor(data: CryptoNodeData, docker?: Docker) {
+    super();
     this.id = data.id || uuid();
     this.network = data.network || NetworkType.MAINNET;
     this.peerPort = data.peerPort || Bitcoin.defaultPeerPort[this.network];
@@ -135,10 +141,6 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
     this.dockerImage = data.dockerImage || (versions && versions[0] ? versions[0].image : '');
     if(docker)
       this._docker = docker;
-    if(logError)
-      this._logError = logError;
-    if(logInfo)
-      this._logInfo = logInfo;
   }
 
   toObject(): CryptoNodeData {
@@ -172,7 +174,7 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
       this.rpcPassword);
   }
 
-  async start(onOutput?: (output: string)=>void, onError?: (err: Error)=>void): Promise<ChildProcess> {
+  async start(): Promise<ChildProcess> {
     const versionData = Bitcoin.versions(this.client).find(({ version }) => version === this.version);
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
@@ -210,8 +212,9 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
     const instance = this._docker.run(
       this.dockerImage + versionData.generateRuntimeArgs(this),
       args,
-      onOutput ? onOutput : ()=>{},
-      onError ? onError : ()=>{},
+      output => this._logOutput(output),
+      err => this._logError(err),
+      code => this._logClose(code),
     );
     this._instance = instance;
     return instance;
@@ -229,7 +232,7 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
           this._docker.stop(this.id)
             .then(() => resolve())
             .catch(err => {
-              this._logError(`${err.message}\n${err.stack}`);
+              this._logError(err);
               resolve();
             });
         }, 30000);
@@ -262,7 +265,7 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
         return '';
       }
     } catch(err) {
-      this._logError(`${err.message}\n${err.stack}`);
+      this._logError(err);
       return '';
     }
   }
@@ -282,7 +285,7 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
         });
       return body.result;
     } catch(err) {
-      this._logError(`${err.message}\n${err.stack}`);
+      this._logError(err);
       return 0;
     }
   }
@@ -300,7 +303,7 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
         throw new Error('Split containerStats/MemUsage length less than two.');
       }
     } catch(err) {
-      this._logError(`${err.message}\n${err.stack}`);
+      this._logError(err);
       return ['0', '0', '0'];
     }
   }
@@ -310,7 +313,7 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
       const containerStats = await this._docker.containerStats(this.id);
       return containerStats.CPUPerc;
     } catch(err) {
-      this._logError(`${err.message}\n${err.stack}`);
+      this._logError(err);
       return '0';
     }
   }
@@ -320,7 +323,7 @@ export class Bitcoin implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
       const stats = await this._docker.containerInspect(this.id);
       return stats.State.StartedAt;
     } catch(err) {
-      this._logError(`${err.message}\n${err.stack}`);
+      this._logError(err);
       return '';
     }
   }

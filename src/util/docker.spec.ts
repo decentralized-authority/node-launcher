@@ -16,7 +16,7 @@ describe('Docker', function() {
     Docker.should.be.a.constructor();
   });
   describe('Docker.run', function() {
-    const docker = new Docker({});
+    const docker = new Docker();
     const image = 'someimage';
 
     it('should call `docker run [args] [image]`', function() {
@@ -58,7 +58,7 @@ describe('Docker', function() {
   });
 
   describe('Docker.exec', function() {
-    const docker = new Docker({});
+    const docker = new Docker();
     const container = 'somecontainer';
     const command = '/bin/bash';
     it('should call `docker exec [args] [container] [command]`', function() {
@@ -99,7 +99,7 @@ describe('Docker', function() {
   });
 
   describe('Docker.containerInspect', function() {
-    const docker = new Docker({});
+    const docker = new Docker();
     const containerName = 'testcontainer';
     it('should return a promise', function() {
       const fakeExecFile = new FakeExecFile();
@@ -130,7 +130,7 @@ describe('Docker', function() {
   });
 
   describe('Docker.containerStats', function() {
-    const docker = new Docker({});
+    const docker = new Docker();
     const containerName = 'testcontainer';
     it('should return a promise', function() {
       const fakeExecFile = new FakeExecFile();

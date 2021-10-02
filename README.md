@@ -24,7 +24,15 @@ $ npm run build
 const nr = require('[path to da-node-runner]/lib');
 
 const bitcoin = new nr.Bitcoin({});
-bitcoin.start(console.log, console.error);
+
+// Listen for events
+bitcoin
+  .on(nr.constants.NodeEvent.OUTPUT, console.log)
+  .on(nr.constants.NodeEvent.ERROR, console.error)
+  .on(nr.constants.NodeEvent.CLOSE, code => console.log(`Exited with code ${code}.`));
+
+// Start node
+bitcoin.start();
 ```
 
 ```js
@@ -32,7 +40,16 @@ bitcoin.start(console.log, console.error);
 const nr = require('[path to da-node-runner]/lib');
 
 const bitcoin = new nr.Bitcoin({});
-bitcoin.start(console.log, console.error);
+
+// Listen for events
+bitcoin
+  .on(nr.constants.NodeEvent.OUTPUT, console.log)
+  .on(nr.constants.NodeEvent.ERROR, console.error)
+  .on(nr.constants.NodeEvent.CLOSE, code => console.log(`Exited with code ${code}.`));
+
+// Start node
+bitcoin.start();
+
 setTimeout(() => {
   bitcoin.stop()
     .then(() => console.log('Stopped!'))
@@ -48,7 +65,15 @@ const { NetworkType } = nr.constants;
 const bitcoin = new nr.Bitcoin({
   network: NetworkType.TESTNET
 });
-bitcoin.start(console.log, console.error);
+
+// Listen for events
+bitcoin
+  .on(nr.constants.NodeEvent.OUTPUT, console.log)
+  .on(nr.constants.NodeEvent.ERROR, console.error)
+  .on(nr.constants.NodeEvent.CLOSE, code => console.log(`Exited with code ${code}.`));
+
+// Start node
+bitcoin.start();
 ```
 
 ```js
@@ -86,8 +111,14 @@ if(fs.pathExistsSync(nodeJsonPath)) { // start using previous configuration and 
   fs.writeJsonSync(nodeJsonPath, bitcoin.toObject(), {spaces: 2});
 }
 
-// Start the node, logging to console
-bitcoin.start(console.log, console.error);
+// Listen for events
+bitcoin
+  .on(nr.constants.NodeEvent.OUTPUT, console.log)
+  .on(nr.constants.NodeEvent.ERROR, console.error)
+  .on(nr.constants.NodeEvent.CLOSE, code => console.log(`Exited with code ${code}.`));
+
+// Start node
+bitcoin.start();
 ```
 
 ```js
@@ -95,6 +126,14 @@ bitcoin.start(console.log, console.error);
 const nr = require('[path to da-node-runner]/lib');
 
 const bitcoin = new nr.Bitcoin({});
+
+// Listen for events
+bitcoin
+  .on(nr.constants.NodeEvent.OUTPUT, console.log)
+  .on(nr.constants.NodeEvent.ERROR, console.error)
+  .on(nr.constants.NodeEvent.CLOSE, code => console.log(`Exited with code ${code}.`));
+
+// Start node
 bitcoin.start();
 
 // get the client version from the live RPC server

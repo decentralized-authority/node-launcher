@@ -23,3 +23,13 @@ export const Status = {
 };
 
 export const defaultDockerNetwork = 'da-node-runner-network';
+
+export const NodeEvent = {
+  CLOSE: 'CLOSE',
+  ERROR: 'ERROR',
+  OUTPUT: 'OUTPUT',
+};
+
+export const DockerEvent = {
+  ERROR: 'ERROR',
+};

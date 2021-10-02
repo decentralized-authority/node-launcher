@@ -101,8 +101,8 @@ export class Fuse extends Ethereum {
   walletDir = '';
   configPath = '';
 
-  constructor(data: CryptoNodeData, docker?: Docker, logInfo?: (message: string)=>void, logError?: (message: string)=>void) {
-    super(data, docker, logInfo, logError);
+  constructor(data: CryptoNodeData, docker?: Docker) {
+    super(data, docker);
     this.id = data.id || uuid();
     this.network = data.network || NetworkType.MAINNET;
     this.peerPort = data.peerPort || Fuse.defaultPeerPort[this.network];
@@ -121,13 +121,9 @@ export class Fuse extends Ethereum {
     this.dockerImage = data.dockerImage || (versions && versions[0] ? versions[0].image : '');
     if(docker)
       this._docker = docker;
-    if(logError)
-      this._logError = logError;
-    if(logInfo)
-      this._logInfo = logInfo;
   }
 
-  async start(onOutput?: (output: string)=>void, onError?: (err: Error)=>void): Promise<ChildProcess> {
+  async start(): Promise<ChildProcess> {
     const versionData = Fuse.versions(this.client).find(({ version }) => version === this.version);
     if(!versionData)
       throw new Error(`Unknown ${this.ticker} version ${this.version}`);
@@ -166,10 +162,9 @@ export class Fuse extends Ethereum {
     const instance = this._docker.run(
       this.dockerImage + versionData.generateRuntimeArgs(this),
       args,
-      onOutput ? onOutput : ()=>{},
-      // console.log,
-      onError ? onError : ()=>{},
-      // console.error,
+      output => this._logOutput(output),
+      err => this._logError(err),
+      code => this._logClose(code),
     );
     this._instance = instance;
     return instance;

@@ -110,8 +110,8 @@ export class LBRY extends Bitcoin {
   walletDir = '';
   configPath = '';
 
-  constructor(data: CryptoNodeData, docker?: Docker, logInfo?: (message: string)=>void, logError?: (message: string)=>void) {
-    super(data, docker, logInfo, logError);
+  constructor(data: CryptoNodeData, docker?: Docker) {
+    super(data, docker);
     this.id = data.id || uuid();
     this.network = data.network || NetworkType.MAINNET;
     this.peerPort = data.peerPort || LBRY.defaultPeerPort[this.network];
@@ -129,13 +129,9 @@ export class LBRY extends Bitcoin {
     this.dockerImage = data.dockerImage || LBRY.versions(this.client)[0].image;
     if(docker)
       this._docker = docker;
-    if(logError)
-      this._logError = logError;
-    if(logInfo)
-      this._logInfo = logInfo;
   }
 
-  async start(onOutput?: (output: string)=>void, onError?: (err: Error)=>void): Promise<ChildProcess> {
+  async start(): Promise<ChildProcess> {
     const versionData = LBRY.versions(this.client).find(({ version }) => version === this.version);
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
@@ -173,8 +169,9 @@ export class LBRY extends Bitcoin {
     const instance = this._docker.run(
       this.dockerImage + versionData.generateRuntimeArgs(this),
       args,
-      onOutput ? onOutput : ()=>{},
-      onError ? onError : ()=>{},
+      output => this._logOutput(output),
+      err => this._logError(err),
+      code => this._logClose(code),
     );
     this._instance = instance;
     return instance;

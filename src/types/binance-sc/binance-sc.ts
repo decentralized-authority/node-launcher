@@ -148,8 +148,8 @@ export class BinanceSC extends Ethereum {
   walletDir = '';
   configPath = '';
 
-  constructor(data: CryptoNodeData, docker?: Docker, logInfo?: (message: string)=>void, logError?: (message: string)=>void) {
-    super(data, docker, logInfo, logError);
+  constructor(data: CryptoNodeData, docker?: Docker) {
+    super(data, docker);
     this.id = data.id || uuid();
     this.network = data.network || NetworkType.MAINNET;
     this.peerPort = data.peerPort || BinanceSC.defaultPeerPort[this.network];
@@ -168,13 +168,9 @@ export class BinanceSC extends Ethereum {
     this.dockerImage = data.dockerImage || (versions && versions[0] ? versions[0].image : '');
     if(docker)
       this._docker = docker;
-    if(logError)
-      this._logError = logError;
-    if(logInfo)
-      this._logInfo = logInfo;
   }
 
-  async start(onOutput?: (output: string)=>void, onError?: (err: Error)=>void): Promise<ChildProcess> {
+  async start(): Promise<ChildProcess> {
     const versionData = BinanceSC.versions(this.client).find(({ version }) => version === this.version);
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
@@ -215,18 +211,18 @@ export class BinanceSC extends Ethereum {
       const genesis = await BinanceSC.getGenesis(this.network);
       await fs.writeFile(genesisPath, genesis, 'utf8');
       await new Promise<void>((resolve, reject) => {
-        const instance = this._docker.run(
+        this._docker.run(
           this.dockerImage + versionData.generateRuntimeArgs(this) + ` init ${path.join(containerDataDir, 'genesis.json')}`,
           args,
-          onOutput ? onOutput : ()=>{},
-          onError ? onError : ()=>{},
+          output => this._logOutput(output),
+          err => {
+            this._logError(err);
+            resolve();
+          },
+          () => {
+            resolve();
+          },
         );
-        instance.on('error', () => {
-          resolve();
-        });
-        instance.on('close', () => {
-          resolve();
-        });
       });
     }
 
@@ -234,8 +230,9 @@ export class BinanceSC extends Ethereum {
     const instance = this._docker.run(
       this.dockerImage + versionData.generateRuntimeArgs(this),
       args,
-      onOutput ? onOutput : ()=>{},
-      onError ? onError : ()=>{},
+      output => this._logOutput(output),
+      err => this._logError(err),
+      code => this._logClose(code),
     );
     this._instance = instance;
     return instance;
