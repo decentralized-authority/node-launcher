@@ -1,27 +1,27 @@
-import { Bitcoin } from './types/bitcoin/bitcoin';
-import { BitcoinCash } from './types/bitcoin-cash/bitcoin-cash';
-import { Dash } from './types/dash/dash';
-import { Ethereum } from './types/ethereum/ethereum';
-import { LBRY } from './types/lbry/lbry';
-import { Litecoin } from './types/litecoin/litecoin';
-import { Xdai } from './types/xdai/xdai';
-import { BinanceSC } from './types/binance-sc/binance-sc';
-import { Avalanche } from './types/avalanche/avalanche';
-import { Pocket } from './types/pocket/pocket';
-import { Fuse } from './types/fuse/fuse';
+import { Bitcoin as BTC } from './types/bitcoin/bitcoin';
+import { BitcoinCash as BCH } from './types/bitcoin-cash/bitcoin-cash';
+import { Dash as DASH } from './types/dash/dash';
+import { Ethereum as ETH } from './types/ethereum/ethereum';
+import { LBRY as LBC } from './types/lbry/lbry';
+import { Litecoin as LTC } from './types/litecoin/litecoin';
+import { Xdai as XDAI } from './types/xdai/xdai';
+import { BinanceSC as BSC } from './types/binance-sc/binance-sc';
+import { Avalanche as AVAX } from './types/avalanche/avalanche';
+import { Pocket as POKT } from './types/pocket/pocket';
+import { Fuse as FUSE } from './types/fuse/fuse';
 import * as constants from './constants';
 
 export {
   constants,
-  BinanceSC,
-  Bitcoin,
-  BitcoinCash,
-  Dash,
-  Ethereum,
-  LBRY,
-  Litecoin,
-  Xdai,
-  Avalanche,
-  Pocket,
-  Fuse,
+  AVAX,
+  BCH,
+  BSC,
+  BTC,
+  DASH,
+  ETH,
+  FUSE,
+  LBC,
+  LTC,
+  POKT,
+  XDAI,
 };
