@@ -250,6 +250,7 @@ export class Pocket extends Bitcoin {
 
   id: string;
   ticker = 'pokt';
+  name = 'Pocket';
   version: string;
   dockerImage: string;
   network: string;
@@ -401,16 +402,16 @@ export class Pocket extends Bitcoin {
     }
   }
 
-  async rpcGetBlockCount(): Promise<number> {
+  async rpcGetBlockCount(): Promise<string> {
     try {
       const { body = {} } = await request
         .post(`http://localhost:${this.rpcPort}/v1/query/height`)
         .timeout(this._requestTimeout)
         .set('Accept', 'application/json');
-      return body.height || 0;
+      return String(body.height) || '0';
     } catch(err) {
       this._logError(err);
-      return 0;
+      return '0';
     }
   }
 

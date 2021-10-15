@@ -92,6 +92,7 @@ export class Dash extends Bitcoin {
 
   id: string;
   ticker = 'dash';
+  name = 'Dash';
   version: string;
   dockerImage: string;
   network: string;

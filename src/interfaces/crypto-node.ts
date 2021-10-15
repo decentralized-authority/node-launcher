@@ -16,6 +16,7 @@ export interface VersionDockerImage {
 export interface CryptoNodeData {
   id?: string;
   ticker?: string;
+  name?: string;
   version?: string;
   dockerImage?: string;
   network?: string;
@@ -47,7 +48,7 @@ export interface CryptoNode {
   toObject(): CryptoNodeData;
   generateConfig(): string;
   rpcGetVersion(): Promise<string>;
-  rpcGetBlockCount(): Promise<number>;
+  rpcGetBlockCount(): Promise<string>;
   getCPUUsage(): Promise<string>;
   getMemUsage(): Promise<[usagePercent: string, used: string, allocated: string]>;
   getStartTime(): Promise<string>;
@@ -55,13 +56,15 @@ export interface CryptoNode {
 }
 
 export abstract class CryptoNodeStatic {
-  static versions: VersionDockerImage[];
   static nodeTypes: string[];
   static networkTypes: string[];
   static defaultPeerPort: any;
   static defaultRPCPort: any;
   static defaultCPUs: number;
   static defaultMem: number;
+  static versions(client: string, network: string): VersionDockerImage[] {
+    return [];
+  }
   static generateConfig(client: string, network: string, peerPort: number, rpcPort: number, rpcUsername: string, rpcPassword: string): string {
     return '';
   }

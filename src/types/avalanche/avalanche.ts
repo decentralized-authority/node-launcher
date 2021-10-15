@@ -259,7 +259,7 @@ export class Avalanche extends Bitcoin {
     }
   }
 
-  async rpcGetBlockCount(): Promise<number> {
+  async rpcGetBlockCount(): Promise<string> {
     try {
       const [ p, c, x ] = await Promise.all([
         this.isBootstrapped('P'),
@@ -274,7 +274,8 @@ export class Avalanche extends Bitcoin {
           .split('\n')
           .map(s => s.trim())
           .filter(s => s);
-        const [ pCount, cCount, xCount ] = ['avalanche_P_bs_fetched', 'avalanche_C_bs_fetched', 'avalanche_X_bs_fetched_vts']
+        // const [ pCount, cCount, xCount ] = ['avalanche_P_bs_fetched', 'avalanche_C_bs_fetched', 'avalanche_X_bs_fetched_vts']
+        const countArr = ['avalanche_P_bs_fetched', 'avalanche_C_bs_fetched', 'avalanche_X_bs_fetched_vts']
           .map(key => {
             let count = 0;
             const patt = new RegExp(`^${key}.+?(\\d+)$`);
@@ -287,8 +288,8 @@ export class Avalanche extends Bitcoin {
             }
             return count;
           });
-        console.log(pCount, cCount, xCount);
-        return 0;
+        // console.log(pCount, cCount, xCount);
+        return [countArr].map(count => String(count)).join(',');
       } else {
         console.log(p, c, x);
         // const res = await request
@@ -304,7 +305,7 @@ export class Avalanche extends Bitcoin {
         //     },
         //   });
         // console.log(res.body);
-        return 0;
+        return '0';
         const res1 = await request
           .post(`http://127.0.0.1:${this.rpcPort}/ext/bc/C/rpc`)
           .set('Accept', 'application/json')
@@ -317,17 +318,17 @@ export class Avalanche extends Bitcoin {
           });
         console.log('res1', res1);
         if(res1.body.result === false) {
-          return 0;
+          return '0';
         } else {
           const { currentBlock } = res1.body.result;
           const blockNum = parseInt(currentBlock, 16);
-          return blockNum > 0 ? blockNum : 0;
+          return blockNum > 0 ? String(blockNum) : '0';
         }
       }
     } catch(err) {
       console.error(err);
       this._logError(err);
-      return 0;
+      return '0';
     }
   }
 

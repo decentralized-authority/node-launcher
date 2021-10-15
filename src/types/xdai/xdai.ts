@@ -108,6 +108,7 @@ export class Xdai extends Ethereum {
 
   id: string;
   ticker = 'xdai';
+  name = 'xDAI';
   version: string;
   dockerImage: string;
   network: string;

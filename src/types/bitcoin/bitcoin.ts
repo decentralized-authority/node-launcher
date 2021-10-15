@@ -97,6 +97,7 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
 
   id: string;
   ticker = 'btc';
+  name = 'Bitcoin';
   version: string;
   dockerImage: string;
   network: string;
@@ -275,7 +276,7 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
     }
   }
 
-  async rpcGetBlockCount(): Promise<number> {
+  async rpcGetBlockCount(): Promise<string> {
     try {
       const { body } = await request
         .post(`http://localhost:${this.rpcPort}/`)
@@ -288,10 +289,10 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
           method: 'getblockcount',
           params: [],
         });
-      return body.result;
+      return String(body.result);
     } catch(err) {
       this._logError(err);
-      return 0;
+      return '0';
     }
   }
 

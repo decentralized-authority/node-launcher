@@ -138,7 +138,8 @@ export class BinanceSC extends Ethereum {
   }
 
   id: string;
-  ticker = 'xdai';
+  ticker = 'bsc';
+  name = 'Binance Smart Chain';
   version: string;
   dockerImage: string;
   network: string;

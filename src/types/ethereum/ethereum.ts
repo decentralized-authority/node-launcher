@@ -98,6 +98,7 @@ export class Ethereum extends Bitcoin {
 
   id: string;
   ticker = 'eth';
+  name = 'Ethereum';
   version: string;
   dockerImage: string;
   network: string;
@@ -217,7 +218,7 @@ export class Ethereum extends Bitcoin {
     }
   }
 
-  async rpcGetBlockCount(): Promise<number> {
+  async rpcGetBlockCount(): Promise<string> {
     try {
       const res = await request
         .post(`http://localhost:${this.rpcPort}/`)
@@ -230,15 +231,15 @@ export class Ethereum extends Bitcoin {
           params: [],
         });
       if(res.body.result === false) {
-        return 0;
+        return '0';
       } else {
         const { currentBlock } = res.body.result;
         const blockNum = parseInt(currentBlock, 16);
-        return blockNum > 0 ? blockNum : 0;
+        return blockNum > 0 ? String(blockNum) : '0';
       }
     } catch(err) {
       this._logError(err);
-      return 0;
+      return '0';
     }
   }
 

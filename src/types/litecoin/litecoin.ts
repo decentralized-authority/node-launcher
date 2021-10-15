@@ -92,6 +92,7 @@ export class Litecoin extends Bitcoin {
 
   id: string;
   ticker = 'ltc';
+  name = 'Litecoin';
   version: string;
   dockerImage: string;
   network: string;

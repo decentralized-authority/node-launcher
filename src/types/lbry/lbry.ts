@@ -99,7 +99,8 @@ export class LBRY extends Bitcoin {
   }
 
   id: string;
-  ticker = 'dash';
+  ticker = 'lbc';
+  name = 'LBRY Coin';
   version: string;
   dockerImage: string;
   network: string;

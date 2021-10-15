@@ -222,7 +222,7 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
           describe(`${name}.rpcGetBlockCount()`, function() {
             it('should resolve with the current block count number', async function() {
               const blockCount = await node.rpcGetBlockCount();
-              blockCount.should.be.a.Number();
+              blockCount.should.be.a.String();
             });
           });
           describe(`${name}.getCPUUsage()`, function() {

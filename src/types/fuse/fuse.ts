@@ -92,6 +92,7 @@ export class Fuse extends Ethereum {
 
   id: string;
   ticker = 'fuse';
+  name = 'Fuse';
   version: string;
   dockerImage: string;
   network: string;

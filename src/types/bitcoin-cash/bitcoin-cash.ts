@@ -92,6 +92,7 @@ export class BitcoinCash extends Bitcoin {
 
   id: string;
   ticker = 'bch';
+  name = 'Bitcoin Cash';
   version: string;
   dockerImage: string;
   network: string;
