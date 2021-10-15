@@ -1,7 +1,7 @@
 import { Bitcoin } from '../bitcoin/bitcoin';
 import { defaultDockerNetwork, NetworkType, NodeClient, NodeType } from '../../constants';
 import { v4 as uuid } from 'uuid';
-import { generateRandom } from '../../util';
+import { filterVersionsByNetworkType, generateRandom } from '../../util';
 import { CryptoNodeData, VersionDockerImage } from '../../interfaces/crypto-node';
 import { Docker } from '../../util/docker';
 import { ChildProcess } from 'child_process';
@@ -26,25 +26,30 @@ rpcport={{RPC_PORT}}
 
 export class BitcoinCash extends Bitcoin {
 
-  static versions(client = BitcoinCash.clients[0]): VersionDockerImage[] {
+  static versions(client: string, networkType: string): VersionDockerImage[] {
     client = client || BitcoinCash.clients[0];
+    let versions: VersionDockerImage[];
     switch(client) {
       case NodeClient.CORE:
-        return [
+        versions = [
           {
             version: '23.0.0',
+            clientVersion: '23.0.0',
             image: 'zquestz/bitcoin-cash-node:23.0.0',
             dataDir: '/opt/blockchain-data',
             walletDir: '/opt/blockchain-wallets',
             configPath: '/opt/bitcoincash.conf',
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
             generateRuntimeArgs(data: CryptoNodeData): string {
               return ` -conf=${this.configPath}` + (data.network === NetworkType.TESTNET ? ' -testnet' : '');
             },
           },
         ];
+        break;
       default:
-        return [];
+        versions = [];
     }
+    return filterVersionsByNetworkType(networkType, versions);
   }
 
   static clients = [
@@ -117,14 +122,14 @@ export class BitcoinCash extends Bitcoin {
     this.dataDir = data.dataDir || this.dataDir;
     this.walletDir = data.walletDir || this.dataDir;
     this.configPath = data.configPath || this.configPath;
-    this.version = data.version || BitcoinCash.versions(this.client)[0].version;
-    this.dockerImage = data.dockerImage || BitcoinCash.versions(this.client)[0].image;
+    this.version = data.version || BitcoinCash.versions(this.client, this.network)[0].version;
+    this.dockerImage = data.dockerImage || BitcoinCash.versions(this.client, this.network)[0].image;
     if(docker)
       this._docker = docker;
   }
 
   async start(): Promise<ChildProcess> {
-    const versionData = BitcoinCash.versions(this.client).find(({ version }) => version === this.version);
+    const versionData = BitcoinCash.versions(this.client, this.network).find(({ version }) => version === this.version);
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
     const {

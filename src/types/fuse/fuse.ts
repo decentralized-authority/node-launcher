@@ -7,6 +7,7 @@ import { ChildProcess } from 'child_process';
 import os from 'os';
 import path from 'path';
 import fs from 'fs-extra';
+import { filterVersionsByNetworkType } from '../../util';
 
 const coreConfig = `
 [parity]
@@ -31,25 +32,30 @@ reserved_peers="/home/parity/.local/share/io.parity.ethereum/bootnodes.txt"
 
 export class Fuse extends Ethereum {
 
-  static versions(client = Fuse.clients[0]): VersionDockerImage[] {
+  static versions(client: string, networkType: string): VersionDockerImage[] {
     client = client || Fuse.clients[0];
+    let versions: VersionDockerImage[];
     switch(client) {
       case NodeClient.PARITY:
-        return [
+        versions = [
           {
             version: '2.5.13',
+            clientVersion: '2.5.13',
             image: 'fusenet/node:1.0.0',
             dataDir: '/root/data',
             walletDir: '/root/keystore',
             configPath: '/root/config.toml',
+            networks: [NetworkType.MAINNET],
             generateRuntimeArgs(data: CryptoNodeData): string {
               return ` --config=${this.configPath}`;
             },
           },
         ];
+        break;
       default:
-        return [];
+        versions = [];
     }
+    return filterVersionsByNetworkType(networkType, versions);
   }
 
   static clients = [
@@ -116,7 +122,7 @@ export class Fuse extends Ethereum {
     this.dataDir = data.dataDir || this.dataDir;
     this.walletDir = data.walletDir || this.dataDir;
     this.configPath = data.configPath || this.configPath;
-    const versions = Fuse.versions(this.client);
+    const versions = Fuse.versions(this.client, this.network);
     this.version = data.version || (versions && versions[0] ? versions[0].version : '');
     this.dockerImage = data.dockerImage || (versions && versions[0] ? versions[0].image : '');
     if(docker)
@@ -124,7 +130,7 @@ export class Fuse extends Ethereum {
   }
 
   async start(): Promise<ChildProcess> {
-    const versionData = Fuse.versions(this.client).find(({ version }) => version === this.version);
+    const versionData = Fuse.versions(this.client, this.network).find(({ version }) => version === this.version);
     if(!versionData)
       throw new Error(`Unknown ${this.ticker} version ${this.version}`);
     const {

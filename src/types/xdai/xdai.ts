@@ -7,6 +7,7 @@ import { ChildProcess } from 'child_process';
 import os from 'os';
 import path from 'path';
 import fs from 'fs-extra';
+import { filterVersionsByNetworkType } from '../../util';
 
 const coreConfig = `
 [parity]
@@ -47,25 +48,30 @@ bootnodes = ["enode://4716883567b5317aad93ea28e707fad0631fb4aa5ac7c5fbd485380b01
 
 export class Xdai extends Ethereum {
 
-  static versions(client = Xdai.clients[0]): VersionDockerImage[] {
+  static versions(client: string, networkType: string): VersionDockerImage[] {
     client = client || Xdai.clients[0];
+    let versions: VersionDockerImage[];
     switch(client) {
       case NodeClient.OPEN_ETHEREUM:
-        return [
+        versions = [
           {
             version: '3.2.6',
+            clientVersion: '3.2.6',
             image: 'rburgett/openethereum:v3.2.6',
             dataDir: '/blockchain/data',
             walletDir: '/blockchain/keys',
             configPath: '/blockchain/config.toml',
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
             generateRuntimeArgs(data: CryptoNodeData): string {
               return ` --config=${this.configPath}`;
             },
           },
         ];
+        break;
       default:
-        return [];
+        versions = [];
     }
+    return filterVersionsByNetworkType(networkType, versions);
   }
 
   static clients = [
@@ -132,7 +138,7 @@ export class Xdai extends Ethereum {
     this.dataDir = data.dataDir || this.dataDir;
     this.walletDir = data.walletDir || this.dataDir;
     this.configPath = data.configPath || this.configPath;
-    const versions = Xdai.versions(this.client);
+    const versions = Xdai.versions(this.client, this.network);
     this.version = data.version || (versions && versions[0] ? versions[0].version : '');
     this.dockerImage = data.dockerImage || (versions && versions[0] ? versions[0].image : '');
     if(docker)
@@ -140,7 +146,7 @@ export class Xdai extends Ethereum {
   }
 
   async start(): Promise<ChildProcess> {
-    const versionData = Xdai.versions(this.client).find(({ version }) => version === this.version);
+    const versionData = Xdai.versions(this.client, this.network).find(({ version }) => version === this.version);
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
     const {

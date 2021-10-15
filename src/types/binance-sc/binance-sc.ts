@@ -7,6 +7,7 @@ import { ChildProcess } from 'child_process';
 import os from 'os';
 import path from 'path';
 import fs from 'fs-extra';
+import { filterVersionsByNetworkType } from '../../util';
 
 const coreConfig = `
 [Eth]
@@ -69,25 +70,30 @@ IdleTimeout = 120000000000
 
 export class BinanceSC extends Ethereum {
 
-  static versions(client = BinanceSC.clients[0]): VersionDockerImage[] {
+  static versions(client: string, networkType: string): VersionDockerImage[] {
     client = client || BinanceSC.clients[0];
+    let versions: VersionDockerImage[];
     switch(client) {
       case NodeClient.GETH:
-        return [
+        versions = [
           {
             version: '1.1.0',
+            clientVersion: '1.1.0',
             image: 'rburgett/bsc_geth:v1.1.0-beta',
             dataDir: '/blockchain/data',
             walletDir: '/blockchain/keys',
             configPath: '/blockchain/config.toml',
+            networks: [NetworkType.MAINNET],
             generateRuntimeArgs(data: CryptoNodeData): string {
               return ` --config=${this.configPath}`;
             },
           },
         ];
+        break;
       default:
-        return [];
+        versions = [];
     }
+    return filterVersionsByNetworkType(networkType, versions);
   }
 
   static clients = [
@@ -163,7 +169,7 @@ export class BinanceSC extends Ethereum {
     this.dataDir = data.dataDir || this.dataDir;
     this.walletDir = data.walletDir || this.dataDir;
     this.configPath = data.configPath || this.configPath;
-    const versions = BinanceSC.versions(this.client);
+    const versions = BinanceSC.versions(this.client, this.network);
     this.version = data.version || (versions && versions[0] ? versions[0].version : '');
     this.dockerImage = data.dockerImage || (versions && versions[0] ? versions[0].image : '');
     if(docker)
@@ -171,7 +177,7 @@ export class BinanceSC extends Ethereum {
   }
 
   async start(): Promise<ChildProcess> {
-    const versionData = BinanceSC.versions(this.client).find(({ version }) => version === this.version);
+    const versionData = BinanceSC.versions(this.client, this.network).find(({ version }) => version === this.version);
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
     const {

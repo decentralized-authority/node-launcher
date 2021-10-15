@@ -23,7 +23,7 @@ $ npm run build
 // Start a mainnet node
 const nr = require('[path to da-node-runner]/lib');
 
-const bitcoin = new nr.Bitcoin({});
+const bitcoin = new nr.BTC({});
 
 // Listen for events
 bitcoin
@@ -39,7 +39,7 @@ bitcoin.start();
 // Start a mainnet node and stop it after thirty seconds
 const nr = require('[path to da-node-runner]/lib');
 
-const bitcoin = new nr.Bitcoin({});
+const bitcoin = new nr.BTC({});
 
 // Listen for events
 bitcoin
@@ -62,7 +62,7 @@ setTimeout(() => {
 const nr = require('[path to da-node-runner]/lib');
 const { NetworkType } = nr.constants;
 
-const bitcoin = new nr.Bitcoin({
+const bitcoin = new nr.BTC({
   network: NetworkType.TESTNET
 });
 
@@ -89,7 +89,7 @@ const nodeJsonPath = path.join(rootPath, 'node.json');
 let bitcoin;
 if(fs.pathExistsSync(nodeJsonPath)) { // start using previous configuration and data
 
-  bitcoin = new nr.Bitcoin(fs.readJsonSync(nodeJsonPath));
+  bitcoin = new nr.BTC(fs.readJsonSync(nodeJsonPath));
   
 } else { // start and persist configuration and data
 
@@ -100,7 +100,7 @@ if(fs.pathExistsSync(nodeJsonPath)) { // start using previous configuration and 
   const configPath = path.join(rootPath, 'bitcoin.config');
 
   // Create node
-  bitcoin = new nr.Bitcoin({
+  bitcoin = new nr.BTC({
     id: 'my-bitcoin-node',
     network: NetworkType.TESTNET,
     dataDir,
@@ -125,7 +125,7 @@ bitcoin.start();
 // use the rpcGetVersion() method to get the node client version and test that the RPC server is live
 const nr = require('[path to da-node-runner]/lib');
 
-const bitcoin = new nr.Bitcoin({});
+const bitcoin = new nr.BTC({});
 
 // Listen for events
 bitcoin

@@ -8,6 +8,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
 import { Bitcoin } from '../bitcoin/bitcoin';
+import { filterVersionsByNetworkType } from '../../util';
 
 const coreConfig = `
 [Eth]
@@ -28,26 +29,31 @@ ListenAddr = ":{{PEER_PORT}}"
 
 export class Ethereum extends Bitcoin {
 
-  static versions(client = Ethereum.clients[0]): VersionDockerImage[] {
+  static versions(client: string, networkType: string): VersionDockerImage[] {
     client = client || Ethereum.clients[0];
+    let versions: VersionDockerImage[];
     switch(client) {
       case NodeClient.GETH:
-        return [
+        versions = [
           {
             version: '1.10.3',
+            clientVersion: '1.10.3',
             image: 'ethereum/client-go:v1.10.3',
             dataDir: '/root/.ethereum',
             walletDir: '/root/keystore',
             configPath: '/root/config.toml',
+            networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
             generateRuntimeArgs(data: CryptoNodeData): string {
               const { network = '' } = data;
               return ` --config=${this.configPath}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
             },
           },
         ];
+        break;
       default:
-        return [];
+        versions = [];
     }
+    return filterVersionsByNetworkType(networkType, versions);
   }
 
   static clients = [
@@ -122,7 +128,7 @@ export class Ethereum extends Bitcoin {
     this.dataDir = data.dataDir || this.dataDir;
     this.walletDir = data.walletDir || this.dataDir;
     this.configPath = data.configPath || this.configPath;
-    const versions = Ethereum.versions(this.client);
+    const versions = Ethereum.versions(this.client, this.network);
     this.version = data.version || (versions && versions[0] ? versions[0].version : '');
     this.dockerImage = data.dockerImage || (versions && versions[0] ? versions[0].image : '');
     if(docker)
@@ -130,7 +136,7 @@ export class Ethereum extends Bitcoin {
   }
 
   async start(): Promise<ChildProcess> {
-    const versionData = Ethereum.versions(this.client).find(({ version }) => version === this.version);
+    const versionData = Ethereum.versions(this.client, this.network).find(({ version }) => version === this.version);
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
     const {

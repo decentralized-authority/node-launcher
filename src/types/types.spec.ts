@@ -60,9 +60,9 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
     it('should be a constructor', function() {
       NodeConstructor.should.be.a.constructor();
     });
-    describe(`static ${name}.versions`, function () {
+    describe(`static ${name}.versions`, function() {
       it('should return an array of version data objects', function () {
-        const versions = NodeConstructor.versions();
+        const versions = NodeConstructor.versions(NodeConstructor.clients[0], NodeConstructor.networkTypes[0]);
         versions.should.be.an.Array();
         versions.forEach(v => {
           v.should.be.an.Object();

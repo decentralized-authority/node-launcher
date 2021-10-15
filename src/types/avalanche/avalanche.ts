@@ -1,6 +1,6 @@
 import { CryptoNodeData, VersionDockerImage } from '../../interfaces/crypto-node';
 import { defaultDockerNetwork, NetworkType, NodeClient, NodeType } from '../../constants';
-import { generateRandom } from '../../util';
+import { filterVersionsByNetworkType, generateRandom } from '../../util';
 import { Docker } from '../../util/docker';
 import { ChildProcess } from 'child_process';
 import { v4 as uuid} from 'uuid';
@@ -30,37 +30,44 @@ const coreConfig = `
 
 export class Avalanche extends Bitcoin {
 
-  static versions(client = Avalanche.clients[0]): VersionDockerImage[] {
+  static versions(client: string, networkType: string): VersionDockerImage[] {
     client = client || Avalanche.clients[0];
+    let versions: VersionDockerImage[];
     switch(client) {
       case NodeClient.CORE:
-        return [
+        versions = [
           {
             version: '1.5.3',
+            clientVersion: '1.5.3',
             image: 'avaplatform/avalanchego:v1.5.3',
             dataDir: '/root/db',
             walletDir: '/root/keystore',
             logDir: '/root/logs',
             configPath: '/root/config.json',
+            networks: [NetworkType.MAINNET],
             generateRuntimeArgs(data: CryptoNodeData): string {
               return ` --config-file=${this.configPath}`;
             },
           },
           {
             version: '1.4.9',
+            clientVersion: '1.4.9',
             image: 'avaplatform/avalanchego:v1.4.9',
             dataDir: '/root/db',
             walletDir: '/root/keystore',
             logDir: '/root/logs',
             configPath: '/root/config.json',
+            networks: [NetworkType.MAINNET],
             generateRuntimeArgs(data: CryptoNodeData): string {
               return ` --config-file=${this.configPath}`;
             },
           },
         ];
+        break;
       default:
-        return [];
+        versions = [];
     }
+    return filterVersionsByNetworkType(networkType, versions);
   }
 
   static clients = [
@@ -131,7 +138,7 @@ export class Avalanche extends Bitcoin {
     this.dataDir = data.dataDir || this.dataDir;
     this.walletDir = data.walletDir || this.dataDir;
     this.configPath = data.configPath || this.configPath;
-    const versions = Avalanche.versions(this.client);
+    const versions = Avalanche.versions(this.client, this.network);
     this.version = data.version || (versions && versions[0] ? versions[0].version : '');
     this.dockerImage = data.dockerImage || (versions && versions[0] ? versions[0].image : '');
     if(docker)
@@ -139,7 +146,7 @@ export class Avalanche extends Bitcoin {
   }
 
   async start(onOutput?: (output: string)=>void, onError?: (err: Error)=>void): Promise<ChildProcess> {
-    const versionData = Avalanche.versions(this.client).find(({ version }) => version === this.version);
+    const versionData = Avalanche.versions(this.client, this.network).find(({ version }) => version === this.version);
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
     const {

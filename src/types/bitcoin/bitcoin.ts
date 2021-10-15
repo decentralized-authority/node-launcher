@@ -1,6 +1,6 @@
 import { CryptoNode, CryptoNodeData, CryptoNodeStatic, VersionDockerImage } from '../../interfaces/crypto-node';
 import { defaultDockerNetwork, NetworkType, NodeClient, NodeEvent, NodeType, Status } from '../../constants';
-import { generateRandom } from '../../util';
+import { filterVersionsByNetworkType, generateRandom } from '../../util';
 import { Docker } from '../../util/docker';
 import { ChildProcess } from 'child_process';
 import { v4 as uuid} from 'uuid';
@@ -27,25 +27,30 @@ rpcport={{RPC_PORT}}
 
 export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode, CryptoNodeStatic {
 
-  static versions(client = Bitcoin.clients[0]): VersionDockerImage[] {
+  static versions(client: string, networkType: string): VersionDockerImage[] {
     client = client || Bitcoin.clients[0];
+    let versions: VersionDockerImage[];
     switch(client) {
       case NodeClient.CORE:
-        return [
+        versions = [
           {
             version: '0.21.0',
+            clientVersion: '0.21.0',
             image: 'rburgett/bitcoin:v0.21.0',
             dataDir: '/opt/blockchain/data',
             walletDir: '/opt/blockchain/wallets',
             configPath: '/opt/blockchain/bitcoin.conf',
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
             generateRuntimeArgs(data: CryptoNodeData): string {
               return ` bitcoind -conf=${this.configPath}` + (data.network === NetworkType.TESTNET ? ' -testnet' : '');
             },
           },
         ];
+        break;
       default:
-        return [];
+        versions = [];
     }
+    return filterVersionsByNetworkType(networkType, versions);
   }
 
   static clients = [
@@ -136,7 +141,7 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
     this.dataDir = data.dataDir || this.dataDir;
     this.walletDir = data.walletDir || this.dataDir;
     this.configPath = data.configPath || this.configPath;
-    const versions = Bitcoin.versions(this.client);
+    const versions = Bitcoin.versions(this.client, this.network);
     this.version = data.version || (versions && versions[0] ? versions[0].version : '');
     this.dockerImage = data.dockerImage || (versions && versions[0] ? versions[0].image : '');
     if(docker)
@@ -175,7 +180,7 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
   }
 
   async start(): Promise<ChildProcess> {
-    const versionData = Bitcoin.versions(this.client).find(({ version }) => version === this.version);
+    const versionData = Bitcoin.versions(this.client, this.network).find(({ version }) => version === this.version);
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
     const {

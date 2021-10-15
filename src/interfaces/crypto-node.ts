@@ -3,11 +3,13 @@ import { Docker } from '../util/docker';
 
 export interface VersionDockerImage {
   version: string;
+  clientVersion: string;
   image: string;
   dataDir: string;
   walletDir: string;
   logDir?: string;
   configPath: string;
+  networks: string[],
   generateRuntimeArgs(data: CryptoNodeData): string;
 }
 

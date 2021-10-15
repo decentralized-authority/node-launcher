@@ -9,6 +9,7 @@ import path from 'path';
 import fs from 'fs-extra';
 import { PocketGenesis } from './genesis';
 import request from 'superagent';
+import { filterVersionsByNetworkType } from '../../util';
 
 const coreConfig = `
 {
@@ -171,26 +172,31 @@ const coreConfig = `
 
 export class Pocket extends Bitcoin {
 
-  static versions(client = Pocket.clients[0]): VersionDockerImage[] {
+  static versions(client: string, networkType: string): VersionDockerImage[] {
     client = client || Pocket.clients[0];
+    let versions: VersionDockerImage[];
     switch(client) {
       case NodeClient.CORE:
-        return [
+        versions = [
           {
             version: 'RC-0.6.3.6',
+            clientVersion: 'RC-0.6.3.6',
             image: 'rburgett/pocketcore:RC-0.6.3.6',
             dataDir: '/root/.pocket',
             walletDir: '/root/pocket-keys',
             configPath: '',
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
             generateRuntimeArgs(data: CryptoNodeData): string {
               const { network = '' } = data;
               return ` start --${network.toLowerCase()}`;
             },
           },
         ];
+        break;
       default:
-        return [];
+        versions = [];
     }
+    return filterVersionsByNetworkType(networkType, versions);
   }
 
   static clients = [
@@ -278,7 +284,7 @@ export class Pocket extends Bitcoin {
     this.dataDir = data.dataDir || this.dataDir;
     this.walletDir = data.walletDir || this.dataDir;
     this.configPath = data.configPath || this.configPath;
-    const versions = Pocket.versions(this.client);
+    const versions = Pocket.versions(this.client, this.network);
     this.version = data.version || (versions && versions[0] ? versions[0].version : '');
     this.dockerImage = data.dockerImage || (versions && versions[0] ? versions[0].image : '');
     this.domain = data.domain || this.domain;
@@ -291,7 +297,7 @@ export class Pocket extends Bitcoin {
   }
 
   async start(): Promise<ChildProcess> {
-    const versionData = Pocket.versions(this.client).find(({ version }) => version === this.version);
+    const versionData = Pocket.versions(this.client, this.network).find(({ version }) => version === this.version);
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
     const {
