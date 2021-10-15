@@ -170,6 +170,8 @@ export class BinanceSC extends Ethereum {
     this.dataDir = data.dataDir || this.dataDir;
     this.walletDir = data.walletDir || this.dataDir;
     this.configPath = data.configPath || this.configPath;
+    this.createdAt = data.createdAt || this.createdAt;
+    this.updatedAt = data.updatedAt || this.updatedAt;
     const versions = BinanceSC.versions(this.client, this.network);
     this.version = data.version || (versions && versions[0] ? versions[0].version : '');
     this.dockerImage = data.dockerImage || (versions && versions[0] ? versions[0].image : '');

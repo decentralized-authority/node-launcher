@@ -34,6 +34,8 @@ export interface CryptoNodeData {
   configPath?: string;
   domain?: string;
   address?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface CryptoNode {

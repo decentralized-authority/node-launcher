@@ -123,6 +123,8 @@ export class BitcoinCash extends Bitcoin {
     this.dataDir = data.dataDir || this.dataDir;
     this.walletDir = data.walletDir || this.dataDir;
     this.configPath = data.configPath || this.configPath;
+    this.createdAt = data.createdAt || this.createdAt;
+    this.updatedAt = data.updatedAt || this.updatedAt;
     this.version = data.version || BitcoinCash.versions(this.client, this.network)[0].version;
     this.dockerImage = data.dockerImage || BitcoinCash.versions(this.client, this.network)[0].image;
     if(docker)
