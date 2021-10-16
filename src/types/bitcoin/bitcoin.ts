@@ -78,7 +78,7 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
 
   static defaultCPUs = 4;
 
-  static defaultMem = 4096;
+  static defaultMem = 8192;
 
   static generateConfig(client = Bitcoin.clients[0], network = NetworkType.MAINNET, peerPort = Bitcoin.defaultPeerPort[NetworkType.MAINNET], rpcPort = Bitcoin.defaultRPCPort[NetworkType.MAINNET], rpcUsername = generateRandom(), rpcPassword = generateRandom()): string {
     switch(client) {
@@ -107,8 +107,8 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
   rpcUsername: string;
   rpcPassword: string;
   client: string;
-  dockerCpus = 4;
-  dockerMem = 4096;
+  dockerCPUs = Bitcoin.defaultCPUs;
+  dockerMem = Bitcoin.defaultMem;
   dockerNetwork = defaultDockerNetwork;
   dataDir = '';
   walletDir = '';
@@ -142,7 +142,7 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
     this.rpcUsername = data.rpcUsername || generateRandom();
     this.rpcPassword = data.rpcPassword || generateRandom();
     this.client = data.client || Bitcoin.clients[0];
-    this.dockerCpus = data.dockerCpus || this.dockerCpus;
+    this.dockerCPUs = data.dockerCPUs || this.dockerCPUs;
     this.dockerMem = data.dockerMem || this.dockerMem;
     this.dockerNetwork = data.dockerNetwork || this.dockerNetwork;
     this.dataDir = data.dataDir || this.dataDir;
@@ -190,7 +190,7 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
       rpcPassword: this.rpcPassword,
       client: this.client,
       network: this.network,
-      dockerCpus: this.dockerCpus,
+      dockerCPUs: this.dockerCPUs,
       dockerMem: this.dockerMem,
       dockerNetwork: this.dockerNetwork,
       dataDir: this.dataDir,
@@ -222,7 +222,7 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
       '-i',
       '--rm',
       '--memory', this.dockerMem.toString(10) + 'MB',
-      '--cpus', this.dockerCpus.toString(10),
+      '--cpus', this.dockerCPUs.toString(10),
       '--name', this.id,
       '--network', this.dockerNetwork,
       '-p', `${this.rpcPort}:${this.rpcPort}`,

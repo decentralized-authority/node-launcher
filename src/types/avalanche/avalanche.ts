@@ -90,9 +90,9 @@ export class Avalanche extends Bitcoin {
     [NetworkType.MAINNET]: 9651,
   };
 
-  static defaultCPUs = 4;
+  static defaultCPUs = 8;
 
-  static defaultMem = 8192;
+  static defaultMem = 16384;
 
   static generateConfig(client = Avalanche.clients[0], network = NetworkType.MAINNET, peerPort = Avalanche.defaultPeerPort[NetworkType.MAINNET], rpcPort = Avalanche.defaultRPCPort[NetworkType.MAINNET]): string {
     switch(client) {
@@ -116,8 +116,8 @@ export class Avalanche extends Bitcoin {
   rpcUsername: string;
   rpcPassword: string;
   client: string;
-  dockerCpus: number;
-  dockerMem: number;
+  dockerCPUs = Avalanche.defaultCPUs;
+  dockerMem = Avalanche.defaultMem;
   dockerNetwork = defaultDockerNetwork;
   dataDir = '';
   walletDir = '';
@@ -132,8 +132,8 @@ export class Avalanche extends Bitcoin {
     this.rpcUsername = data.rpcUsername || '';
     this.rpcPassword = data.rpcPassword || '';
     this.client = data.client || Avalanche.clients[0];
-    this.dockerCpus = data.dockerCpus || Avalanche.defaultCPUs;
-    this.dockerMem = data.dockerMem || Avalanche.defaultMem;
+    this.dockerCPUs = data.dockerCPUs || this.dockerCPUs;
+    this.dockerMem = data.dockerMem || this.dockerMem;
     this.dockerNetwork = data.dockerNetwork || this.dockerNetwork;
     this.dataDir = data.dataDir || this.dataDir;
     this.walletDir = data.walletDir || this.dataDir;
@@ -163,7 +163,7 @@ export class Avalanche extends Bitcoin {
       '-i',
       '--rm',
       '--memory', this.dockerMem.toString(10) + 'MB',
-      '--cpus', this.dockerCpus.toString(10),
+      '--cpus', this.dockerCPUs.toString(10),
       '--name', this.id,
       '--network', this.dockerNetwork,
       '-p', `${this.rpcPort}:${this.rpcPort}`,

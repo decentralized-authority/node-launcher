@@ -49,7 +49,7 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
       rpcUsername: 'some username',
       rpcPassword: 'some password',
       client: NodeConstructor.clients[0],
-      dockerCpus: 4,
+      dockerCPUs: 4,
       dockerMem: 4096,
       dockerNetwork: 'some network',
       dataDir: '/some/dir',

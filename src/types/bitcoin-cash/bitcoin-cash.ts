@@ -75,6 +75,10 @@ export class BitcoinCash extends Bitcoin {
     [NetworkType.TESTNET]: 18333,
   };
 
+  static defaultCPUs = 4;
+
+  static defaultMem = 8192;
+
   static generateConfig(client = BitcoinCash.clients[0], network = NetworkType.MAINNET, peerPort = BitcoinCash.defaultPeerPort[NetworkType.MAINNET], rpcPort = BitcoinCash.defaultRPCPort[NetworkType.MAINNET], rpcUsername = generateRandom(), rpcPassword = generateRandom()): string {
     switch(client) {
       case NodeClient.CORE:
@@ -101,8 +105,8 @@ export class BitcoinCash extends Bitcoin {
   rpcUsername: string;
   rpcPassword: string;
   client: string;
-  dockerCpus = 4;
-  dockerMem = 4096;
+  dockerCPUs = BitcoinCash.defaultCPUs;
+  dockerMem = BitcoinCash.defaultMem;
   dockerNetwork = defaultDockerNetwork;
   dataDir = '';
   walletDir = '';
@@ -117,7 +121,7 @@ export class BitcoinCash extends Bitcoin {
     this.rpcUsername = data.rpcUsername || generateRandom();
     this.rpcPassword = data.rpcPassword || generateRandom();
     this.client = data.client || BitcoinCash.clients[0];
-    this.dockerCpus = data.dockerCpus || this.dockerCpus;
+    this.dockerCPUs = data.dockerCPUs || this.dockerCPUs;
     this.dockerMem = data.dockerMem || this.dockerMem;
     this.dockerNetwork = data.dockerNetwork || this.dockerNetwork;
     this.dataDir = data.dataDir || this.dataDir;
@@ -149,7 +153,7 @@ export class BitcoinCash extends Bitcoin {
       '-i',
       '--rm',
       '--memory', this.dockerMem.toString(10) + 'MB',
-      '--cpus', this.dockerCpus.toString(10),
+      '--cpus', this.dockerCPUs.toString(10),
       '--name', this.id,
       '--network', this.dockerNetwork,
       '-p', `${this.rpcPort}:${this.rpcPort}`,

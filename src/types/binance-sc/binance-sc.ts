@@ -116,6 +116,10 @@ export class BinanceSC extends Ethereum {
     [NetworkType.MAINNET]: 8546,
   };
 
+  static defaultCPUs = 8;
+
+  static defaultMem = 32768;
+
   static generateConfig(client = BinanceSC.clients[0], network = NetworkType.MAINNET, peerPort = BinanceSC.defaultPeerPort[NetworkType.MAINNET], rpcPort = BinanceSC.defaultRPCPort[NetworkType.MAINNET]): string {
     switch(client) {
       case NodeClient.GETH:
@@ -148,8 +152,8 @@ export class BinanceSC extends Ethereum {
   rpcUsername: string;
   rpcPassword: string;
   client: string;
-  dockerCpus = 8;
-  dockerMem = 16384;
+  dockerCPUs = BinanceSC.defaultCPUs;
+  dockerMem = BinanceSC.defaultMem;
   dockerNetwork = defaultDockerNetwork;
   dataDir = '';
   walletDir = '';
@@ -164,7 +168,7 @@ export class BinanceSC extends Ethereum {
     this.rpcUsername = data.rpcUsername || '';
     this.rpcPassword = data.rpcPassword || '';
     this.client = data.client || BinanceSC.clients[0];
-    this.dockerCpus = data.dockerCpus || this.dockerCpus;
+    this.dockerCPUs = data.dockerCPUs || this.dockerCPUs;
     this.dockerMem = data.dockerMem || this.dockerMem;
     this.dockerNetwork = data.dockerNetwork || this.dockerNetwork;
     this.dataDir = data.dataDir || this.dataDir;
@@ -196,7 +200,7 @@ export class BinanceSC extends Ethereum {
       '-i',
       '--rm',
       '--memory', this.dockerMem.toString(10) + 'MB',
-      '--cpus', this.dockerCpus.toString(10),
+      '--cpus', this.dockerCPUs.toString(10),
       '--name', this.id,
       '--network', this.dockerNetwork,
       '-p', `${this.rpcPort}:${this.rpcPort}`,

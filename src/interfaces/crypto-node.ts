@@ -27,7 +27,7 @@ export interface CryptoNodeData {
   rpcUsername?: string;
   rpcPassword?: string;
   client?: string;
-  dockerCpus?: number;
+  dockerCPUs?: number;
   dockerMem?: number;
   dockerNetwork?: string;
   dataDir?: string;

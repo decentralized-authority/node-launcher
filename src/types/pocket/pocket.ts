@@ -273,8 +273,8 @@ export class Pocket extends Bitcoin {
   rpcUsername: string;
   rpcPassword: string;
   client: string;
-  dockerCpus: number;
-  dockerMem: number;
+  dockerCPUs = Pocket.defaultCPUs;
+  dockerMem = Pocket.defaultMem;
   dockerNetwork = defaultDockerNetwork;
   dataDir = '';
   walletDir = '';
@@ -292,8 +292,8 @@ export class Pocket extends Bitcoin {
     this.rpcPassword = data.rpcPassword || '';
 
     this.client = data.client || Pocket.clients[0];
-    this.dockerCpus = data.dockerCpus || Pocket.defaultCPUs;
-    this.dockerMem = data.dockerMem || Pocket.defaultMem;
+    this.dockerCPUs = data.dockerCPUs || this.dockerCPUs;
+    this.dockerMem = data.dockerMem || this.dockerMem;
     this.dockerNetwork = data.dockerNetwork || this.dockerNetwork;
     this.dataDir = data.dataDir || this.dataDir;
     this.walletDir = data.walletDir || this.dataDir;
@@ -379,7 +379,7 @@ export class Pocket extends Bitcoin {
       '-i',
       '--rm',
       '--memory', this.dockerMem.toString(10) + 'MB',
-      '--cpus', this.dockerCpus.toString(10),
+      '--cpus', this.dockerCPUs.toString(10),
       '--name', this.id,
       '--network', this.dockerNetwork,
       '-p', `${this.rpcPort}:${this.rpcPort}`,

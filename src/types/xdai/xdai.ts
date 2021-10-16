@@ -94,6 +94,10 @@ export class Xdai extends Ethereum {
     [NetworkType.MAINNET]: 30303,
   };
 
+  static defaultCPUs = 6;
+
+  static defaultMem = 8192;
+
   static generateConfig(client = Xdai.clients[0], network = NetworkType.MAINNET, peerPort = Xdai.defaultPeerPort[NetworkType.MAINNET], rpcPort = Xdai.defaultRPCPort[NetworkType.MAINNET]): string {
     switch(client) {
       case NodeClient.OPEN_ETHEREUM:
@@ -117,8 +121,8 @@ export class Xdai extends Ethereum {
   rpcUsername: string;
   rpcPassword: string;
   client: string;
-  dockerCpus = 4;
-  dockerMem = 4096;
+  dockerCPUs = Xdai.defaultCPUs;
+  dockerMem = Xdai.defaultMem;
   dockerNetwork = defaultDockerNetwork;
   dataDir = '';
   walletDir = '';
@@ -133,7 +137,7 @@ export class Xdai extends Ethereum {
     this.rpcUsername = data.rpcUsername || '';
     this.rpcPassword = data.rpcPassword || '';
     this.client = data.client || Xdai.clients[0];
-    this.dockerCpus = data.dockerCpus || this.dockerCpus;
+    this.dockerCPUs = data.dockerCPUs || this.dockerCPUs;
     this.dockerMem = data.dockerMem || this.dockerMem;
     this.dockerNetwork = data.dockerNetwork || this.dockerNetwork;
     this.dataDir = data.dataDir || this.dataDir;
@@ -165,7 +169,7 @@ export class Xdai extends Ethereum {
       '-i',
       '--rm',
       '--memory', this.dockerMem.toString(10) + 'MB',
-      '--cpus', this.dockerCpus.toString(10),
+      '--cpus', this.dockerCPUs.toString(10),
       '--name', this.id,
       '--network', this.dockerNetwork,
       '-p', `${this.rpcPort}:${this.rpcPort}`,
