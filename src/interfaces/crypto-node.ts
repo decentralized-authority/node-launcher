@@ -18,6 +18,7 @@ export interface CryptoNodeData {
   ticker?: string;
   name?: string;
   version?: string;
+  clientVersion?: string;
   dockerImage?: string;
   network?: string;
   peerPort?: number;
@@ -36,6 +37,10 @@ export interface CryptoNodeData {
   address?: string;
   createdAt?: string;
   updatedAt?: string;
+  remote?: boolean;
+  remoteDomain?: string;
+  remoteProtocol?: string;
+  remotePort?: number;
 }
 
 export interface CryptoNode {
@@ -49,6 +54,7 @@ export interface CryptoNode {
   stop(): void;
   toObject(): CryptoNodeData;
   generateConfig(): string;
+  endpoint(): string;
   rpcGetVersion(): Promise<string>;
   rpcGetBlockCount(): Promise<string>;
   getCPUUsage(): Promise<string>;

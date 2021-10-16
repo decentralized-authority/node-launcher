@@ -179,6 +179,19 @@ export class Pocket extends Bitcoin {
       case NodeClient.CORE:
         versions = [
           {
+            version: 'RC-0.6.3.7',
+            clientVersion: 'RC-0.6.3.7',
+            image: 'rburgett/pocketcore:RC-0.6.3.7',
+            dataDir: '/root/.pocket',
+            walletDir: '/root/pocket-keys',
+            configPath: '',
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              const { network = '' } = data;
+              return ` start --${network.toLowerCase()}`;
+            },
+          },
+          {
             version: 'RC-0.6.3.6',
             clientVersion: 'RC-0.6.3.6',
             image: 'rburgett/pocketcore:RC-0.6.3.6',
@@ -287,8 +300,12 @@ export class Pocket extends Bitcoin {
     this.configPath = data.configPath || this.configPath;
     this.createdAt = data.createdAt || this.createdAt;
     this.updatedAt = data.updatedAt || this.updatedAt;
+    this.remote = data.remote || this.remote;
+    this.remoteDomain = data.remoteDomain || this.remoteDomain;
+    this.remoteProtocol = data.remoteProtocol || this.remoteProtocol;
     const versions = Pocket.versions(this.client, this.network);
     this.version = data.version || (versions && versions[0] ? versions[0].version : '');
+    this.clientVersion = data.clientVersion || (versions && versions[0] ? versions[0].clientVersion : '');
     this.dockerImage = data.dockerImage || (versions && versions[0] ? versions[0].image : '');
     this.domain = data.domain || this.domain;
     this.address = data.address || this.address;
@@ -391,11 +408,10 @@ export class Pocket extends Bitcoin {
   }
 
   async rpcGetVersion(): Promise<string> {
-    if(!this._instance)
-      throw new Error('Instance must be running before you can call rpcGetVersion()');
     try {
+      this._runCheck('rpcGetVersion');
       const { body: version = '' } = await request
-        .get(`http://localhost:${this.rpcPort}/v1`)
+        .get(`${this.endpoint()}/v1`)
         .timeout(this._requestTimeout);
       return version;
     } catch(err) {
@@ -406,8 +422,9 @@ export class Pocket extends Bitcoin {
 
   async rpcGetBlockCount(): Promise<string> {
     try {
+      this._runCheck('rpcGetBlockCount');
       const { body = {} } = await request
-        .post(`http://localhost:${this.rpcPort}/v1/query/height`)
+        .post(`${this.endpoint()}/v1/query/height`)
         .timeout(this._requestTimeout)
         .set('Accept', 'application/json');
       return String(body.height) || '0';

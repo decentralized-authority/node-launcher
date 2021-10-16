@@ -133,8 +133,13 @@ export class LBRY extends Bitcoin {
     this.configPath = data.configPath || this.configPath;
     this.createdAt = data.createdAt || this.createdAt;
     this.updatedAt = data.updatedAt || this.updatedAt;
-    this.version = data.version || LBRY.versions(this.client, this.network)[0].version;
-    this.dockerImage = data.dockerImage || LBRY.versions(this.client, this.network)[0].image;
+    this.remote = data.remote || this.remote;
+    this.remoteDomain = data.remoteDomain || this.remoteDomain;
+    this.remoteProtocol = data.remoteProtocol || this.remoteProtocol;
+    const versions = LBRY.versions(this.client, this.network);
+    this.version = data.version || versions[0].version;
+    this.clientVersion = data.clientVersion || (versions && versions[0] ? versions[0].clientVersion : '');
+    this.dockerImage = data.dockerImage || versions[0].image;
     if(docker)
       this._docker = docker;
   }

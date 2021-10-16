@@ -99,6 +99,7 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
   ticker = 'btc';
   name = 'Bitcoin';
   version: string;
+  clientVersion: string;
   dockerImage: string;
   network: string;
   peerPort: number;
@@ -114,6 +115,9 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
   configPath = '';
   createdAt = '';
   updatedAt = '';
+  remote = false;
+  remoteDomain = '';
+  remoteProtocol = '';
 
   _docker = new Docker();
   _instance?: ChildProcess;
@@ -146,11 +150,32 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
     this.configPath = data.configPath || this.configPath;
     this.createdAt = data.createdAt || this.createdAt;
     this.updatedAt = data.updatedAt || this.updatedAt;
+    this.remote = data.remote || this.remote;
+    this.remoteDomain = data.remoteDomain || this.remoteDomain;
+    this.remoteProtocol = data.remoteProtocol || this.remoteProtocol;
     const versions = Bitcoin.versions(this.client, this.network);
     this.version = data.version || (versions && versions[0] ? versions[0].version : '');
+    this.clientVersion = data.clientVersion || (versions && versions[0] ? versions[0].clientVersion : '');
     this.dockerImage = data.dockerImage || (versions && versions[0] ? versions[0].image : '');
     if(docker)
       this._docker = docker;
+  }
+
+  endpoint(): string {
+    if(this.remote) {
+      if(!this.remoteDomain || !this.remoteProtocol)
+        throw new Error('remoteDomain and remoteProtocol must be entered for a remote domain.');
+      if(!this.rpcPort
+        || (this.remoteProtocol === 'http' && this.rpcPort === 80)
+        || (this.remoteProtocol === 'https' && this.rpcPort === 443)
+      ) {
+        return `${this.remoteProtocol}://${this.remoteDomain}`;
+      } else {
+        return `${this.remoteProtocol}://${this.remoteDomain}:${this.rpcPort}`;
+      }
+    } else {
+      return `http://localhost:${this.rpcPort}`;
+    }
   }
 
   toObject(): CryptoNodeData {
@@ -252,12 +277,16 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
     });
   }
 
+  _runCheck(method: string): void {
+    if(!this.remote && !this._instance)
+      throw new Error(`Instance must be running before you can call ${method}()`);
+  }
+
   async rpcGetVersion(): Promise<string> {
-    if(!this._instance)
-      throw new Error('Instance must be running before you can call rpcGetVersion()');
+    this._runCheck('rpcGetVersion');
     try {
       const { body } = await request
-        .post(`http://localhost:${this.rpcPort}/`)
+        .post(this.endpoint())
         .set('Accept', 'application/json')
         .auth(this.rpcUsername, this.rpcPassword)
         .timeout(this._requestTimeout)
@@ -282,8 +311,9 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
 
   async rpcGetBlockCount(): Promise<string> {
     try {
+      this._runCheck('rpcGetBlockCount');
       const { body } = await request
-        .post(`http://localhost:${this.rpcPort}/`)
+        .post(this.endpoint())
         .set('Accept', 'application/json')
         .auth(this.rpcUsername, this.rpcPassword)
         .timeout(this._requestTimeout)
@@ -302,6 +332,7 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
 
   async getMemUsage(): Promise<[usagePercent: string, used: string, allocated: string]> {
     try {
+      this._runCheck('getMemUsage');
       const containerStats = await this._docker.containerStats(this.id);
       const percent = containerStats.MemPerc;
       const split = containerStats.MemUsage
@@ -320,6 +351,7 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
 
   async getCPUUsage(): Promise<string> {
     try {
+      this._runCheck('getCPUUsage');
       const containerStats = await this._docker.containerStats(this.id);
       return containerStats.CPUPerc;
     } catch(err) {
@@ -330,6 +362,7 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
 
   async getStartTime(): Promise<string> {
     try {
+      this._runCheck('getStartTime');
       const stats = await this._docker.containerInspect(this.id);
       return stats.State.StartedAt;
     } catch(err) {
@@ -340,8 +373,13 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
 
   async getStatus(): Promise<string> {
     try {
-      const stats = await this._docker.containerInspect(this.id);
-      return stats.State.Running ? Status.RUNNING : Status.STOPPED;
+      if(this.remote) {
+        const version = await this.rpcGetVersion();
+        return version ? Status.RUNNING : Status.STOPPED;
+      } else {
+        const stats = await this._docker.containerInspect(this.id);
+        return stats.State.Running ? Status.RUNNING : Status.STOPPED;
+      }
     } catch(err) {
       return Status.STOPPED;
     }
