@@ -19,6 +19,7 @@ export interface CryptoNodeData {
   name?: string;
   version?: string;
   clientVersion?: string;
+  archival?: boolean;
   dockerImage?: string;
   network?: string;
   peerPort?: number;

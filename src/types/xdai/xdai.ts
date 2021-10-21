@@ -114,6 +114,8 @@ export class Xdai extends Ethereum {
   ticker = 'xdai';
   name = 'xDAI';
   version: string;
+  clientVersion: string;
+  archival = false;
   dockerImage: string;
   network: string;
   peerPort: number;
@@ -151,6 +153,7 @@ export class Xdai extends Ethereum {
     const versions = Xdai.versions(this.client, this.network);
     this.version = data.version || (versions && versions[0] ? versions[0].version : '');
     this.clientVersion = data.clientVersion || (versions && versions[0] ? versions[0].clientVersion : '');
+    this.archival = data.archival || this.archival;
     this.dockerImage = data.dockerImage || (versions && versions[0] ? versions[0].image : '');
     if(docker)
       this._docker = docker;
