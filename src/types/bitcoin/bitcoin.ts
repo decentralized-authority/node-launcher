@@ -158,7 +158,7 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
     this.version = data.version || (versions && versions[0] ? versions[0].version : '');
     this.clientVersion = data.clientVersion || (versions && versions[0] ? versions[0].clientVersion : '');
     this.archival = data.archival || this.archival;
-    this.dockerImage = data.dockerImage || (versions && versions[0] ? versions[0].image : '');
+    this.dockerImage = this.remote ? '' : (data.dockerImage || (versions && versions[0] ? versions[0].image : ''));
     if(docker)
       this._docker = docker;
   }
@@ -184,20 +184,27 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
     return {
       id: this.id,
       ticker: this.ticker,
-      version: this.version,
-      dockerImage: this.dockerImage,
+      network: this.network,
       peerPort: this.peerPort,
       rpcPort: this.rpcPort,
       rpcUsername: this.rpcUsername,
       rpcPassword: this.rpcPassword,
       client: this.client,
-      network: this.network,
       dockerCPUs: this.dockerCPUs,
       dockerMem: this.dockerMem,
       dockerNetwork: this.dockerNetwork,
       dataDir: this.dataDir,
       walletDir: this.walletDir,
       configPath: this.configPath,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
+      remote: this.remote,
+      remoteDomain: this.remoteDomain,
+      remoteProtocol: this.remoteProtocol,
+      version: this.version,
+      clientVersion: this.clientVersion,
+      archival: this.archival,
+      dockerImage: this.dockerImage,
     };
   }
 
@@ -260,6 +267,8 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
   stop():Promise<void> {
     return new Promise<void>(resolve => {
       if(this._instance) {
+        const { exitCode } = this._instance;
+        if(typeof exitCode === 'number') resolve();
         this._instance.on('exit', () => {
           clearTimeout(timeout);
           resolve();
