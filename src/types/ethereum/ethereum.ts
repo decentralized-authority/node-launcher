@@ -227,7 +227,11 @@ export class Ethereum extends Bitcoin {
           params: [],
         });
       const { result = '' } = body;
-      const matches = result.match(/v(\d+\.\d+\.\d+)/);
+      // first, check for RC matches
+      let matches = result.match(/v(\d+\.\d+\.\d+-rc.+?)-/i);
+      if(!matches)
+        // check for regular matches
+        matches = result.match(/v(\d+\.\d+\.\d+)/);
       if(matches && matches.length > 1) {
         return matches[1];
       } else {

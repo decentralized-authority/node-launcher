@@ -36,8 +36,20 @@ export class Fuse extends Ethereum {
     client = client || Fuse.clients[0];
     let versions: VersionDockerImage[];
     switch(client) {
-      case NodeClient.PARITY:
+      case NodeClient.OPEN_ETHEREUM:
         versions = [
+          {
+            version: '2.0.1',
+            clientVersion: '3.2.6',
+            image: 'fusenet/node:2.0.1',
+            dataDir: '/root/data',
+            walletDir: '/root/keystore',
+            configPath: '/root/config.toml',
+            networks: [NetworkType.MAINNET],
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              return ` --config=${this.configPath}`;
+            },
+          },
           {
             version: '2.5.13',
             clientVersion: '2.5.13',
@@ -59,7 +71,7 @@ export class Fuse extends Ethereum {
   }
 
   static clients = [
-    NodeClient.PARITY,
+    NodeClient.OPEN_ETHEREUM,
   ];
 
   static nodeTypes = [
@@ -84,6 +96,11 @@ export class Fuse extends Ethereum {
 
   static generateConfig(client = Fuse.clients[0], network = NetworkType.MAINNET, peerPort = Fuse.defaultPeerPort[NetworkType.MAINNET], rpcPort = Fuse.defaultRPCPort[NetworkType.MAINNET]): string {
     switch(client) {
+      case NodeClient.OPEN_ETHEREUM:
+        return coreConfig
+          .replace('{{PEER_PORT}}', peerPort.toString(10))
+          .replace(/{{RPC_PORT}}/g, rpcPort.toString(10))
+          .trim();
       case NodeClient.PARITY:
         return coreConfig
           .replace('{{PEER_PORT}}', peerPort.toString(10))
