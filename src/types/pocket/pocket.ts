@@ -179,6 +179,19 @@ export class Pocket extends Bitcoin {
       case NodeClient.CORE:
         versions = [
           {
+            version: 'RC-0.6.4',
+            clientVersion: 'RC-0.6.4',
+            image: 'rburgett/pocketcore:RC-0.6.4',
+            dataDir: '/root/.pocket',
+            walletDir: '/root/pocket-keys',
+            configPath: '',
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              const { network = '' } = data;
+              return ` start --${network.toLowerCase()} --useCache`;
+            },
+          },
+          {
             version: 'RC-0.6.3.7',
             clientVersion: 'RC-0.6.3.7',
             image: 'rburgett/pocketcore:RC-0.6.3.7',
@@ -242,7 +255,7 @@ export class Pocket extends Bitcoin {
 
   static defaultCPUs = 4;
 
-  static defaultMem = 4096;
+  static defaultMem = 8192;
 
   static generateConfig(client = Pocket.clients[0], network = NetworkType.MAINNET, peerPort = Pocket.defaultPeerPort[NetworkType.MAINNET], rpcPort = Pocket.defaultRPCPort[NetworkType.MAINNET], domain = ''): string {
     switch(client) {
