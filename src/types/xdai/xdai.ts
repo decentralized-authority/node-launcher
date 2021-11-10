@@ -55,6 +55,18 @@ export class Xdai extends Ethereum {
       case NodeClient.OPEN_ETHEREUM:
         versions = [
           {
+            version: '3.3.0',
+            clientVersion: '3.3.0-rc.15',
+            image: 'rburgett/openethereum:v3.3.0-rc.15',
+            dataDir: '/blockchain/data',
+            walletDir: '/blockchain/keys',
+            configPath: '/blockchain/config.toml',
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              return ` --config=${this.configPath}`;
+            },
+          },
+          {
             version: '3.2.6',
             clientVersion: '3.2.6',
             image: 'rburgett/openethereum:v3.2.6',
