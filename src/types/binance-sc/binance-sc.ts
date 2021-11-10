@@ -77,6 +77,18 @@ export class BinanceSC extends Ethereum {
       case NodeClient.GETH:
         versions = [
           {
+            version: '1.1.2',
+            clientVersion: '1.1.2',
+            image: 'rburgett/bsc_geth:v1.1.2',
+            dataDir: '/blockchain/data',
+            walletDir: '/blockchain/keys',
+            configPath: '/blockchain/config.toml',
+            networks: [NetworkType.MAINNET],
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              return ` --config=${this.configPath}`;
+            },
+          },
+          {
             version: '1.1.0',
             clientVersion: '1.1.0',
             image: 'rburgett/bsc_geth:v1.1.0-beta',
