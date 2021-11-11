@@ -1,5 +1,5 @@
 import { CryptoNodeData, VersionDockerImage } from '../../interfaces/crypto-node';
-import { defaultDockerNetwork, NetworkType, NodeClient, NodeType } from '../../constants';
+import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Status } from '../../constants';
 import { Docker } from '../../util/docker';
 import { ChildProcess } from 'child_process';
 import { v4 as uuid} from 'uuid';
@@ -267,6 +267,42 @@ export class Ethereum extends Bitcoin {
       this._logError(err);
       return '0';
     }
+  }
+
+  async getStatus(): Promise<string> {
+    let status;
+    try {
+      if(this.remote) {
+        const version = await this.rpcGetVersion();
+        status = version ? Status.RUNNING : Status.STOPPED;
+      } else {
+        const stats = await this._docker.containerInspect(this.id);
+        status = stats.State.Running ? Status.RUNNING : Status.STOPPED;
+      }
+    } catch(err) {
+      status = Status.STOPPED;
+    }
+
+    if(status !== Status.STOPPED) {
+      try {
+        const res = await request
+          .post(this.endpoint())
+          .set('Accept', 'application/json')
+          .timeout(this._requestTimeout)
+          .send({
+            id: '',
+            jsonrpc: '2.0',
+            method: 'eth_syncing',
+            params: [],
+          });
+        if(res.body.result !== false)
+          status = Status.SYNCING;
+      } catch(err) {
+        // do nothing with the error
+      }
+    }
+
+    return status;
   }
 
 }
