@@ -37,6 +37,19 @@ export class Avalanche extends Bitcoin {
       case NodeClient.CORE:
         versions = [
           {
+            version: '1.6.5',
+            clientVersion: '1.6.5',
+            image: 'avaplatform/avalanchego:v1.6.5',
+            dataDir: '/root/db',
+            walletDir: '/root/keystore',
+            logDir: '/root/logs',
+            configPath: '/root/config.json',
+            networks: [NetworkType.MAINNET],
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              return ` --config-file=${this.configPath}`;
+            },
+          },
+          {
             version: '1.6.3',
             clientVersion: '1.6.3',
             image: 'avaplatform/avalanchego:v1.6.3',
@@ -300,7 +313,7 @@ export class Avalanche extends Bitcoin {
             let count = 0;
             const patt = new RegExp(`^${key}.+?(\\d+)$`);
             const countIndex = splitText.findIndex(s => patt.test(s));
-            console.log(key, countIndex);
+            // console.log(key, countIndex);
             if(countIndex > -1) {
               const matches = splitText[countIndex].match(patt);
               const countStr = matches ? matches[1] : p;
@@ -311,7 +324,7 @@ export class Avalanche extends Bitcoin {
         // console.log(pCount, cCount, xCount);
         return [countArr].map(count => String(count)).join(',');
       } else {
-        console.log(p, c, x);
+        // console.log(p, c, x);
         // const res = await request
         //   .post(`http://127.0.0.1:${this.rpcPort}/ext/info`)
         //   .set('Accept', 'application/json')
@@ -336,7 +349,7 @@ export class Avalanche extends Bitcoin {
             method: 'eth_syncing',
             params: [],
           });
-        console.log('res1', res1);
+        // console.log('res1', res1);
         if(res1.body.result === false) {
           return '0';
         } else {
@@ -346,7 +359,6 @@ export class Avalanche extends Bitcoin {
         }
       }
     } catch(err) {
-      console.error(err);
       this._logError(err);
       return '0';
     }
