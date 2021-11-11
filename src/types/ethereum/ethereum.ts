@@ -244,6 +244,7 @@ export class Ethereum extends Bitcoin {
   }
 
   async rpcGetBlockCount(): Promise<string> {
+    let blockHeight;
     try {
       this._runCheck('rpcGetBlockCount');
       const res = await request
@@ -257,16 +258,29 @@ export class Ethereum extends Bitcoin {
           params: [],
         });
       if(res.body.result === false) {
-        return '0';
+        const res = await request
+          .post(this.endpoint())
+          .set('Accept', 'application/json')
+          .timeout(this._requestTimeout)
+          .send({
+            id: '',
+            jsonrpc: '2.0',
+            method: 'eth_blockNumber',
+            params: [],
+          });
+        const currentBlock = res.body.result;
+        const blockNum = parseInt(currentBlock, 16);
+        blockHeight = blockNum > 0 ? blockNum.toString(10) : '';
       } else {
         const { currentBlock } = res.body.result;
         const blockNum = parseInt(currentBlock, 16);
-        return blockNum > 0 ? String(blockNum) : '0';
+        blockHeight = blockNum > 0 ? blockNum.toString(10) : '';
       }
     } catch(err) {
       this._logError(err);
-      return '0';
+      blockHeight = '';
     }
+    return blockHeight || '';
   }
 
   async getStatus(): Promise<string> {
