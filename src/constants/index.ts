@@ -32,4 +32,5 @@ export const NodeEvent = {
 
 export const DockerEvent = {
   ERROR: 'ERROR',
+  INFO: 'INFO',
 };

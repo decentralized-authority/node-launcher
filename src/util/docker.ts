@@ -14,6 +14,10 @@ export class Docker extends EventEmitter {
     this.emit(DockerEvent.ERROR, err);
   }
 
+  private _logInfo(str: string): void {
+    this.emit(DockerEvent.INFO, str);
+  }
+
   constructor() {
     super();
   }
@@ -73,11 +77,14 @@ export class Docker extends EventEmitter {
     if(found) return true;
     try {
       await new Promise<void>((resolve, reject) => {
-        const instance = spawn('docker', [
+        const command = 'docker';
+        const args = [
           'network',
           'create',
           networkName,
-        ]);
+        ];
+        this.emit(DockerEvent.INFO, `${command} ${args.join(' ')}`);
+        const instance = spawn(command, args);
         instance.on('error', err => {
           reject(err);
         });
@@ -140,14 +147,17 @@ export class Docker extends EventEmitter {
   }
 
   public run(image: string, args: string[], onOutput?: (output: string) => void, onErr?: (err: Error) => void, onClose?: (statusCode: number) => void): ChildProcess {
-    const instance = this._spawn('docker', [
+    const command = 'docker';
+    const spawnArgs = [
       'run',
       ...args,
       ...image
         .split(/\s/g)
         .map(s => s.trim())
         .filter(s => s),
-    ]);
+    ];
+    this.emit(DockerEvent.INFO, `${command} ${spawnArgs.join(' ')}`);
+    const instance = this._spawn(command, spawnArgs);
     instance.on('error', err => {
       this._logError(err);
       if(onErr)
@@ -169,7 +179,8 @@ export class Docker extends EventEmitter {
   }
 
   public exec(containerName: string, args: string[], command: string, onOutput: (output: string) => void, onErr: (err: Error) => void, onClose: (statusCode: number) => void): ChildProcess {
-    const instance = this._spawn('docker', [
+    const spawnCommand = 'docker';
+    const spawnArgs = [
       'exec',
       ...args,
       containerName,
@@ -177,7 +188,9 @@ export class Docker extends EventEmitter {
         .split(/\s/g)
         .map(s => s.trim())
         .filter(s => s),
-    ]);
+    ];
+    this.emit(DockerEvent.INFO, `${spawnCommand} ${spawnArgs.join(' ')}`);
+    const instance = this._spawn(spawnCommand, spawnArgs);
     instance.on('error', err => {
       this._logError(err);
       if(onErr)
@@ -200,7 +213,10 @@ export class Docker extends EventEmitter {
 
   public kill(name: string): Promise<string> {
     return new Promise(resolve => {
-      execFile('docker', ['kill', name], {}, (err, output) => {
+      const command = 'docker';
+      const args = ['kill', name];
+      this.emit(DockerEvent.INFO, `${command} ${args.join(' ')}`);
+      execFile(command, args, {}, (err, output) => {
         if(err) {
           this._logError(err);
           resolve('');
@@ -214,7 +230,10 @@ export class Docker extends EventEmitter {
 
   public stop(name: string): Promise<string> {
     return new Promise(resolve => {
-      execFile('docker', ['stop', name], {}, (err, output) => {
+      const command = 'docker';
+      const args = ['stop', name];
+      this.emit(DockerEvent.INFO, `${command} ${args.join(' ')}`);
+      execFile(command, args, {}, (err, output) => {
         if(err) {
           this._logError(err);
           resolve('');
