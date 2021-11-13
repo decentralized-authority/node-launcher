@@ -53,6 +53,7 @@ export interface CryptoNode {
   _requestTimeout: number;
   start(): Promise<ChildProcess>;
   stop(): void;
+  isRunning(): Promise<boolean>;
   toObject(): CryptoNodeData;
   generateConfig(): string;
   endpoint(): string;

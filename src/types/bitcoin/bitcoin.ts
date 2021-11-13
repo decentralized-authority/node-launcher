@@ -293,6 +293,21 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
       throw new Error(`Instance must be running before you can call ${method}()`);
   }
 
+  async isRunning(): Promise<boolean> {
+    if(this.remote) {
+      try {
+        const version = await this.rpcGetVersion();
+        return !!version;
+      } catch(err) {
+        // ignore error
+        return false;
+      }
+    } else {
+      const instance = this._instance;
+      return !(!instance || typeof instance.exitCode === 'number');
+    }
+  }
+
   async rpcGetVersion(): Promise<string> {
     this._runCheck('rpcGetVersion');
     try {

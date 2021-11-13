@@ -19,16 +19,16 @@ import { Fuse } from './fuse/fuse';
 
 const chains: [{name: string, constructor: any}] = [
   {name: 'Bitcoin', constructor: Bitcoin},
-  {name: 'BitcoinCash', constructor: BitcoinCash},
-  {name: 'Dash', constructor: Dash},
-  {name: 'LBRY', constructor: LBRY},
-  {name: 'Litecoin', constructor: Litecoin},
-  {name: 'Ethereum', constructor: Ethereum},
-  {name: 'BinanceSC', constructor: BinanceSC},
-  {name: 'Xdai', constructor: Xdai},
-  {name: 'Avalanche', constructor: Avalanche},
-  {name: 'Pocket', constructor: Pocket},
-  {name: 'Fuse', constructor: Fuse},
+  // {name: 'BitcoinCash', constructor: BitcoinCash},
+  // {name: 'Dash', constructor: Dash},
+  // {name: 'LBRY', constructor: LBRY},
+  // {name: 'Litecoin', constructor: Litecoin},
+  // {name: 'Ethereum', constructor: Ethereum},
+  // {name: 'BinanceSC', constructor: BinanceSC},
+  // {name: 'Xdai', constructor: Xdai},
+  // {name: 'Avalanche', constructor: Avalanche},
+  // {name: 'Pocket', constructor: Pocket},
+  // {name: 'Fuse', constructor: Fuse},
 ];
 
 chains.forEach(({ name, constructor: NodeConstructor }) => {
@@ -299,6 +299,22 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
               const currentStatus = await remoteNode.getStatus();
               currentStatus.should.be.a.String();
               currentStatus.should.equal(Status.STOPPED);
+            });
+          });
+          describe(`${name}.isRunning()`, function() {
+            it('should resolve with a boolean indicating if the node is running', async function() {
+              await node.start();
+              await remoteNode.start();
+              await timeout(2000);
+              const localRunningRes = await node.isRunning();
+              localRunningRes.should.be.True();
+              const remoteRunningRes = await remoteNode.isRunning();
+              remoteRunningRes.should.be.True();
+              await node.stop();
+              const localStoppedRes = await node.isRunning();
+              localStoppedRes.should.be.False();
+              const remoteStoppedRes = await remoteNode.isRunning();
+              remoteStoppedRes.should.be.False();
             });
           });
         });
