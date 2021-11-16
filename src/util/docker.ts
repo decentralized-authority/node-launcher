@@ -10,6 +10,8 @@ export class Docker extends EventEmitter {
 
   _objectPatt = /({.+})/;
 
+  _logDriver = '';
+
   private _logError(err: Error): void {
     this.emit(DockerEvent.ERROR, err);
   }
@@ -18,8 +20,9 @@ export class Docker extends EventEmitter {
     this.emit(DockerEvent.INFO, str);
   }
 
-  constructor() {
+  constructor(dockerParams = {logDriver: ''}) {
     super();
+    this._logDriver = dockerParams.logDriver;
   }
 
   public async listNetworks():Promise<{Name: string}[]> {
@@ -148,6 +151,13 @@ export class Docker extends EventEmitter {
 
   public run(image: string, args: string[], onOutput?: (output: string) => void, onErr?: (err: Error) => void, onClose?: (statusCode: number) => void): ChildProcess {
     const command = 'docker';
+    if(this._logDriver) {
+      args = [
+        '--log-driver',
+        'none',
+        ...args,
+      ];
+    }
     const spawnArgs = [
       'run',
       ...args,

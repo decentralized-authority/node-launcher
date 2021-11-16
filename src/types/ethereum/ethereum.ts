@@ -128,6 +128,9 @@ export class Ethereum extends Bitcoin {
   dataDir = '';
   walletDir = '';
   configPath = '';
+  remote = false;
+  remoteDomain = '';
+  remoteProtocol = '';
 
   constructor(data: CryptoNodeData, docker?: Docker) {
     super(data, docker);

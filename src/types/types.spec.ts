@@ -37,7 +37,9 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
 
     this.timeout(30000);
 
-    const docker = new Docker();
+    const docker = new Docker({
+      logDriver: 'none',
+    });
     // docker.on(DockerEvent.INFO, console.log);
 
     let node;
