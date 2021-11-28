@@ -8,6 +8,7 @@ import os from 'os';
 import path from 'path';
 import fs from 'fs-extra';
 import { filterVersionsByNetworkType } from '../../util';
+import * as genesis from './genesis';
 
 const coreConfig = `
 [Eth]
@@ -144,10 +145,10 @@ export class BinanceSC extends Ethereum {
     }
   }
 
-  static async getGenesis(network: string): Promise<string> {
+  static getGenesis(network: string): string {
     switch(network) {
       case NetworkType.MAINNET: {
-        return await fs.readFile(path.resolve(__dirname, '../../../static/bsc-mainnet-genesis.json'), 'utf8');
+        return genesis.mainnet;
       } default:
         return '';
     }
@@ -240,7 +241,7 @@ export class BinanceSC extends Ethereum {
     const genesisExists = await fs.pathExists(genesisPath);
 
     if(!genesisExists) {
-      const genesis = await BinanceSC.getGenesis(this.network);
+      const genesis = BinanceSC.getGenesis(this.network);
       await fs.writeFile(genesisPath, genesis, 'utf8');
       await new Promise<void>((resolve, reject) => {
         this._docker.run(
