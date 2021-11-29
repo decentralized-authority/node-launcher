@@ -4,6 +4,7 @@
   "description": "Full crypto node runner used in Node Pilot.",
   "main": "./lib/index.js",
   "scripts": {
+    "postinstall": "npm run build",
     "build": "tsc",
     "watch": "tsc -w",
     "test": "ts-mocha -p ./tsconfig.json src/**/*.spec.ts",
