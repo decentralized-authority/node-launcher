@@ -41,6 +41,7 @@ export class LBRY extends Bitcoin {
             walletDir: '/lbry/keys',
             configPath: '/lbry/lbrycrd.conf',
             networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               return ` -conf=${this.configPath}` + (data.network === NetworkType.TESTNET ? ' -testnet' : '');
             },
@@ -152,7 +153,8 @@ export class LBRY extends Bitcoin {
   }
 
   async start(): Promise<ChildProcess> {
-    const versionData = LBRY.versions(this.client, this.network).find(({ version }) => version === this.version);
+    const versions = LBRY.versions(this.client, this.network);
+    const versionData = versions.find(({ version }) => version === this.version) || versions[0];
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
     const {

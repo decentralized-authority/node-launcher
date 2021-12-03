@@ -46,6 +46,7 @@ export class Fuse extends Ethereum {
             walletDir: '/root/keystore',
             configPath: '/root/config.toml',
             networks: [NetworkType.MAINNET],
+            breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               return ` --config=${this.configPath}`;
             },
@@ -58,6 +59,7 @@ export class Fuse extends Ethereum {
             walletDir: '/root/keystore',
             configPath: '/root/config.toml',
             networks: [NetworkType.MAINNET],
+            breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               return ` --config=${this.configPath}`;
             },
@@ -161,7 +163,8 @@ export class Fuse extends Ethereum {
   }
 
   async start(): Promise<ChildProcess> {
-    const versionData = Fuse.versions(this.client, this.network).find(({ version }) => version === this.version);
+    const versions = Fuse.versions(this.client, this.network);
+    const versionData = versions.find(({ version }) => version === this.version) || versions[0];
     if(!versionData)
       throw new Error(`Unknown ${this.ticker} version ${this.version}`);
     const {

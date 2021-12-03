@@ -16,6 +16,7 @@ import { BinanceSC } from './binance-sc/binance-sc';
 import { Avalanche } from './avalanche/avalanche';
 import { Pocket } from './pocket/pocket';
 import { Fuse } from './fuse/fuse';
+import { isNull } from 'lodash';
 
 const chains: [{name: string, constructor: any}] = [
   {name: 'Bitcoin', constructor: Bitcoin},
@@ -135,6 +136,124 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
         config.length.should.be.greaterThan(0);
       });
     });
+    describe(`static ${name}.getAvailableUpgrade()`, function() {
+      it('should return new version data if available', function() {
+        const versions1 = [
+          {version: '2345'},
+          {version: '1234'},
+        ];
+        const res1 = NodeConstructor.getAvailableUpgrade({version: versions1[0].version}, versions1);
+        isNull(res1).should.be.true();
+        const versions2 = [
+          {version: '2345', breaking: true},
+          {version: '1234'},
+        ];
+        const res2 = NodeConstructor.getAvailableUpgrade({version: versions2[0].version}, versions2);
+        isNull(res2).should.be.true();
+        const versions3 = [
+          {version: '4123'},
+          {version: '3412'},
+          {version: '2341'},
+          {version: '1234'},
+        ];
+        const res3 = NodeConstructor.getAvailableUpgrade({version: versions3[versions3.length - 1].version}, versions3);
+        res3.version.should.equal(versions3[0].version);
+
+        const versions4 = [
+          {version: '34512'},
+          {version: '23451', breaking: true},
+          {version: '12345', breaking: true},
+          {version: '4123'},
+          {version: '3412', breaking: true},
+          {version: '2341'},
+          {version: '1234'},
+        ];
+        NodeConstructor.getAvailableUpgrade(
+          {version: '1234'},
+          versions4
+        ).version.should.equal('3412');
+        NodeConstructor.getAvailableUpgrade(
+          {version: '1234'},
+          versions4
+        ).version.should.equal('3412');
+        NodeConstructor.getAvailableUpgrade(
+          {version: '1234'},
+          versions4,
+          true,
+        ).version.should.equal('2341');
+        isNull(NodeConstructor.getAvailableUpgrade(
+          {version: '12345'},
+          versions4,
+          true,
+        )).should.be.true();
+      });
+    });
+
+    describe(`static ${name}.upgradeNode()`, function() {
+      it('should upgrade a node to a newer version', async function() {
+        const versionData = {
+          version: '2345',
+          clientVersion: '3456',
+          image: 'some-image',
+        };
+        {
+          node = new NodeConstructor(initialNodeData);
+          const res = await NodeConstructor.upgradeNode(node, versionData);
+          res.should.be.true();
+          node.version.should.equal(versionData.version);
+          node.clientVersion.should.equal(versionData.clientVersion);
+          node.dockerImage.should.equal(versionData.image);
+        }
+        { // test a successful upgrade
+          node = new NodeConstructor(initialNodeData);
+          let upgradeCalled = false;
+          versionData.upgrade = async function() {
+            upgradeCalled = true;
+            return true;
+          };
+          const res = await NodeConstructor.upgradeNode(node, versionData);
+          res.should.be.true();
+          upgradeCalled.should.be.true();
+          node.version.should.equal(versionData.version);
+          node.clientVersion.should.equal(versionData.clientVersion);
+          node.dockerImage.should.equal(versionData.image);
+        }
+        { // test an unsuccessful upgrade
+          node = new NodeConstructor(initialNodeData);
+          const origVersion = node.version;
+          const origClientVersion = node.clientVersion;
+          const origDockerImage = node.dockerImage;
+          let upgradeCalled = false;
+          versionData.upgrade = async function() {
+            upgradeCalled = true;
+            return false;
+          };
+          const res = await NodeConstructor.upgradeNode(node, versionData);
+          res.should.be.false();
+          upgradeCalled.should.be.true();
+          node.version.should.equal(origVersion);
+          node.clientVersion.should.equal(origClientVersion);
+          node.dockerImage.should.equal(origDockerImage);
+        }
+        { // test an unsuccessful upgrade that throws an error
+          node = new NodeConstructor(initialNodeData);
+          const origVersion = node.version;
+          const origClientVersion = node.clientVersion;
+          const origDockerImage = node.dockerImage;
+          let upgradeCalled = false;
+          versionData.upgrade = async function() {
+            upgradeCalled = true;
+            throw new Error('something');
+          };
+          await NodeConstructor.upgradeNode(node, versionData).should.be.rejected();
+          upgradeCalled.should.be.true();
+          node.version.should.equal(origVersion);
+          node.clientVersion.should.equal(origClientVersion);
+          node.dockerImage.should.equal(origDockerImage);
+        }
+      });
+    });
+
     describe(`${name}.toObject()`, function() {
       it('should return a node data object', async function() {
         node = new NodeConstructor(initialNodeData);
@@ -166,6 +285,9 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
               network,
               client,
             }, docker);
+            // node.on(NodeEvent.OUTPUT, console.log);
+            // node.on(NodeEvent.ERROR, console.error);
+            // node.on(NodeEvent.CLOSE, console.log);
             node.start().should.be.a.Promise();
             await new Promise(resolve => setTimeout(resolve, 2000));
             await docker.kill(id);
@@ -175,6 +297,9 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
               network,
               client,
             }, docker);
+            // node.on(NodeEvent.OUTPUT, console.log);
+            // node.on(NodeEvent.ERROR, console.error);
+            // node.on(NodeEvent.CLOSE, console.log);
             const instance = await node.start();
             instance.should.be.an.instanceOf(ChildProcess);
             await new Promise(resolve => setTimeout(resolve, 2000));

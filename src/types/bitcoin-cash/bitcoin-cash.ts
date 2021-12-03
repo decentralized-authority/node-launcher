@@ -40,6 +40,7 @@ export class BitcoinCash extends Bitcoin {
             walletDir: '/opt/blockchain-wallets',
             configPath: '/opt/bitcoincash.conf',
             networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               return ` -conf=${this.configPath}` + (data.network === NetworkType.TESTNET ? ' -testnet' : '');
             },
@@ -144,7 +145,8 @@ export class BitcoinCash extends Bitcoin {
   }
 
   async start(): Promise<ChildProcess> {
-    const versionData = BitcoinCash.versions(this.client, this.network).find(({ version }) => version === this.version);
+    const versions = BitcoinCash.versions(this.client, this.network);
+    const versionData = versions.find(({ version }) => version === this.version) || versions[0];
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
     const {

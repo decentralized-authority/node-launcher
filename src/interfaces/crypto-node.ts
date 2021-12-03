@@ -10,9 +10,10 @@ export interface VersionDockerImage {
   logDir?: string;
   configPath: string;
   networks: string[],
+  breaking: boolean,
   generateRuntimeArgs(data: CryptoNodeData): string;
+  upgrade?(data: CryptoNodeData): Promise<boolean>;
 }
-
 export interface CryptoNodeData {
   id?: string;
   ticker?: string;

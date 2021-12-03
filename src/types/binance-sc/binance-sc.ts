@@ -85,6 +85,7 @@ export class BinanceSC extends Ethereum {
             walletDir: '/blockchain/keys',
             configPath: '/blockchain/config.toml',
             networks: [NetworkType.MAINNET],
+            breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               return ` --config=${this.configPath}`;
             },
@@ -97,6 +98,7 @@ export class BinanceSC extends Ethereum {
             walletDir: '/blockchain/keys',
             configPath: '/blockchain/config.toml',
             networks: [NetworkType.MAINNET],
+            breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               return ` --config=${this.configPath}`;
             },
@@ -204,7 +206,8 @@ export class BinanceSC extends Ethereum {
   }
 
   async start(): Promise<ChildProcess> {
-    const versionData = BinanceSC.versions(this.client, this.network).find(({ version }) => version === this.version);
+    const versions = BinanceSC.versions(this.client, this.network);
+    const versionData = versions.find(({ version }) => version === this.version) || versions[0];
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
     const {

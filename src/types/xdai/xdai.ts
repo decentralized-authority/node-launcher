@@ -62,6 +62,7 @@ export class Xdai extends Ethereum {
             walletDir: '/blockchain/keys',
             configPath: '/blockchain/config.toml',
             networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               return ` --config=${this.configPath}`;
             },
@@ -74,6 +75,7 @@ export class Xdai extends Ethereum {
             walletDir: '/blockchain/keys',
             configPath: '/blockchain/config.toml',
             networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               return ` --config=${this.configPath}`;
             },
@@ -172,7 +174,8 @@ export class Xdai extends Ethereum {
   }
 
   async start(): Promise<ChildProcess> {
-    const versionData = Xdai.versions(this.client, this.network).find(({ version }) => version === this.version);
+    const versions = Xdai.versions(this.client, this.network);
+    const versionData = versions.find(({ version }) => version === this.version) || versions[0];
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
     const {

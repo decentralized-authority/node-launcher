@@ -45,6 +45,7 @@ export class Avalanche extends Bitcoin {
             logDir: '/root/logs',
             configPath: '/root/config.json',
             networks: [NetworkType.MAINNET],
+            breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               return ` --config-file=${this.configPath}`;
             },
@@ -58,6 +59,7 @@ export class Avalanche extends Bitcoin {
             logDir: '/root/logs',
             configPath: '/root/config.json',
             networks: [NetworkType.MAINNET],
+            breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               return ` --config-file=${this.configPath}`;
             },
@@ -71,6 +73,7 @@ export class Avalanche extends Bitcoin {
             logDir: '/root/logs',
             configPath: '/root/config.json',
             networks: [NetworkType.MAINNET],
+            breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               return ` --config-file=${this.configPath}`;
             },
@@ -84,6 +87,7 @@ export class Avalanche extends Bitcoin {
             logDir: '/root/logs',
             configPath: '/root/config.json',
             networks: [NetworkType.MAINNET],
+            breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               return ` --config-file=${this.configPath}`;
             },
@@ -97,6 +101,7 @@ export class Avalanche extends Bitcoin {
             logDir: '/root/logs',
             configPath: '/root/config.json',
             networks: [NetworkType.MAINNET],
+            breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               return ` --config-file=${this.configPath}`;
             },
@@ -192,7 +197,8 @@ export class Avalanche extends Bitcoin {
   }
 
   async start(): Promise<ChildProcess> {
-    const versionData = Avalanche.versions(this.client, this.network).find(({ version }) => version === this.version);
+    const versions = Avalanche.versions(this.client, this.network);
+    const versionData = versions.find(({ version }) => version === this.version) || versions[0];
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
     const {

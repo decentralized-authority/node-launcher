@@ -186,6 +186,7 @@ export class Pocket extends Bitcoin {
             walletDir: '/root/pocket-keys',
             configPath: '',
             networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               const { network = '' } = data;
               return ` start --${network.toLowerCase()} --useCache`;
@@ -199,6 +200,7 @@ export class Pocket extends Bitcoin {
             walletDir: '/root/pocket-keys',
             configPath: '',
             networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               const { network = '' } = data;
               return ` start --${network.toLowerCase()} --useCache`;
@@ -212,6 +214,7 @@ export class Pocket extends Bitcoin {
             walletDir: '/root/pocket-keys',
             configPath: '',
             networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               const { network = '' } = data;
               return ` start --${network.toLowerCase()}`;
@@ -225,6 +228,7 @@ export class Pocket extends Bitcoin {
             walletDir: '/root/pocket-keys',
             configPath: '',
             networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               const { network = '' } = data;
               return ` start --${network.toLowerCase()}`;
@@ -346,7 +350,8 @@ export class Pocket extends Bitcoin {
   }
 
   async start(): Promise<ChildProcess> {
-    const versionData = Pocket.versions(this.client, this.network).find(({ version }) => version === this.version);
+    const versions = Pocket.versions(this.client, this.network);
+    const versionData = versions.find(({ version }) => version === this.version) || versions[0];
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
     const {
