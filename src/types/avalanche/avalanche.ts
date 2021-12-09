@@ -203,9 +203,10 @@ export class Avalanche extends Bitcoin {
     this.remoteProtocol = data.remoteProtocol || this.remoteProtocol;
     const versions = Avalanche.versions(this.client, this.network);
     this.version = data.version || (versions && versions[0] ? versions[0].version : '');
-    this.clientVersion = data.clientVersion || (versions && versions[0] ? versions[0].clientVersion : '');
+    const versionObj = versions.find(v => v.version === this.version) || versions[0] || {};
+    this.clientVersion = data.clientVersion || versionObj.clientVersion || '';
+    this.dockerImage = this.remote ? '' : data.dockerImage ? data.dockerImage : (versionObj.image || '');
     this.archival = data.archival || this.archival;
-    this.dockerImage = data.dockerImage || (versions && versions[0] ? versions[0].image : '');
     if(docker)
       this._docker = docker;
   }
