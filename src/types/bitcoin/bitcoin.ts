@@ -327,12 +327,18 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
         if(typeof exitCode === 'number') resolve();
         this._instance.on('exit', () => {
           clearTimeout(timeout);
-          resolve();
+          setTimeout(() => {
+            resolve();
+          }, 1000);
         });
         this._instance.kill();
         const timeout = setTimeout(() => {
           this._docker.stop(this.id)
-            .then(() => resolve())
+            .then(() => {
+              setTimeout(() => {
+                resolve();
+              }, 1000);
+            })
             .catch(err => {
               this._logError(err);
               resolve();

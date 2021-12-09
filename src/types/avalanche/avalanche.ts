@@ -295,7 +295,6 @@ export class Avalanche extends Bitcoin {
         return '';
       }
     } catch(err) {
-      console.log(err.message + '\n' + err.stack);
       this._logError(err);
       return '';
     }
@@ -341,7 +340,6 @@ export class Avalanche extends Bitcoin {
       return Number(height) > 0 ? height : '';
     } catch(err) {
       this._logError(err);
-      console.error(err);
       return '';
     }
   }
@@ -367,7 +365,6 @@ export class Avalanche extends Bitcoin {
       return blockNum > 0 ? blockNum.toString(10) : '';
     } catch(err) {
       this._logError(err);
-      console.log(err);
       return '';
     }
   }
@@ -394,7 +391,6 @@ export class Avalanche extends Bitcoin {
             let count = 0;
             const patt = new RegExp(`^${key}.+?(\\d+)$`);
             const countIndex = splitText.findIndex(s => patt.test(s));
-            // console.log(key, countIndex);
             if(countIndex > -1) {
               const matches = splitText[countIndex].match(patt);
               const countStr = matches ? matches[1] : p;
