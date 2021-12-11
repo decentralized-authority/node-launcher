@@ -100,7 +100,7 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
     const { version } = node;
     const idx = versions.findIndex(v => v.version === version);
     // Already the latest version
-    if(idx === 0)
+    if(idx < 1)
       return null;
     let updateIdx = 0;
     for(let i = idx - 1; i >= 0; i--) {
