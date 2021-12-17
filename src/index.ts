@@ -9,6 +9,7 @@ import { BinanceSC as BSC } from './types/binance-sc/binance-sc';
 import { Avalanche as AVAX } from './types/avalanche/avalanche';
 import { Pocket as POKT } from './types/pocket/pocket';
 import { Fuse as FUSE } from './types/fuse/fuse';
+import { Harmony as ONE } from './types/harmony/harmony';
 import * as constants from './constants';
 import { Docker } from './util/docker';
 
@@ -26,4 +27,5 @@ export {
   LTC,
   POKT,
   XDAI,
+  ONE,
 };
