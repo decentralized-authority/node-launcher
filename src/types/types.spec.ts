@@ -17,6 +17,7 @@ import { Avalanche } from './avalanche/avalanche';
 import { Pocket } from './pocket/pocket';
 import { Fuse } from './fuse/fuse';
 import { isNull } from 'lodash';
+import { Harmony } from './harmony/harmony';
 
 const chains: [{name: string, constructor: any}] = [
   {name: 'Bitcoin', constructor: Bitcoin},
@@ -30,6 +31,7 @@ const chains: [{name: string, constructor: any}] = [
   {name: 'Avalanche', constructor: Avalanche},
   {name: 'Pocket', constructor: Pocket},
   {name: 'Fuse', constructor: Fuse},
+  {name: 'Harmony', constructor: Harmony},
 ];
 
 chains.forEach(({ name, constructor: NodeConstructor }) => {

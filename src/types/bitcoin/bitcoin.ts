@@ -236,7 +236,7 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
     }
   }
 
-  toObject(): CryptoNodeData {
+  _toObject(): CryptoNodeData {
     return {
       id: this.id,
       ticker: this.ticker,
@@ -262,6 +262,10 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
       archival: this.archival,
       dockerImage: this.dockerImage,
     };
+  }
+
+  toObject(): CryptoNodeData {
+    return this._toObject();
   }
 
   generateConfig(): string {

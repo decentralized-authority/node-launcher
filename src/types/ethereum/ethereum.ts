@@ -189,7 +189,7 @@ export class Ethereum extends Bitcoin {
     this.dockerMem = data.dockerMem || this.dockerMem;
     this.dockerNetwork = data.dockerNetwork || this.dockerNetwork;
     this.dataDir = data.dataDir || this.dataDir;
-    this.walletDir = data.walletDir || this.dataDir;
+    this.walletDir = data.walletDir || this.walletDir;
     this.configPath = data.configPath || this.configPath;
     this.createdAt = data.createdAt || this.createdAt;
     this.updatedAt = data.updatedAt || this.updatedAt;
