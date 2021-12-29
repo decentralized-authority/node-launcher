@@ -13,7 +13,6 @@ import { filterVersionsByNetworkType } from '../../util';
 const coreConfig = `
 [Eth]
 NetworkId = 1
-SyncMode = "fast"
 
 [Node]
 DataDir = "/root/.ethereum"
@@ -35,6 +34,33 @@ export class Ethereum extends Bitcoin {
     switch(client) {
       case NodeClient.GETH:
         versions = [
+          {
+            version: '1.10.14',
+            clientVersion: '1.10.14',
+            image: 'ethereum/client-go:v1.10.14',
+            dataDir: '/root/.ethereum',
+            walletDir: '/root/keystore',
+            configPath: '/root/config.toml',
+            networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
+            breaking: true,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              const { network = '' } = data;
+              return ` --config=${this.configPath} --syncmode snap` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
+            },
+            async upgrade(data: CryptoNodeData): Promise<boolean> {
+              const { configPath } = data;
+              if(configPath && (await fs.pathExists(configPath))) {
+                const conf = await fs.readFile(configPath, 'utf8');
+                const newConf = conf
+                  .split('\n')
+                  .map(str => str.trim())
+                  .filter(str => !/^SyncMode\s*=/.test(str))
+                  .join('\n');
+                await fs.writeFile(configPath, newConf, 'utf8');
+              }
+              return true;
+            },
+          },
           {
             version: '1.10.13',
             clientVersion: '1.10.13',
@@ -240,6 +266,8 @@ export class Ethereum extends Bitcoin {
     if(!configExists)
       await fs.writeFile(configPath, this.generateConfig(), 'utf8');
     args = [...args, '-v', `${configPath}:${containerConfigPath}`];
+
+    await this._docker.pull(this.dockerImage, str => this._logOutput(str));
 
     await this._docker.createNetwork(this.dockerNetwork);
     const instance = this._docker.run(

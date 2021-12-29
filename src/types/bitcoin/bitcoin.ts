@@ -313,6 +313,8 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
       await fs.writeFile(configPath, this.generateConfig(), 'utf8');
     args = [...args, '-v', `${configPath}:${containerConfigPath}`];
 
+    await this._docker.pull(this.dockerImage, str => this._logOutput(str));
+
     await this._docker.createNetwork(this.dockerNetwork);
     const instance = this._docker.run(
       this.dockerImage + versionData.generateRuntimeArgs(this),

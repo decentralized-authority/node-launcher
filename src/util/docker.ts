@@ -255,4 +255,26 @@ export class Docker extends EventEmitter {
     });
   }
 
+  pull(image: string, onOutput?: (output: string)=>void): Promise<number> {
+    return new Promise((resolve, reject) => {
+      const instance = spawn('docker', ['pull', image]);
+      instance.stdout.on('data', data => {
+        const str = data.toString();
+        if(onOutput)
+          onOutput(str);
+      });
+      instance.stderr.on('data', data => {
+        const str = data.toString();
+        if(onOutput)
+          onOutput(str);
+      });
+      instance.on('error', err => {
+        reject(err);
+      });
+      instance.on('close', code => {
+        resolve(code || 0);
+      });
+    });
+  }
+
 }

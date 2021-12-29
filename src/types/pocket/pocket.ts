@@ -388,6 +388,8 @@ export class Pocket extends Bitcoin {
       walletDir: containerWalletDir,
     } = versionData;
 
+    await this._docker.pull(this.dockerImage, str => this._logOutput(str));
+
     const tmpdir = os.tmpdir();
     const dataDir = this.dataDir || path.join(tmpdir, uuid());
     await fs.ensureDir(dataDir);
