@@ -54,7 +54,7 @@ export class Ethereum extends Bitcoin {
                 const newConf = conf
                   .split('\n')
                   .map(str => str.trim())
-                  .filter(str => !/SyncMode\s*=/.test(str))
+                  .filter(str => !/^SyncMode\s*=/.test(str))
                   .join('\n');
                 await fs.writeFile(configPath, newConf, 'utf8');
               }
