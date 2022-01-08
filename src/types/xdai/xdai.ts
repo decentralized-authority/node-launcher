@@ -8,9 +8,8 @@ import os from 'os';
 import path from 'path';
 import fs from 'fs-extra';
 import { filterVersionsByNetworkType } from '../../util';
-import { openEthereumConfig } from './openethereum/config';
-import { nethermindConfig } from './nethermind/config';
-
+import { openEthereumConfig } from './config/openethereum';
+import { nethermindConfig } from './config/nethermind';
 
 
 export class Xdai extends Ethereum {
