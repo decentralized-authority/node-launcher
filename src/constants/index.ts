@@ -14,6 +14,7 @@ export const NodeClient = {
   GETH: 'GETH',
   OPEN_ETHEREUM: 'OPEN_ETHEREUM',
   PARITY: 'PARITY',
+  NETHERMIND: 'NETHERMIND',
 };
 
 export const Status = {
