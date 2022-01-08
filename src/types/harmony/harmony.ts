@@ -174,7 +174,7 @@ export class Harmony extends Ethereum {
 
   static defaultCPUs = 8;
 
-  static defaultMem = 16384;
+  static defaultMem = 32768;
 
   static generateConfig(client = Harmony.clients[0], network = NetworkType.MAINNET, peerPort = Harmony.defaultPeerPort[NetworkType.MAINNET], rpcPort = Harmony.defaultRPCPort[NetworkType.MAINNET], shard = 0): string {
     switch(client) {
