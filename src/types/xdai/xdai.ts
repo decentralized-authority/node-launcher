@@ -8,8 +8,8 @@ import os from 'os';
 import path from 'path';
 import fs from 'fs-extra';
 import { filterVersionsByNetworkType } from '../../util';
-import {openEthereumConfig} from './openethereum/config';
-import {nethermindConfig} from './nethermind/config';
+import { openEthereumConfig } from './openethereum/config';
+import { nethermindConfig } from './nethermind/config';
 
 
 
@@ -61,13 +61,7 @@ export class Xdai extends Ethereum {
             networks: [NetworkType.MAINNET],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
-              return ` --config xdai \
-                       --datadir ${this.dataDir} \
-                       --HealthChecks.Enabled true \
-                       --JsonRpc.Enabled true \
-                       --JsonRpc.Host 0.0.0.0 \
-                       --Network.ActivePeersMaxCount 32
-              `;
+              return ` --config xdai`;
             },
           },
         ];
@@ -104,6 +98,7 @@ export class Xdai extends Ethereum {
   static defaultMem = 8192;
 
   static generateConfig(client = Xdai.clients[0], network = NetworkType.MAINNET, peerPort = Xdai.defaultPeerPort[NetworkType.MAINNET], rpcPort = Xdai.defaultRPCPort[NetworkType.MAINNET]): string {
+    let cfg;
     switch(client) {
       case NodeClient.OPEN_ETHEREUM:
         return openEthereumConfig
@@ -111,7 +106,7 @@ export class Xdai extends Ethereum {
           .replace('{{RPC_PORT}}', rpcPort.toString(10))
           .trim();
       case NodeClient.NETHERMIND:
-        let cfg = nethermindConfig;
+        cfg = nethermindConfig;
         cfg.JsonRpc.Port = rpcPort;
         cfg.Network.DiscoveryPort = peerPort;
         cfg.Network.P2PPort = peerPort;

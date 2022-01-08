@@ -12,12 +12,13 @@ export const nethermindConfig = {
   'Network': {
     'DiscoveryPort': 30303,
     'P2PPort': 30303,
+    'ActivePeersMaxCount': 32
   },
   'TxPool': {
     'Size': 2048,
   },
   'JsonRpc': {
-    'Enabled': false,
+    'Enabled': true,
     'Timeout': 20000,
     'Host': '0.0.0.0',
     'Port': 8545,
@@ -47,6 +48,9 @@ export const nethermindConfig = {
     'Enabled': false,
     'PushGatewayUrl': 'http://localhost:9091/metrics',
     'IntervalSeconds': 5,
+  },
+  'HealthChecks': {
+    'Enabled': true
   },
   'Aura': {
     'ForceSealing': true,
