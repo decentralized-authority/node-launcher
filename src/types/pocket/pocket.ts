@@ -157,7 +157,7 @@ const coreConfig = `
         "user_agent": "",
         "validator_cache_size": 100,
         "application_cache_size": 100,
-        "rpc_timeout": 3000,
+        "rpc_timeout": 15000,
         "pocket_prometheus_port": "8083",
         "prometheus_max_open_files": 3,
         "max_claim_age_for_proof_retry": 32,
