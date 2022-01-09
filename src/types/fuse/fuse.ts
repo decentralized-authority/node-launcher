@@ -1,5 +1,5 @@
 import { Ethereum } from '../ethereum/ethereum';
-import { defaultDockerNetwork, NetworkType, NodeClient, NodeType } from '../../constants';
+import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role } from '../../constants';
 import { v4 as uuid } from 'uuid';
 import { CryptoNodeData, VersionDockerImage } from '../../interfaces/crypto-node';
 import { Docker } from '../../util/docker';
@@ -8,6 +8,10 @@ import os from 'os';
 import path from 'path';
 import fs from 'fs-extra';
 import { filterVersionsByNetworkType } from '../../util';
+import Web3 from 'web3';
+import request from 'superagent';
+
+const testnetBootnodes = 'enode://aaa92938fb3b4b073ea811894376d597a3feef30ce999a8bee617c24b7acd4021f16f94856e5c48f25b4fde999fc5df27de73d2c394e6c46cc5d44e012dd9e35@3.123.228.59:30303,enode://e44c9e9f12b5a1e1e44b3fa4fb77b7aae2e8484cd13ad742d7f67fda9a4fa627bac5e418580fcaf98c267b747a3b9d5f19fdeb13804ac08b267aeb77489b3c5d@18.192.23.151:30303,enode://ad46ec3c252bc76fb150865382b2dfbfa98ae9156a4b4659fca43b08799b8ec97d1b0a9d70aeccb26e5045853a63807cfc96e68b57cdbe1242aa12c66914f1d4@3.125.120.73:30303,enode://5ff7f084a3f5e091d1264639d74e5d8e65204fcdf4d727a37d140758709da744ab44d348a8b23010946a378a7d76f46b922b9a727027a154b71a2cc596adf5f8@170.75.251.230:30303';
 
 const coreConfig = `
 [parity]
@@ -29,15 +33,63 @@ disable = true
 port = {{PEER_PORT}}
 reserved_peers="/home/parity/.local/share/io.parity.ethereum/bootnodes.txt"
 `;
+const coreValidatorConfig = `
+[parity]
+chain = "/home/parity/.local/share/io.parity.ethereum/spec.json"
+db_path = "/root/data"
+keys_path = "/root/keystore"
+
+[rpc]
+cors = ["all"]
+port = {{RPC_PORT}}
+interface = "all"
+hosts = ["all"]
+apis = ["web3", "eth", "net", "parity", "traces", "rpc", "secretstore"]
+
+[websockets]
+disable = true
+
+[network]
+port = {{PEER_PORT}}
+reserved_peers="/home/parity/.local/share/io.parity.ethereum/bootnodes.txt"
+
+[account]
+password = ["/root/pass.pwd"]
+
+[mining]
+reseal_on_txs = "none"
+force_sealing = true
+engine_signer = "{{address}}"
+min_gas_price = 1000000000
+gas_floor_target = "10000000"
+`;
+
+interface FuseVersionDockerImage extends VersionDockerImage {
+  passwordPath: string
+}
 
 export class Fuse extends Ethereum {
 
-  static versions(client: string, networkType: string): VersionDockerImage[] {
+  static versions(client: string, networkType: string): FuseVersionDockerImage[] {
     client = client || Fuse.clients[0];
-    let versions: VersionDockerImage[];
+    let versions: FuseVersionDockerImage[];
     switch(client) {
       case NodeClient.OPEN_ETHEREUM:
         versions = [
+          {
+            version: '2.0.1',
+            clientVersion: '3.2.6',
+            image: 'fusenet/spark-node:2.0.1_OE',
+            dataDir: '/root/data',
+            walletDir: '/root/keystore',
+            configPath: '/root/config.toml',
+            passwordPath: '/root/pass.pwd',
+            networks: [NetworkType.TESTNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              return ` --no-warp --config=${this.configPath} --bootnodes ${testnetBootnodes}`;
+            },
+          },
           {
             version: '2.0.1',
             clientVersion: '3.2.6',
@@ -45,10 +97,11 @@ export class Fuse extends Ethereum {
             dataDir: '/root/data',
             walletDir: '/root/keystore',
             configPath: '/root/config.toml',
+            passwordPath: '/root/pass.pwd',
             networks: [NetworkType.MAINNET],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
-              return ` --config=${this.configPath}`;
+              return ` --no-warp --config=${this.configPath}`;
             },
           },
           {
@@ -58,6 +111,7 @@ export class Fuse extends Ethereum {
             dataDir: '/root/data',
             walletDir: '/root/keystore',
             configPath: '/root/config.toml',
+            passwordPath: '/root/pass.pwd',
             networks: [NetworkType.MAINNET],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
@@ -69,7 +123,7 @@ export class Fuse extends Ethereum {
       default:
         versions = [];
     }
-    return filterVersionsByNetworkType(networkType, versions);
+    return filterVersionsByNetworkType(networkType, versions) as FuseVersionDockerImage[];
   }
 
   static clients = [
@@ -82,29 +136,50 @@ export class Fuse extends Ethereum {
 
   static networkTypes = [
     NetworkType.MAINNET,
+    NetworkType.TESTNET,
+  ];
+
+  static roles = [
+    Role.NODE,
+    Role.VALIDATOR,
   ];
 
   static defaultRPCPort = {
     [NetworkType.MAINNET]: 8545,
+    [NetworkType.TESTNET]: 8545,
   };
 
   static defaultPeerPort = {
     [NetworkType.MAINNET]: 30300,
+    [NetworkType.TESTNET]: 30300,
   };
 
   static defaultCPUs = 6;
 
   static defaultMem = 8192;
 
-  static generateConfig(client = Fuse.clients[0], network = NetworkType.MAINNET, peerPort = Fuse.defaultPeerPort[NetworkType.MAINNET], rpcPort = Fuse.defaultRPCPort[NetworkType.MAINNET]): string {
+  static generateConfig(client: string|Fuse = Fuse.clients[0], network = NetworkType.MAINNET, peerPort = Fuse.defaultPeerPort[NetworkType.MAINNET], rpcPort = Fuse.defaultRPCPort[NetworkType.MAINNET]): string {
+    let baseConfig = coreConfig;
+    let address = '';
+    if(typeof client !== 'string') { // node was passed in rather than client string
+      const node = client;
+      client = node.client;
+      network = node.network;
+      peerPort = node.peerPort;
+      rpcPort = node.rpcPort;
+      address = node.address;
+      if(node.role === Role.VALIDATOR)
+        baseConfig = coreValidatorConfig;
+    }
     switch(client) {
       case NodeClient.OPEN_ETHEREUM:
-        return coreConfig
+        return baseConfig
+          .replace('{{address}}', address)
           .replace('{{PEER_PORT}}', peerPort.toString(10))
           .replace(/{{RPC_PORT}}/g, rpcPort.toString(10))
           .trim();
       case NodeClient.PARITY:
-        return coreConfig
+        return baseConfig
           .replace('{{PEER_PORT}}', peerPort.toString(10))
           .replace(/{{RPC_PORT}}/g, rpcPort.toString(10))
           .trim();
@@ -132,6 +207,11 @@ export class Fuse extends Ethereum {
   dataDir = '';
   walletDir = '';
   configPath = '';
+  passwordPath = '';
+  key: any;
+  keyPass = '';
+  address = '';
+  role = Fuse.roles[0];
 
   constructor(data: CryptoNodeData, docker?: Docker) {
     super(data, docker);
@@ -148,6 +228,7 @@ export class Fuse extends Ethereum {
     this.dataDir = data.dataDir || this.dataDir;
     this.walletDir = data.walletDir || this.dataDir;
     this.configPath = data.configPath || this.configPath;
+    this.passwordPath = data.passwordPath || this.passwordPath;
     this.createdAt = data.createdAt || this.createdAt;
     this.updatedAt = data.updatedAt || this.updatedAt;
     this.remote = data.remote || this.remote;
@@ -159,8 +240,25 @@ export class Fuse extends Ethereum {
     this.clientVersion = data.clientVersion || versionObj.clientVersion || '';
     this.dockerImage = this.remote ? '' : data.dockerImage ? data.dockerImage : (versionObj.image || '');
     this.archival = data.archival || this.archival;
+    this.role = data.role || this.role;
+    this.key = data.key || this.key;
+    this.keyPass = data.keyPass || this.keyPass;
+    this.address = data.address || this.address;
+    if(this.role === Role.VALIDATOR && !this.key)
+      this.createAccount();
     if(docker)
       this._docker = docker;
+  }
+
+  toObject(): CryptoNodeData {
+    let keys = Object
+      .keys(this)
+      .filter(key => !/^_/.test(key));
+    // @ts-ignore
+    keys = keys.filter(key => typeof this[key] !== 'function' && typeof this[key] !== 'undefined');
+    // @ts-ignore
+    const dataObj = keys.reduce((obj: any, key) => ({...obj, [key]: this[key]}), {});
+    return dataObj as CryptoNodeData;
   }
 
   async start(): Promise<ChildProcess> {
@@ -172,6 +270,7 @@ export class Fuse extends Ethereum {
       dataDir: containerDataDir,
       walletDir: containerWalletDir,
       configPath: containerConfigPath,
+      passwordPath: containerPasswordPath,
     } = versionData;
     let args = [
       '-i',
@@ -181,7 +280,8 @@ export class Fuse extends Ethereum {
       '--name', this.id,
       '--network', this.dockerNetwork,
       '-p', `${this.rpcPort}:${this.rpcPort}`,
-      '-p', `${this.peerPort}:${this.peerPort}`,
+      '-p', `${this.peerPort}:${this.peerPort}/tcp`,
+      '-p', `${this.peerPort}:${this.peerPort}/udp`,
       '--entrypoint', '/usr/local/bin/parity',
     ];
     const tmpdir = os.tmpdir();
@@ -201,6 +301,33 @@ export class Fuse extends Ethereum {
 
     await this._docker.pull(this.dockerImage, str => this._logOutput(str));
 
+    if(this.key) {
+      const passwordPath = this.passwordPath || path.join(tmpdir, uuid());
+      const passwordFileExists = await fs.pathExists(passwordPath);
+      if(!passwordFileExists)
+        await fs.writeFile(passwordPath, this.keyPass, 'utf8');
+      args = [...args, '-v', `${passwordPath}:${containerPasswordPath}`];
+      if(fs.readdirSync(walletDir).length === 0) {
+        const keyFilePath = path.join(os.tmpdir(), uuid());
+        await fs.writeJson(keyFilePath, this.key);
+        const accountPath = `/UTC--${new Date().toISOString().replace(/:/g, '-')}--${this.address}.json`;
+        const newArgs = [
+          ...args,
+          '-v', `${keyFilePath}:${accountPath}`,
+        ];
+        await new Promise<void>(resolve => {
+          this._docker.run(
+            this.dockerImage + ` account import ${accountPath}${versionData.generateRuntimeArgs(this)}`,
+            newArgs,
+            output => this._logOutput(output),
+            err => this._logError(err),
+            () => resolve(),
+          );
+        });
+        await fs.remove(keyFilePath);
+      }
+    }
+
     await this._docker.createNetwork(this.dockerNetwork);
     const instance = this._docker.run(
       this.dockerImage + versionData.generateRuntimeArgs(this),
@@ -210,15 +337,34 @@ export class Fuse extends Ethereum {
       code => this._logClose(code),
     );
     this._instance = instance;
+
+    if(this.role === Role.VALIDATOR) {
+
+    }
+
     return instance;
   }
 
   generateConfig(): string {
-    return Fuse.generateConfig(
-      this.client,
-      this.network,
-      this.peerPort,
-      this.rpcPort);
+    return Fuse.generateConfig(this);
+  }
+
+  createAccount(): void {
+    const web3 = new Web3();
+    const keyPass = this.keyPass || uuid();
+    const { address, privateKey } = web3.eth.accounts.create();
+    this.keyPass = keyPass;
+    this.address = address;
+    this.key = web3.eth.accounts.encrypt(privateKey, keyPass);
+  }
+
+  async rpcGetBalance(): Promise<string> {
+    try {
+      const web3 = new Web3(`http://localhost:${this.rpcPort}`);
+      return await web3.eth.getBalance(this.address);
+    } catch(err) {
+      return '';
+    }
   }
 
 }

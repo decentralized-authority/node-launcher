@@ -1,6 +1,6 @@
 import { Ethereum } from '../ethereum/ethereum';
 import { CryptoNodeData, VersionDockerImage } from '../../interfaces/crypto-node';
-import { defaultDockerNetwork, NetworkType, NodeClient, NodeType } from '../../constants';
+import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role } from '../../constants';
 import { Docker } from '../../util/docker';
 import { v4 as uuid } from 'uuid';
 import { filterVersionsByNetworkType } from '../../util';
@@ -164,6 +164,10 @@ export class Harmony extends Ethereum {
     NetworkType.MAINNET,
   ];
 
+  static roles = [
+    Role.NODE,
+  ];
+
   static defaultRPCPort = {
     [NetworkType.MAINNET]: 9500,
   };
@@ -212,6 +216,7 @@ export class Harmony extends Ethereum {
   remoteDomain = '';
   remoteProtocol = '';
   shard = 0;
+  role = Harmony.roles[0];
 
   constructor(data: HarmonyNodeData, docker?: Docker) {
     super(data, docker);
@@ -240,6 +245,7 @@ export class Harmony extends Ethereum {
     this.dockerImage = this.remote ? '' : data.dockerImage ? data.dockerImage : (versionObj.image || '');
     this.archival = data.archival || this.archival;
     this.shard = data.shard || this.shard;
+    this.role = data.role || this.role;
     if(docker)
       this._docker = docker;
   }

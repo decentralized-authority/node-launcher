@@ -25,6 +25,8 @@ export interface CryptoNodeData {
   network?: string;
   peerPort?: number;
   privKeyPass?: string;
+  key?: any; // encrypted key string or web3 keystore v3 object
+  keyPass?: string;
   rpcPort?: number;
   rpcUsername?: string;
   rpcPassword?: string;
@@ -35,6 +37,7 @@ export interface CryptoNodeData {
   dataDir?: string;
   walletDir?: string;
   configPath?: string;
+  passwordPath?: string;
   domain?: string;
   address?: string;
   createdAt?: string;
@@ -43,6 +46,7 @@ export interface CryptoNodeData {
   remoteDomain?: string;
   remoteProtocol?: string;
   remotePort?: number;
+  role?: string;
 }
 
 export interface CryptoNode {

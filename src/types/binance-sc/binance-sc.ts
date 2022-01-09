@@ -1,5 +1,5 @@
 import { Ethereum } from '../ethereum/ethereum';
-import { defaultDockerNetwork, NetworkType, NodeClient, NodeType } from '../../constants';
+import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role } from '../../constants';
 import { v4 as uuid } from 'uuid';
 import { CryptoNodeData, VersionDockerImage } from '../../interfaces/crypto-node';
 import { Docker } from '../../util/docker';
@@ -121,6 +121,10 @@ export class BinanceSC extends Ethereum {
 
   static networkTypes = [
     NetworkType.MAINNET,
+  ];
+
+  static roles = [
+    Role.NODE,
   ];
 
   static defaultRPCPort = {

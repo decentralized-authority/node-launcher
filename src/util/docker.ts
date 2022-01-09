@@ -277,4 +277,19 @@ export class Docker extends EventEmitter {
     });
   }
 
+  public rm(name: string): Promise<boolean> {
+    return new Promise(resolve => {
+      const command = 'docker';
+      const args = ['rm', name];
+      this.emit(DockerEvent.INFO, `${command} ${args.join(' ')}`);
+      execFile(command, args, {}, err => {
+        if(err) {
+          resolve(false);
+        } else {
+          resolve(true);
+        }
+      });
+    });
+  }
+
 }
