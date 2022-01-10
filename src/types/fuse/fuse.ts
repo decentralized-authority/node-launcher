@@ -9,9 +9,13 @@ import path from 'path';
 import fs from 'fs-extra';
 import { filterVersionsByNetworkType } from '../../util';
 import Web3 from 'web3';
-import request from 'superagent';
 
-const testnetBootnodes = 'enode://aaa92938fb3b4b073ea811894376d597a3feef30ce999a8bee617c24b7acd4021f16f94856e5c48f25b4fde999fc5df27de73d2c394e6c46cc5d44e012dd9e35@3.123.228.59:30303,enode://e44c9e9f12b5a1e1e44b3fa4fb77b7aae2e8484cd13ad742d7f67fda9a4fa627bac5e418580fcaf98c267b747a3b9d5f19fdeb13804ac08b267aeb77489b3c5d@18.192.23.151:30303,enode://ad46ec3c252bc76fb150865382b2dfbfa98ae9156a4b4659fca43b08799b8ec97d1b0a9d70aeccb26e5045853a63807cfc96e68b57cdbe1242aa12c66914f1d4@3.125.120.73:30303,enode://5ff7f084a3f5e091d1264639d74e5d8e65204fcdf4d727a37d140758709da744ab44d348a8b23010946a378a7d76f46b922b9a727027a154b71a2cc596adf5f8@170.75.251.230:30303';
+const testnetBootnodes = [
+  'enode://aaa92938fb3b4b073ea811894376d597a3feef30ce999a8bee617c24b7acd4021f16f94856e5c48f25b4fde999fc5df27de73d2c394e6c46cc5d44e012dd9e35@3.123.228.59:30303',
+  'enode://e44c9e9f12b5a1e1e44b3fa4fb77b7aae2e8484cd13ad742d7f67fda9a4fa627bac5e418580fcaf98c267b747a3b9d5f19fdeb13804ac08b267aeb77489b3c5d@18.192.23.151:30303',
+  'enode://ad46ec3c252bc76fb150865382b2dfbfa98ae9156a4b4659fca43b08799b8ec97d1b0a9d70aeccb26e5045853a63807cfc96e68b57cdbe1242aa12c66914f1d4@3.125.120.73:30303',
+  'enode://5ff7f084a3f5e091d1264639d74e5d8e65204fcdf4d727a37d140758709da744ab44d348a8b23010946a378a7d76f46b922b9a727027a154b71a2cc596adf5f8@170.75.251.230:30303',
+].join(',');
 
 const coreConfig = `
 [parity]
@@ -76,6 +80,20 @@ export class Fuse extends Ethereum {
     switch(client) {
       case NodeClient.OPEN_ETHEREUM:
         versions = [
+          {
+            version: '2.0.2',
+            clientVersion: '3.2.6',
+            image: 'fusenet/spark-node:2.0.2',
+            dataDir: '/root/data',
+            walletDir: '/root/keystore',
+            configPath: '/root/config.toml',
+            passwordPath: '/root/pass.pwd',
+            networks: [NetworkType.TESTNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              return ` --no-warp --config=${this.configPath}`;
+            },
+          },
           {
             version: '2.0.1',
             clientVersion: '3.2.6',
