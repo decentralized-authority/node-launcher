@@ -379,14 +379,20 @@ export class Fuse extends Ethereum {
         '--network', this.dockerNetwork,
         '--name', this.validatorAppContainerName(),
       ];
-      this._docker.run(
-        versionData.imageValidatorApp,
-        validatorAppArgs,
-        // () => {},
-        console.log,
-        err => this._logError(err),
-        () => this._logOutput(`${this.validatorAppContainerName()} closed`),
-      );
+      try {
+        const validatorAppExists = await this._docker.containerExists(this.validatorAppContainerName());
+        if(!validatorAppExists) {
+          this._docker.run(
+            versionData.imageValidatorApp,
+            validatorAppArgs,
+            () => {},
+            err => this._logError(err),
+            () => this._logOutput(`${this.validatorAppContainerName()} closed`),
+          );
+        }
+      } catch(err) {
+        this._logError(err);
+      }
       // start netstats
       const netstatConfig = `
         [
@@ -429,14 +435,20 @@ export class Fuse extends Ethereum {
         '-e', `LISTENING_PORT=${this.peerPort}`,
         '-v', `${netstatConfigPath}:/home/ethnetintel/eth-net-intelligence-api/app.json.example`,
       ];
-      this._docker.run(
-        `${versionData.imageNetstat} --instance-name ${this.address} --role validator --parity-version ${versionData.version} --fuseapp-version ${this.validatorAppContainerName().split(':')[1]} --netstats-version ${this.netstatContainerName().split(':')[1]}`,
-        netstatArgs,
-        // () => {},
-        console.log,
-        err => this._logError(err),
-        () => this._logOutput(`${this.netstatContainerName()} closed`),
-      );
+      try {
+        const netstatExists = await this._docker.containerExists(this.netstatContainerName());
+        if(!netstatExists) {
+          this._docker.run(
+            `${versionData.imageNetstat} --instance-name ${this.address} --role validator --parity-version ${versionData.version} --fuseapp-version ${this.validatorAppContainerName().split(':')[1]} --netstats-version ${this.netstatContainerName().split(':')[1]}`,
+            netstatArgs,
+            () => {},
+            err => this._logError(err),
+            () => this._logOutput(`${this.netstatContainerName()} closed`),
+          );
+        }
+      } catch(err) {
+        this._logError(err);
+      }
     }
 
     return instance;

@@ -109,6 +109,15 @@ export class Docker extends EventEmitter {
     return true;
   }
 
+  async containerExists(name: string): Promise<boolean> {
+    try {
+      const data = await this.containerInspect(name);
+      return Object.keys(data).length > 0;
+    } catch(err) {
+      return false;
+    }
+  }
+
   public async containerInspect(name: string): Promise<any> {
     try {
       const output: string = await new Promise((resolve, reject) => {
