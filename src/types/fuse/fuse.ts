@@ -463,15 +463,17 @@ export class Fuse extends Ethereum {
   }
 
   async stop(): Promise<void> {
-    try {
-      await this._docker.kill(this.validatorAppContainerName());
-    } catch(err) {
-      this._logError(err);
-    }
-    try {
-      await this._docker.kill(this.netstatContainerName());
-    } catch(err) {
-      this._logError(err);
+    if(this.role === Role.VALIDATOR) {
+      try {
+        await this._docker.kill(this.validatorAppContainerName());
+      } catch(err) {
+        this._logError(err);
+      }
+      try {
+        await this._docker.kill(this.netstatContainerName());
+      } catch(err) {
+        this._logError(err);
+      }
     }
     await new Promise<void>(resolve => {
       if(this._instance) {
