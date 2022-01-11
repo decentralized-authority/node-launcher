@@ -70,6 +70,8 @@ gas_floor_target = "10000000"
 
 interface FuseVersionDockerImage extends VersionDockerImage {
   passwordPath: string
+  imageValidatorApp: string
+  imageNetstat: string
 }
 
 export class Fuse extends Ethereum {
@@ -84,6 +86,8 @@ export class Fuse extends Ethereum {
             version: '2.0.2',
             clientVersion: '3.2.6',
             image: 'fusenet/spark-node:2.0.2',
+            imageValidatorApp: 'fusenet/spark-validator-app:1.0.0',
+            imageNetstat: 'fusenet/spark-netstat:1.0.0',
             dataDir: '/root/data',
             walletDir: '/root/keystore',
             configPath: '/root/config.toml',
@@ -98,6 +102,8 @@ export class Fuse extends Ethereum {
             version: '2.0.1',
             clientVersion: '3.2.6',
             image: 'fusenet/spark-node:2.0.1_OE',
+            imageValidatorApp: '',
+            imageNetstat: '',
             dataDir: '/root/data',
             walletDir: '/root/keystore',
             configPath: '/root/config.toml',
@@ -112,6 +118,8 @@ export class Fuse extends Ethereum {
             version: '2.0.1',
             clientVersion: '3.2.6',
             image: 'fusenet/node:2.0.1',
+            imageValidatorApp: '',
+            imageNetstat: '',
             dataDir: '/root/data',
             walletDir: '/root/keystore',
             configPath: '/root/config.toml',
@@ -126,6 +134,8 @@ export class Fuse extends Ethereum {
             version: '2.5.13',
             clientVersion: '2.5.13',
             image: 'fusenet/node:1.0.0',
+            imageValidatorApp: '',
+            imageNetstat: '',
             dataDir: '/root/data',
             walletDir: '/root/keystore',
             configPath: '/root/config.toml',
@@ -357,10 +367,126 @@ export class Fuse extends Ethereum {
     this._instance = instance;
 
     if(this.role === Role.VALIDATOR) {
-
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      // start validator app
+      const validatorAppArgs = [
+        '--rm',
+        '-i',
+        '--memory', '250m',
+        '-v', `${path.resolve(walletDir, '..')}:/config`,
+        '-e', 'CONFIG_DIR=/config',
+        '-e', `RPC=http://${this.id}:${this.rpcPort}`,
+        '--network', this.dockerNetwork,
+        '--name', this.validatorAppContainerName(),
+      ];
+      this._docker.run(
+        versionData.imageValidatorApp,
+        validatorAppArgs,
+        // () => {},
+        console.log,
+        err => this._logError(err),
+        () => this._logOutput(`${this.validatorAppContainerName()} closed`),
+      );
+      // start netstats
+      const netstatConfig = `
+        [
+          {
+            "name"              : "netstat_daemon",
+            "script"            : "app.js",
+            "log_date_format"   : "YYYY-MM-DD HH:mm Z",
+            "merge_logs"        : false,
+            "watch"             : false,
+            "max_restarts"      : 100,
+            "exec_interpreter"  : "node",
+            "exec_mode"         : "fork_mode",
+            "env":
+            {
+              "NODE_ENV"        : "production",
+              "INSTANCE_NAME"   : "",
+              "BRIDGE_VERSION"  : "",
+              "ROLE"            : "",
+              "FUSE_APP_VERSION": "",
+              "PARITY_VERSION"  : "",
+              "NETSTATS_VERSION": "",
+              "CONTACT_DETAILS" : "",
+              "WS_SECRET"       : "see http://forum.ethereum.org/discussion/2112/how-to-add-yourself-to-the-stats-dashboard-its-not-automatic",
+              "WS_SERVER"       : "https://health.fuse.io",
+              "VERBOSITY"       : 2
+            }
+          }
+        ]`;
+      const netstatConfigPath = path.join(tmpdir, uuid());
+      await fs.writeJson(netstatConfigPath, JSON.parse(netstatConfig), {spaces: 2});
+      const netstatArgs = [
+        '--rm',
+        '-i',
+        '--memory', '250m',
+        '--name', this.netstatContainerName(),
+        '--network', this.dockerNetwork,
+        '--user', 'root',
+        '-e', `RPC_HOST=${this.id}`,
+        '-e', `RPC_PORT=${this.rpcPort}`,
+        '-e', `LISTENING_PORT=${this.peerPort}`,
+        '-v', `${netstatConfigPath}:/home/ethnetintel/eth-net-intelligence-api/app.json.example`,
+      ];
+      this._docker.run(
+        `${versionData.imageNetstat} --instance-name ${this.address} --role validator --parity-version ${versionData.version} --fuseapp-version ${this.validatorAppContainerName().split(':')[1]} --netstats-version ${this.netstatContainerName().split(':')[1]}`,
+        netstatArgs,
+        // () => {},
+        console.log,
+        err => this._logError(err),
+        () => this._logOutput(`${this.netstatContainerName()} closed`),
+      );
     }
 
     return instance;
+  }
+
+  validatorAppContainerName(): string {
+    return `${this.id}-validator-app`;
+  }
+
+  netstatContainerName(): string {
+    return `${this.id}-netstat`;
+  }
+
+  stop(): Promise<void> {
+    return new Promise<void>(resolve => {
+      if(this._instance) {
+        this._docker.kill(this.validatorAppContainerName())
+          .catch(err => this._logError(err));
+        this._docker.kill(this.netstatContainerName())
+          .catch(err => this._logError(err));
+        this._docker.kill(`${this.id}-netstat`)
+          .catch(err => this._logError(err));
+        const { exitCode } = this._instance;
+        if(typeof exitCode === 'number') {
+          resolve();
+        } else {
+          this._instance.on('exit', () => {
+            clearTimeout(timeout);
+            setTimeout(() => {
+              resolve();
+            }, 1000);
+          });
+          this._instance.kill();
+          const timeout = setTimeout(() => {
+            this._docker.stop(this.id)
+              .then(() => {
+                setTimeout(() => {
+                  resolve();
+                }, 1000);
+              })
+              .catch(err => {
+                this._logError(err);
+                resolve();
+              });
+          }, 30000);
+        }
+      } else {
+        resolve();
+      }
+    });
   }
 
   generateConfig(): string {
