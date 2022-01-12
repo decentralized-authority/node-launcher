@@ -8,6 +8,7 @@ import { ChildProcess } from 'child_process';
 import os from 'os';
 import path from 'path';
 import fs from 'fs-extra';
+import request from 'superagent';
 
 const coreConfig = `
 Version = "2.5.0"
@@ -118,6 +119,19 @@ export class Harmony extends Ethereum {
     switch(client) {
       case NodeClient.CORE:
         versions = [
+          {
+            version: '4.3.2',
+            clientVersion: '4.3.2',
+            image: 'pocketfoundation/harmony:4.3.2',
+            dataDir: '/root/data',
+            walletDir: '/root/keystore',
+            configPath: '/harmony/harmony.conf',
+            networks: [NetworkType.MAINNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              return ` -c ${this.configPath}`;
+            },
+          },
           {
             version: '4.3.1',
             clientVersion: '4.3.1',
@@ -314,6 +328,19 @@ export class Harmony extends Ethereum {
       this.peerPort,
       this.rpcPort,
       this.shard);
+  }
+
+  _makeSyncingCall(): Promise<any> {
+    return request
+      .post(this.endpoint())
+      .set('Accept', 'application/json')
+      .timeout(this._requestTimeout)
+      .send({
+        id: '',
+        jsonrpc: '2.0',
+        method: 'hmy_syncing',
+        params: [],
+      });
   }
 
 }

@@ -366,6 +366,19 @@ export class Ethereum extends Bitcoin {
     return blockHeight || '';
   }
 
+  _makeSyncingCall(): Promise<any> {
+    return request
+      .post(this.endpoint())
+      .set('Accept', 'application/json')
+      .timeout(this._requestTimeout)
+      .send({
+        id: '',
+        jsonrpc: '2.0',
+        method: 'eth_syncing',
+        params: [],
+      });
+  }
+
   async getStatus(): Promise<string> {
     let status;
     try {
@@ -382,16 +395,7 @@ export class Ethereum extends Bitcoin {
 
     if(status !== Status.STOPPED) {
       try {
-        const res = await request
-          .post(this.endpoint())
-          .set('Accept', 'application/json')
-          .timeout(this._requestTimeout)
-          .send({
-            id: '',
-            jsonrpc: '2.0',
-            method: 'eth_syncing',
-            params: [],
-          });
+        const res = await this._makeSyncingCall();
         if(res.body.result !== false)
           status = Status.SYNCING;
       } catch(err) {
