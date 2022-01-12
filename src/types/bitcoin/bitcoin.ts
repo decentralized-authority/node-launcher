@@ -1,5 +1,5 @@
 import { CryptoNode, CryptoNodeData, CryptoNodeStatic, VersionDockerImage } from '../../interfaces/crypto-node';
-import { defaultDockerNetwork, NetworkType, NodeClient, NodeEvent, NodeType, Status } from '../../constants';
+import { defaultDockerNetwork, NetworkType, NodeClient, NodeEvent, NodeType, Role, Status } from '../../constants';
 import { filterVersionsByNetworkType, generateRandom } from '../../util';
 import { Docker } from '../../util/docker';
 import { ChildProcess } from 'child_process';
@@ -65,6 +65,10 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
   static networkTypes = [
     NetworkType.MAINNET,
     NetworkType.TESTNET,
+  ];
+
+  static roles = [
+    Role.NODE,
   ];
 
   static defaultRPCPort = {
@@ -174,6 +178,7 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
   remote = false;
   remoteDomain = '';
   remoteProtocol = '';
+  role = Bitcoin.roles[0];
 
   _docker = new Docker();
   _instance?: ChildProcess;
@@ -215,6 +220,7 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
     this.clientVersion = data.clientVersion || versionObj.clientVersion || '';
     this.dockerImage = this.remote ? '' : data.dockerImage ? data.dockerImage : (versionObj.image || '');
     this.archival = data.archival || this.archival;
+    this.role = data.role || this.role;
     if(docker)
       this._docker = docker;
   }

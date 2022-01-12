@@ -17,6 +17,11 @@ export const NodeClient = {
   NETHERMIND: 'NETHERMIND',
 };
 
+export const Role = {
+  NODE: 'NODE',
+  VALIDATOR: 'VALIDATOR',
+};
+
 export const Status = {
   STOPPED: 'STOPPED',
   SYNCING: 'SYNCING',

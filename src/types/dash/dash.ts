@@ -1,5 +1,5 @@
 import { Bitcoin } from '../bitcoin/bitcoin';
-import { defaultDockerNetwork, NetworkType, NodeClient, NodeType } from '../../constants';
+import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role } from '../../constants';
 import { v4 as uuid } from 'uuid';
 import { filterVersionsByNetworkType, generateRandom } from '../../util';
 import { CryptoNodeData, VersionDockerImage } from '../../interfaces/crypto-node';
@@ -66,6 +66,10 @@ export class Dash extends Bitcoin {
     NetworkType.TESTNET,
   ];
 
+  static roles = [
+    Role.NODE,
+  ];
+
   static defaultRPCPort = {
     [NetworkType.MAINNET]: 9998,
     [NetworkType.TESTNET]: 19998,
@@ -114,6 +118,7 @@ export class Dash extends Bitcoin {
   dataDir = '';
   walletDir = '';
   configPath = '';
+  role = Dash.roles[0];
 
   constructor(data: CryptoNodeData, docker?: Docker) {
     super(data, docker);
@@ -141,6 +146,7 @@ export class Dash extends Bitcoin {
     this.clientVersion = data.clientVersion || versionObj.clientVersion || '';
     this.dockerImage = this.remote ? '' : data.dockerImage ? data.dockerImage : (versionObj.image || '');
     this.archival = data.archival || this.archival;
+    this.role = data.role || this.role;
     if(docker)
       this._docker = docker;
   }

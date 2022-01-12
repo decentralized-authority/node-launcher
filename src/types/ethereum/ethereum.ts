@@ -1,5 +1,5 @@
 import { CryptoNodeData, VersionDockerImage } from '../../interfaces/crypto-node';
-import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Status } from '../../constants';
+import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role, Status } from '../../constants';
 import { Docker } from '../../util/docker';
 import { ChildProcess } from 'child_process';
 import { v4 as uuid} from 'uuid';
@@ -153,6 +153,10 @@ export class Ethereum extends Bitcoin {
     NetworkType.RINKEBY,
   ];
 
+  static roles = [
+    Role.NODE,
+  ];
+
   static defaultRPCPort = {
     [NetworkType.MAINNET]: 8545,
     [NetworkType.RINKEBY]: 18545,
@@ -201,6 +205,7 @@ export class Ethereum extends Bitcoin {
   remote = false;
   remoteDomain = '';
   remoteProtocol = '';
+  role = Ethereum.roles[0];
 
   constructor(data: CryptoNodeData, docker?: Docker) {
     super(data, docker);
@@ -228,6 +233,7 @@ export class Ethereum extends Bitcoin {
     this.clientVersion = data.clientVersion || versionObj.clientVersion || '';
     this.dockerImage = this.remote ? '' : data.dockerImage ? data.dockerImage : (versionObj.image || '');
     this.archival = data.archival || this.archival;
+    this.role = data.role || this.role;
     if(docker)
       this._docker = docker;
   }

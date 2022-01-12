@@ -109,6 +109,15 @@ export class Docker extends EventEmitter {
     return true;
   }
 
+  async containerExists(name: string): Promise<boolean> {
+    try {
+      const data = await this.containerInspect(name);
+      return Object.keys(data).length > 0;
+    } catch(err) {
+      return false;
+    }
+  }
+
   public async containerInspect(name: string): Promise<any> {
     try {
       const output: string = await new Promise((resolve, reject) => {
@@ -273,6 +282,21 @@ export class Docker extends EventEmitter {
       });
       instance.on('close', code => {
         resolve(code || 0);
+      });
+    });
+  }
+
+  public rm(name: string): Promise<boolean> {
+    return new Promise(resolve => {
+      const command = 'docker';
+      const args = ['rm', name];
+      this.emit(DockerEvent.INFO, `${command} ${args.join(' ')}`);
+      execFile(command, args, {}, err => {
+        if(err) {
+          resolve(false);
+        } else {
+          resolve(true);
+        }
       });
     });
   }

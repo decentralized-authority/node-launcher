@@ -1,5 +1,5 @@
 import { CryptoNodeData, VersionDockerImage } from '../../interfaces/crypto-node';
-import { defaultDockerNetwork, NetworkType, NodeClient, NodeType } from '../../constants';
+import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role } from '../../constants';
 import { Bitcoin } from '../bitcoin/bitcoin';
 import { Docker } from '../../util/docker';
 import { v4 as uuid } from 'uuid';
@@ -288,6 +288,11 @@ export class Pocket extends Bitcoin {
     [NetworkType.TESTNET]: 8081,
   };
 
+  static roles = [
+    Role.NODE,
+    Role.VALIDATOR,
+  ];
+
   static defaultPeerPort = {
     [NetworkType.MAINNET]: 26656,
     [NetworkType.TESTNET]: 26656,
@@ -341,6 +346,7 @@ export class Pocket extends Bitcoin {
   configPath = '';
   domain = '';
   address = '';
+  role = Pocket.roles[0];
 
   constructor(data: CryptoNodeData, docker?: Docker) {
     super(data, docker);
@@ -373,6 +379,7 @@ export class Pocket extends Bitcoin {
     this.address = data.address || this.address;
 
     this.privKeyPass = data.privKeyPass || uuid();
+    this.role = data.role || this.role;
 
     if(docker)
       this._docker = docker;

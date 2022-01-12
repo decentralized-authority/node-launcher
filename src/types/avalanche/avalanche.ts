@@ -1,5 +1,5 @@
 import { CryptoNodeData, VersionDockerImage } from '../../interfaces/crypto-node';
-import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Status } from '../../constants';
+import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role, Status } from '../../constants';
 import { filterVersionsByNetworkType, generateRandom } from '../../util';
 import { Docker } from '../../util/docker';
 import { ChildProcess } from 'child_process';
@@ -154,6 +154,10 @@ export class Avalanche extends Bitcoin {
     NetworkType.MAINNET,
   ];
 
+  static roles = [
+    Role.NODE,
+  ];
+
   static defaultRPCPort = {
     [NetworkType.MAINNET]: 9650,
   };
@@ -196,6 +200,7 @@ export class Avalanche extends Bitcoin {
   dataDir = '';
   walletDir = '';
   configPath = '';
+  role = Avalanche.roles[0];
 
   constructor(data: CryptoNodeData, docker?: Docker) {
     super(data, docker);
@@ -221,6 +226,7 @@ export class Avalanche extends Bitcoin {
     this.clientVersion = data.clientVersion || versionObj.clientVersion || '';
     this.dockerImage = this.remote ? '' : data.dockerImage ? data.dockerImage : (versionObj.image || '');
     this.archival = data.archival || this.archival;
+    this.role = data.role || this.role;
     if(docker)
       this._docker = docker;
   }
