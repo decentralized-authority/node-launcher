@@ -20,18 +20,18 @@ import { isNull } from 'lodash';
 import { Harmony } from './harmony/harmony';
 
 const chains: [{name: string, constructor: any}] = [
-  // {name: 'Bitcoin', constructor: Bitcoin},
-  // {name: 'BitcoinCash', constructor: BitcoinCash},
-  // {name: 'Dash', constructor: Dash},
-  // {name: 'LBRY', constructor: LBRY},
-  // {name: 'Litecoin', constructor: Litecoin},
+  {name: 'Bitcoin', constructor: Bitcoin},
+  {name: 'BitcoinCash', constructor: BitcoinCash},
+  {name: 'Dash', constructor: Dash},
+  {name: 'LBRY', constructor: LBRY},
+  {name: 'Litecoin', constructor: Litecoin},
   {name: 'Ethereum', constructor: Ethereum},
-  // {name: 'BinanceSC', constructor: BinanceSC},
-  // {name: 'Xdai', constructor: Xdai},
-  // {name: 'Avalanche', constructor: Avalanche},
-  // {name: 'Pocket', constructor: Pocket},
-  // {name: 'Fuse', constructor: Fuse},
-  // {name: 'Harmony', constructor: Harmony},
+  {name: 'BinanceSC', constructor: BinanceSC},
+  {name: 'Xdai', constructor: Xdai},
+  {name: 'Avalanche', constructor: Avalanche},
+  {name: 'Pocket', constructor: Pocket},
+  {name: 'Fuse', constructor: Fuse},
+  {name: 'Harmony', constructor: Harmony},
 ];
 
 chains.forEach(({ name, constructor: NodeConstructor }) => {
