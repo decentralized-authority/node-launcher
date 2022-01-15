@@ -26,11 +26,15 @@ HTTPModules = ["net", "web3", "eth"]
 ListenAddr = ":{{PEER_PORT}}"
 `;
 
+interface EthVersionDockerImage extends VersionDockerImage {
+  generateRpcRuntimeArgs?: (data: CryptoNodeData) => string
+}
+
 export class Ethereum extends Bitcoin {
 
-  static versions(client: string, networkType: string): VersionDockerImage[] {
+  static versions(client: string, networkType: string): EthVersionDockerImage[] {
     client = client || Ethereum.clients[0];
-    let versions: VersionDockerImage[];
+    let versions: EthVersionDockerImage[];
     switch(client) {
       case NodeClient.GETH:
         versions = [
@@ -133,6 +137,38 @@ export class Ethereum extends Bitcoin {
           },
         ];
         break;
+      case NodeClient.ERIGON:
+        versions = [
+          {
+            version: '2021.12.02',
+            clientVersion: '2021.12.02',
+            image: 'thorax/erigon:v2021.12.02',
+            dataDir: '/home/erigon/.local/share/erigon',
+            walletDir: '',
+            configPath: '',
+            networks: [NetworkType.MAINNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              const { network = '' } = data;
+              return ` erigon --metrics                       \
+                              --metrics.addr=0.0.0.0          \
+                              --metrics.port=6060             \
+                              --private.api.addr=0.0.0.0:9090 \
+                              --pprof --pprof.addr=0.0.0.0    \
+                              --pprof.port=6061`;
+            },
+            generateRpcRuntimeArgs(data: CryptoNodeData): string {
+              const { network = '' } = data;
+              return ` rpcdaemon --datadir=${data.dataDir}          \
+                                --private.api.addr=${data.id}:9090  \
+                                --http.addr=0.0.0.0                 \
+                                --http.vhosts='*'                   \
+                                --http.corsdomain='*'               \
+                                --http.api='eth,debug,net,trace' `;
+            }
+          },
+        ];
+        break;
       default:
         versions = [];
     }
@@ -206,6 +242,7 @@ export class Ethereum extends Bitcoin {
   remoteDomain = '';
   remoteProtocol = '';
   role = Ethereum.roles[0];
+  _rpcInstance?: ChildProcess;
 
   constructor(data: CryptoNodeData, docker?: Docker) {
     super(data, docker);
@@ -238,11 +275,86 @@ export class Ethereum extends Bitcoin {
       this._docker = docker;
   }
 
+  rpcContainerName(): string {
+    return `${this.id}-rpc`;
+  }
+
   async start(): Promise<ChildProcess> {
     const versions = Ethereum.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
+
+    switch(this.client) {
+      case NodeClient.ERIGON:
+        return this.startErigon(versionData);
+
+      case NodeClient.GETH:
+        return this.startGeth(versionData);
+    }
+
+    throw new Error(`Cannot start ETH node for unknown client: ${this.client}`)
+  }
+
+  private async startErigon(versionData: EthVersionDockerImage): Promise<ChildProcess> {
+    const { dataDir: containerDataDir } = versionData;
+    const tmpdir = os.tmpdir();
+    const dataDir = this.dataDir || path.join(tmpdir, uuid());
+    await fs.ensureDir(dataDir);
+
+    const nodeContainerArgs = [
+      '-i',
+      '--rm',
+      '--memory', this.dockerMem.toString(10) + 'MB',
+      '--cpus', this.dockerCPUs.toString(10),
+      '--name', this.id,
+      '--network', this.dockerNetwork,
+      '-p', `${this.peerPort}:${this.peerPort}/tcp`,
+      '-p', `${this.peerPort}:${this.peerPort}/udp`,
+      '-v', `${dataDir}:${containerDataDir}`,
+    ];
+
+    const rpcContainerArgs = [
+      '-i',
+      '--rm',
+      '--memory', '2048MB', // TODO: parameterize this
+      '--cpus', '2', // TODO: parameterize this
+      '--name', this.rpcContainerName(),
+      '--network', this.dockerNetwork,
+      '-p', `${this.rpcPort}:${this.rpcPort}`,
+      '-v', `${dataDir}:${containerDataDir}`,
+    ];
+
+    await this._docker.pull(this.dockerImage, str => this._logOutput(str));
+    await this._docker.createNetwork(this.dockerNetwork);
+
+    const nodeInstance = this._docker.run(
+      this.dockerImage + versionData.generateRuntimeArgs(this),
+      nodeContainerArgs,
+      output => this._logOutput(output),
+      err => this._logError(err),
+      code => this._logClose(code),
+    );
+
+    let rpcArgs ='';
+    if(versionData.generateRpcRuntimeArgs !== undefined) {
+      rpcArgs = versionData.generateRpcRuntimeArgs(this);
+    }
+
+    const rpcInstance = this._docker.run(
+      this.dockerImage + rpcArgs,
+      rpcContainerArgs,
+      output => this._logOutput(output),
+      err => this._logError(err),
+      code => this._logClose(code),
+    );
+
+    this._instance = nodeInstance;
+    this._rpcInstance = rpcInstance
+    return nodeInstance;
+  }
+
+  private async startGeth(versionData: EthVersionDockerImage): Promise<ChildProcess> {
     const {
       dataDir: containerDataDir,
       walletDir: containerWalletDir,
@@ -285,6 +397,46 @@ export class Ethereum extends Bitcoin {
     );
     this._instance = instance;
     return instance;
+  }
+
+  async stop(): Promise<void> {
+
+    try {
+      await this._docker.kill(this.rpcContainerName());
+    } catch(err) {
+      this._logError(err);
+    }
+
+    await new Promise<void>(resolve => {
+      if(this._instance) {
+        const { exitCode } = this._instance;
+        if(typeof exitCode === 'number') {
+          resolve();
+        } else {
+          this._instance.on('exit', () => {
+            clearTimeout(timeout);
+            setTimeout(() => {
+              resolve();
+            }, 1000);
+          });
+          this._instance.kill();
+          const timeout = setTimeout(() => {
+            this._docker.stop(this.id)
+              .then(() => {
+                setTimeout(() => {
+                  resolve();
+                }, 1000);
+              })
+              .catch(err => {
+                this._logError(err);
+                resolve();
+              });
+          }, 30000);
+        }
+      } else {
+        resolve();
+      }
+    });
   }
 
   generateConfig(): string {
