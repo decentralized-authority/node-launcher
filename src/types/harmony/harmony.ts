@@ -122,7 +122,7 @@ export class Harmony extends Ethereum {
           {
             version: '4.3.2',
             clientVersion: '4.3.2',
-            image: 'pocketfoundation/harmony:4.3.2',
+            image: 'pocketfoundation/harmony:4.3.2-29-g1c450bbc',
             dataDir: '/root/data',
             walletDir: '/root/keystore',
             configPath: '/harmony/harmony.conf',
