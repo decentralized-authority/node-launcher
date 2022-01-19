@@ -36,7 +36,6 @@ Version = "2.5.0"
 [General]
   DataDir = "/root/data"
   IsArchival = false
-  IsBackup = false
   IsBeaconArchival = false
   IsOffline = false
   NoStaking = true
@@ -44,7 +43,6 @@ Version = "2.5.0"
   ShardID = {{SHARD}}
 
 [HTTP]
-  AuthPort = 9501
   Enabled = true
   IP = "0.0.0.0"
   Port = {{RPC_PORT}}
@@ -67,19 +65,13 @@ Version = "2.5.0"
   NetworkType = "mainnet"
 
 [P2P]
-  DiscConcurrency = 0
   IP = "0.0.0.0"
   KeyFile = "./.hmykey"
-  MaxConnsPerIP = 10
   Port = {{PEER_PORT}}
 
 [Pprof]
   Enabled = false
-  Folder = "./profiles"
   ListenAddr = "127.0.0.1:6060"
-  ProfileDebugValues = [0]
-  ProfileIntervals = [600]
-  ProfileNames = []
 
 [RPCOpt]
   DebugEnabled = false
@@ -101,7 +93,6 @@ Version = "2.5.0"
   BlacklistFile = "./.hmy/blacklist.txt"
 
 [WS]
-  AuthPort = 9801
   Enabled = true
   IP = "127.0.0.1"
   Port = 9800
