@@ -37,6 +37,20 @@ export class Avalanche extends Bitcoin {
       case NodeClient.CORE:
         versions = [
           {
+            version: '1.7.4',
+            clientVersion: '1.7.4',
+            image: 'avaplatform/avalanchego:v1.7.4',
+            dataDir: '/root/db',
+            walletDir: '/root/keystore',
+            logDir: '/root/logs',
+            configPath: '/root/config.json',
+            networks: [NetworkType.MAINNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              return ` --config-file=${this.configPath}`;
+            },
+          },
+          {
             version: '1.7.3',
             clientVersion: '1.7.3',
             image: 'avaplatform/avalanchego:v1.7.3',
