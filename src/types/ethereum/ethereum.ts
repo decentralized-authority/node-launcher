@@ -221,7 +221,6 @@ export class Ethereum extends Bitcoin {
     NetworkType.GOERLI,
     NetworkType.ROPSTEN,
     NetworkType.KOVAN,
-    NetworkType.BSC,
   ];
 
   static networkTypesByClient = {
@@ -235,7 +234,6 @@ export class Ethereum extends Bitcoin {
       NetworkType.GOERLI,
       NetworkType.ROPSTEN,
       NetworkType.KOVAN,
-      NetworkType.BSC,
     ],
   };
 
@@ -249,7 +247,6 @@ export class Ethereum extends Bitcoin {
     [NetworkType.GOERLI]: 8545,
     [NetworkType.ROPSTEN]: 8545,
     [NetworkType.KOVAN]: 8545,
-    [NetworkType.BSC]: 8545,
   };
 
   static defaultPeerPort = {
@@ -258,7 +255,6 @@ export class Ethereum extends Bitcoin {
     [NetworkType.GOERLI]: 30303,
     [NetworkType.ROPSTEN]: 30303,
     [NetworkType.KOVAN]: 30303,
-    [NetworkType.BSC]: 30303,
   };
 
   static defaultCPUs = 8;

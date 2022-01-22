@@ -11,7 +11,7 @@ import {
   NodeClient,
   NodeType,
   Status,
-}                         from '../constants';
+} from '../constants';
 import { v4 as uuid }     from 'uuid';
 import { ChildProcess }   from 'child_process';
 import { timeout }        from '../util';

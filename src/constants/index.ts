@@ -9,7 +9,6 @@ export const NetworkType: KeysMap = {
   GOERLI: 'GOERLI',
   ROPSTEN: 'ROPSTEN',
   KOVAN: 'KOVAN',
-  BSC: 'BSC',
 };
 
 export const NodeType: KeysMap = {
