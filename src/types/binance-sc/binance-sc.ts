@@ -86,7 +86,7 @@ export class BinanceSC extends Ethereum {
             configPath: '/blockchain/config.toml',
             networks: [NetworkType.MAINNET],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(): string {
               return ` --config=${this.configPath}`;
             },
           },
@@ -99,7 +99,7 @@ export class BinanceSC extends Ethereum {
             configPath: '/blockchain/config.toml',
             networks: [NetworkType.MAINNET],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(): string {
               return ` --config=${this.configPath}`;
             },
           },
@@ -122,6 +122,12 @@ export class BinanceSC extends Ethereum {
   static networkTypes = [
     NetworkType.MAINNET,
   ];
+
+  static networkTypesByClient = {
+    [NodeClient.GETH]: [
+      NetworkType.MAINNET,
+    ],
+  };
 
   static roles = [
     Role.NODE,
@@ -251,7 +257,7 @@ export class BinanceSC extends Ethereum {
     if(!genesisExists) {
       const genesis = BinanceSC.getGenesis(this.network);
       await fs.writeFile(genesisPath, genesis, 'utf8');
-      await new Promise<void>((resolve, reject) => {
+      await new Promise<void>((resolve) => {
         this._docker.run(
           this.dockerImage + versionData.generateRuntimeArgs(this) + ` init ${path.join(containerDataDir, 'genesis.json')}`,
           args,

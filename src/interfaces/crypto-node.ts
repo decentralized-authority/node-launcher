@@ -16,6 +16,7 @@ export interface VersionDockerImage {
 }
 export interface CryptoNodeData {
   id?: string;
+  rpcDaemonId?: string;
   ticker?: string;
   name?: string;
   version?: string;
@@ -47,16 +48,18 @@ export interface CryptoNodeData {
   remoteProtocol?: string;
   remotePort?: number;
   role?: string;
+  [key: string]: any;
 }
 
 export interface CryptoNode {
   _docker: Docker,
   _instance?: ChildProcess;
+  _rpcInstance?: ChildProcess;
   _logError(message: string): void;
   _logOutput(output: string): void;
   _logClose(exitCode: number): void;
   _requestTimeout: number;
-  start(): Promise<ChildProcess>;
+  start(): Promise<ChildProcess|Array<ChildProcess>>;
   stop(): void;
   isRunning(): Promise<boolean>;
   toObject(): CryptoNodeData;
@@ -73,10 +76,17 @@ export interface CryptoNode {
 export abstract class CryptoNodeStatic {
   static nodeTypes: string[];
   static networkTypes: string[];
+  static networkTypesByClient: {
+    [key: string]: Array<string>
+  };
   static defaultPeerPort: any;
   static defaultRPCPort: any;
   static defaultCPUs: number;
   static defaultMem: number;
+  static defaultArchivalCPUs?: number;
+  static defaultArchivalMem?: number;
+  static rpcDaemonCPUs?: number;
+  static rpcDaemonMem?: number;
   static versions(client: string, network: string): VersionDockerImage[] {
     return [];
   }

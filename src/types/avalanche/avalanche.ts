@@ -1,6 +1,6 @@
 import { CryptoNodeData, VersionDockerImage } from '../../interfaces/crypto-node';
 import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role, Status } from '../../constants';
-import { filterVersionsByNetworkType, generateRandom } from '../../util';
+import { filterVersionsByNetworkType } from '../../util';
 import { Docker } from '../../util/docker';
 import { ChildProcess } from 'child_process';
 import { v4 as uuid} from 'uuid';
@@ -46,7 +46,7 @@ export class Avalanche extends Bitcoin {
             configPath: '/root/config.json',
             networks: [NetworkType.MAINNET],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(): string {
               return ` --config-file=${this.configPath}`;
             },
           },
@@ -60,7 +60,7 @@ export class Avalanche extends Bitcoin {
             configPath: '/root/config.json',
             networks: [NetworkType.MAINNET],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(): string {
               return ` --config-file=${this.configPath}`;
             },
           },
@@ -74,7 +74,7 @@ export class Avalanche extends Bitcoin {
             configPath: '/root/config.json',
             networks: [NetworkType.MAINNET],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(): string {
               return ` --config-file=${this.configPath}`;
             },
           },
@@ -88,7 +88,7 @@ export class Avalanche extends Bitcoin {
             configPath: '/root/config.json',
             networks: [NetworkType.MAINNET],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(): string {
               return ` --config-file=${this.configPath}`;
             },
           },
@@ -102,7 +102,7 @@ export class Avalanche extends Bitcoin {
             configPath: '/root/config.json',
             networks: [NetworkType.MAINNET],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(): string {
               return ` --config-file=${this.configPath}`;
             },
           },
@@ -116,7 +116,7 @@ export class Avalanche extends Bitcoin {
             configPath: '/root/config.json',
             networks: [NetworkType.MAINNET],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(): string {
               return ` --config-file=${this.configPath}`;
             },
           },
@@ -130,7 +130,7 @@ export class Avalanche extends Bitcoin {
             configPath: '/root/config.json',
             networks: [NetworkType.MAINNET],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(): string {
               return ` --config-file=${this.configPath}`;
             },
           },
@@ -144,7 +144,7 @@ export class Avalanche extends Bitcoin {
             configPath: '/root/config.json',
             networks: [NetworkType.MAINNET],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(): string {
               return ` --config-file=${this.configPath}`;
             },
           },
@@ -167,6 +167,12 @@ export class Avalanche extends Bitcoin {
   static networkTypes = [
     NetworkType.MAINNET,
   ];
+
+  static networkTypesByClient = {
+    [NodeClient.CORE]: [
+      NetworkType.MAINNET,
+    ],
+  };
 
   static roles = [
     Role.NODE,
@@ -380,7 +386,7 @@ export class Avalanche extends Bitcoin {
   }
 
   async getXHeight(): Promise<string> {
-    return '';
+    return Promise.resolve('');
   }
 
   async getCHeight(): Promise<string> {
