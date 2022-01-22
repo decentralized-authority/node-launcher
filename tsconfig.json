@@ -10,5 +10,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "exclude": ["./src/**/*.spec.ts"]
+  "exclude": [
+    "./src/**/*.spec.ts"
+  ]
 }

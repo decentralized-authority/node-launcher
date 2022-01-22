@@ -12,7 +12,7 @@ export const nethermindConfig = {
   'Network': {
     'DiscoveryPort': 30303,
     'P2PPort': 30303,
-    'ActivePeersMaxCount': 32
+    'ActivePeersMaxCount': 32,
   },
   'TxPool': {
     'Size': 2048,
@@ -50,7 +50,7 @@ export const nethermindConfig = {
     'IntervalSeconds': 5,
   },
   'HealthChecks': {
-    'Enabled': true
+    'Enabled': true,
   },
   'Aura': {
     'ForceSealing': true,

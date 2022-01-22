@@ -1,14 +1,23 @@
-import { Ethereum } from '../ethereum/ethereum';
-import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role } from '../../constants';
-import { v4 as uuid } from 'uuid';
-import { CryptoNodeData, VersionDockerImage } from '../../interfaces/crypto-node';
-import { Docker } from '../../util/docker';
-import { ChildProcess } from 'child_process';
-import os from 'os';
-import path from 'path';
-import fs from 'fs-extra';
+import { Ethereum }                    from '../ethereum/ethereum';
+import {
+  defaultDockerNetwork,
+  NetworkType,
+  NodeClient,
+  NodeType,
+  Role,
+}                                      from '../../constants';
+import { v4 as uuid }                  from 'uuid';
+import {
+  CryptoNodeData,
+  VersionDockerImage,
+}                                      from '../../interfaces/crypto-node';
+import { Docker }                      from '../../util/docker';
+import { ChildProcess }                from 'child_process';
+import os                              from 'os';
+import path                            from 'path';
+import fs                              from 'fs-extra';
 import { filterVersionsByNetworkType } from '../../util';
-import * as genesis from './genesis';
+import * as genesis                    from './genesis';
 
 const coreConfig = `
 [Eth]
@@ -74,7 +83,7 @@ export class BinanceSC extends Ethereum {
   static versions(client: string, networkType: string): VersionDockerImage[] {
     client = client || BinanceSC.clients[0];
     let versions: VersionDockerImage[];
-    switch(client) {
+    switch (client) {
       case NodeClient.GETH:
         versions = [
           {
@@ -84,7 +93,7 @@ export class BinanceSC extends Ethereum {
             dataDir: '/blockchain/data',
             walletDir: '/blockchain/keys',
             configPath: '/blockchain/config.toml',
-            networks: [NetworkType.MAINNET],
+            networks: [ NetworkType.MAINNET ],
             breaking: false,
             generateRuntimeArgs(): string {
               return ` --config=${this.configPath}`;
@@ -97,7 +106,7 @@ export class BinanceSC extends Ethereum {
             dataDir: '/blockchain/data',
             walletDir: '/blockchain/keys',
             configPath: '/blockchain/config.toml',
-            networks: [NetworkType.MAINNET],
+            networks: [ NetworkType.MAINNET ],
             breaking: false,
             generateRuntimeArgs(): string {
               return ` --config=${this.configPath}`;
@@ -146,7 +155,7 @@ export class BinanceSC extends Ethereum {
   static defaultMem = 32768;
 
   static generateConfig(client = BinanceSC.clients[0], network = NetworkType.MAINNET, peerPort = BinanceSC.defaultPeerPort[NetworkType.MAINNET], rpcPort = BinanceSC.defaultRPCPort[NetworkType.MAINNET]): string {
-    switch(client) {
+    switch (client) {
       case NodeClient.GETH:
         return coreConfig
           .replace('{{PEER_PORT}}', peerPort.toString(10))
@@ -158,10 +167,11 @@ export class BinanceSC extends Ethereum {
   }
 
   static getGenesis(network: string): string {
-    switch(network) {
+    switch (network) {
       case NetworkType.MAINNET: {
         return genesis.mainnet;
-      } default:
+      }
+      default:
         return '';
     }
   }
@@ -212,14 +222,14 @@ export class BinanceSC extends Ethereum {
     this.clientVersion = data.clientVersion || versionObj.clientVersion || '';
     this.dockerImage = this.remote ? '' : data.dockerImage ? data.dockerImage : (versionObj.image || '');
     this.archival = data.archival || this.archival;
-    if(docker)
+    if (docker)
       this._docker = docker;
   }
 
   async start(): Promise<ChildProcess> {
     const versions = BinanceSC.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
-    if(!versionData)
+    if (!versionData)
       throw new Error(`Unknown version ${this.version}`);
     const {
       dataDir: containerDataDir,
@@ -238,23 +248,23 @@ export class BinanceSC extends Ethereum {
     ];
     const tmpdir = os.tmpdir();
     const dataDir = this.dataDir || path.join(tmpdir, uuid());
-    args = [...args, '-v', `${dataDir}:${containerDataDir}`];
+    args = [ ...args, '-v', `${dataDir}:${containerDataDir}` ];
     await fs.ensureDir(dataDir);
 
     const walletDir = this.walletDir || path.join(tmpdir, uuid());
-    args = [...args, '-v', `${walletDir}:${containerWalletDir}`];
+    args = [ ...args, '-v', `${walletDir}:${containerWalletDir}` ];
     await fs.ensureDir(walletDir);
 
     const configPath = this.configPath || path.join(tmpdir, uuid());
     const configExists = await fs.pathExists(configPath);
-    if(!configExists)
+    if (!configExists)
       await fs.writeFile(configPath, this.generateConfig(), 'utf8');
-    args = [...args, '-v', `${configPath}:${containerConfigPath}`];
+    args = [ ...args, '-v', `${configPath}:${containerConfigPath}` ];
 
     const genesisPath = path.join(dataDir, 'genesis.json');
     const genesisExists = await fs.pathExists(genesisPath);
 
-    if(!genesisExists) {
+    if (!genesisExists) {
       const genesis = BinanceSC.getGenesis(this.network);
       await fs.writeFile(genesisPath, genesis, 'utf8');
       await new Promise<void>((resolve) => {

@@ -1,14 +1,23 @@
-import { Ethereum } from '../ethereum/ethereum';
-import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role } from '../../constants';
-import { v4 as uuid } from 'uuid';
-import { CryptoNodeData, VersionDockerImage } from '../../interfaces/crypto-node';
-import { Docker } from '../../util/docker';
-import { ChildProcess } from 'child_process';
-import os from 'os';
-import path from 'path';
-import fs from 'fs-extra';
+import { Ethereum }                    from '../ethereum/ethereum';
+import {
+  defaultDockerNetwork,
+  NetworkType,
+  NodeClient,
+  NodeType,
+  Role,
+}                                      from '../../constants';
+import { v4 as uuid }                  from 'uuid';
+import {
+  CryptoNodeData,
+  VersionDockerImage,
+}                                      from '../../interfaces/crypto-node';
+import { Docker }                      from '../../util/docker';
+import { ChildProcess }                from 'child_process';
+import os                              from 'os';
+import path                            from 'path';
+import fs                              from 'fs-extra';
 import { filterVersionsByNetworkType } from '../../util';
-import Web3 from 'web3';
+import Web3                            from 'web3';
 
 const testnetBootnodes = [
   'enode://aaa92938fb3b4b073ea811894376d597a3feef30ce999a8bee617c24b7acd4021f16f94856e5c48f25b4fde999fc5df27de73d2c394e6c46cc5d44e012dd9e35@3.123.228.59:30303',
@@ -69,9 +78,9 @@ gas_floor_target = "10000000"
 `;
 
 interface FuseVersionDockerImage extends VersionDockerImage {
-  passwordPath: string
-  imageValidatorApp: string
-  imageNetstat: string
+  passwordPath: string;
+  imageValidatorApp: string;
+  imageNetstat: string;
 }
 
 export class Fuse extends Ethereum {
@@ -79,7 +88,7 @@ export class Fuse extends Ethereum {
   static versions(client: string, networkType: string): FuseVersionDockerImage[] {
     client = client || Fuse.clients[0];
     let versions: FuseVersionDockerImage[];
-    switch(client) {
+    switch (client) {
       case NodeClient.OPEN_ETHEREUM:
         versions = [
           {
@@ -92,7 +101,7 @@ export class Fuse extends Ethereum {
             walletDir: '/root/keystore',
             configPath: '/root/config.toml',
             passwordPath: '/root/pass.pwd',
-            networks: [NetworkType.TESTNET],
+            networks: [ NetworkType.TESTNET ],
             breaking: false,
             generateRuntimeArgs(): string {
               return ` --no-warp --config=${this.configPath}`;
@@ -108,7 +117,7 @@ export class Fuse extends Ethereum {
             walletDir: '/root/keystore',
             configPath: '/root/config.toml',
             passwordPath: '/root/pass.pwd',
-            networks: [NetworkType.TESTNET],
+            networks: [ NetworkType.TESTNET ],
             breaking: false,
             generateRuntimeArgs(): string {
               return ` --no-warp --config=${this.configPath} --bootnodes ${testnetBootnodes}`;
@@ -124,7 +133,7 @@ export class Fuse extends Ethereum {
             walletDir: '/root/keystore',
             configPath: '/root/config.toml',
             passwordPath: '/root/pass.pwd',
-            networks: [NetworkType.MAINNET],
+            networks: [ NetworkType.MAINNET ],
             breaking: false,
             generateRuntimeArgs(): string {
               return ` --no-warp --config=${this.configPath}`;
@@ -140,7 +149,7 @@ export class Fuse extends Ethereum {
             walletDir: '/root/keystore',
             configPath: '/root/config.toml',
             passwordPath: '/root/pass.pwd',
-            networks: [NetworkType.MAINNET],
+            networks: [ NetworkType.MAINNET ],
             breaking: false,
             generateRuntimeArgs(): string {
               return ` --config=${this.configPath}`;
@@ -193,19 +202,19 @@ export class Fuse extends Ethereum {
 
   static defaultMem = 8192;
 
-  static generateConfig(client: string|Fuse = Fuse.clients[0], network = NetworkType.MAINNET, peerPort = Fuse.defaultPeerPort[NetworkType.MAINNET], rpcPort = Fuse.defaultRPCPort[NetworkType.MAINNET]): string {
+  static generateConfig(client: string | Fuse = Fuse.clients[0], network = NetworkType.MAINNET, peerPort = Fuse.defaultPeerPort[NetworkType.MAINNET], rpcPort = Fuse.defaultRPCPort[NetworkType.MAINNET]): string {
     let baseConfig = coreConfig;
     let address = '';
-    if(typeof client !== 'string') { // node was passed in rather than client string
+    if (typeof client !== 'string') { // node was passed in rather than client string
       const node = client;
       client = node.client;
       peerPort = node.peerPort;
       rpcPort = node.rpcPort;
       address = node.address;
-      if(node.role === Role.VALIDATOR)
+      if (node.role === Role.VALIDATOR)
         baseConfig = coreValidatorConfig;
     }
-    switch(client) {
+    switch (client) {
       case NodeClient.OPEN_ETHEREUM:
         return baseConfig
           .replace('{{address}}', address)
@@ -246,6 +255,7 @@ export class Fuse extends Ethereum {
   keyPass = '';
   address = '';
   role = Fuse.roles[0];
+
   [key: string]: any;
 
   constructor(data: CryptoNodeData, docker?: Docker) {
@@ -279,9 +289,9 @@ export class Fuse extends Ethereum {
     this.key = data.key || this.key;
     this.keyPass = data.keyPass || this.keyPass;
     this.address = data.address || this.address;
-    if(this.role === Role.VALIDATOR && !this.key)
+    if (this.role === Role.VALIDATOR && !this.key)
       this.createAccount();
-    if(docker)
+    if (docker)
       this._docker = docker;
   }
 
@@ -292,14 +302,14 @@ export class Fuse extends Ethereum {
 
     keys = keys.filter(key => typeof this[key] !== 'function' && typeof this[key] !== 'undefined');
 
-    const dataObj = keys.reduce((obj: any, key) => ({...obj, [key]: this[key]}), {});
+    const dataObj = keys.reduce((obj: any, key) => ({ ...obj, [key]: this[key] }), {});
     return dataObj as CryptoNodeData;
   }
 
   async start(): Promise<ChildProcess> {
     const versions = Fuse.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
-    if(!versionData)
+    if (!versionData)
       throw new Error(`Unknown ${this.ticker} version ${this.version}`);
     const {
       dataDir: containerDataDir,
@@ -321,28 +331,28 @@ export class Fuse extends Ethereum {
     ];
     const tmpdir = os.tmpdir();
     const dataDir = this.dataDir || path.join(tmpdir, uuid());
-    args = [...args, '-v', `${dataDir}:${containerDataDir}`];
+    args = [ ...args, '-v', `${dataDir}:${containerDataDir}` ];
     await fs.ensureDir(dataDir);
 
     const walletDir = this.walletDir || path.join(tmpdir, uuid());
-    args = [...args, '-v', `${walletDir}:${containerWalletDir}`];
+    args = [ ...args, '-v', `${walletDir}:${containerWalletDir}` ];
     await fs.ensureDir(walletDir);
 
     const configPath = this.configPath || path.join(tmpdir, uuid());
     const configExists = await fs.pathExists(configPath);
-    if(!configExists)
+    if (!configExists)
       await fs.writeFile(configPath, this.generateConfig(), 'utf8');
-    args = [...args, '-v', `${configPath}:${containerConfigPath}`];
+    args = [ ...args, '-v', `${configPath}:${containerConfigPath}` ];
 
     await this._docker.pull(this.dockerImage, str => this._logOutput(str));
 
-    if(this.key) {
+    if (this.key) {
       const passwordPath = this.passwordPath || path.join(tmpdir, uuid());
       const passwordFileExists = await fs.pathExists(passwordPath);
-      if(!passwordFileExists)
+      if (!passwordFileExists)
         await fs.writeFile(passwordPath, this.keyPass, 'utf8');
-      args = [...args, '-v', `${passwordPath}:${containerPasswordPath}`];
-      if(fs.readdirSync(walletDir).length === 0) {
+      args = [ ...args, '-v', `${passwordPath}:${containerPasswordPath}` ];
+      if (fs.readdirSync(walletDir).length === 0) {
         const keyFilePath = path.join(os.tmpdir(), uuid());
         await fs.writeJson(keyFilePath, this.key);
         const accountPath = `/UTC--${new Date().toISOString().replace(/:/g, '-')}--${this.address}.json`;
@@ -373,7 +383,7 @@ export class Fuse extends Ethereum {
     );
     this._instance = instance;
 
-    if(this.role === Role.VALIDATOR) {
+    if (this.role === Role.VALIDATOR) {
       await new Promise(resolve => setTimeout(resolve, 1000));
       // start validator app
       const validatorAppArgs = [
@@ -388,16 +398,17 @@ export class Fuse extends Ethereum {
       ];
       try {
         const validatorAppExists = await this._docker.containerExists(this.validatorAppContainerName());
-        if(!validatorAppExists) {
+        if (!validatorAppExists) {
           this._docker.run(
             versionData.imageValidatorApp,
             validatorAppArgs,
-            () => {},
+            () => {
+            },
             err => this._logError(err),
             () => this._logOutput(`${this.validatorAppContainerName()} closed`),
           );
         }
-      } catch(err) {
+      } catch (err) {
         this._logError(err);
       }
       // start netstats
@@ -429,7 +440,7 @@ export class Fuse extends Ethereum {
           }
         ]`;
       const netstatConfigPath = path.join(tmpdir, uuid());
-      await fs.writeJson(netstatConfigPath, JSON.parse(netstatConfig), {spaces: 2});
+      await fs.writeJson(netstatConfigPath, JSON.parse(netstatConfig), { spaces: 2 });
       const netstatArgs = [
         '--rm',
         '-i',
@@ -444,16 +455,17 @@ export class Fuse extends Ethereum {
       ];
       try {
         const netstatExists = await this._docker.containerExists(this.netstatContainerName());
-        if(!netstatExists) {
+        if (!netstatExists) {
           this._docker.run(
             `${versionData.imageNetstat} --instance-name ${this.address} --role validator --parity-version ${versionData.version} --fuseapp-version ${this.validatorAppContainerName().split(':')[1]} --netstats-version ${this.netstatContainerName().split(':')[1]}`,
             netstatArgs,
-            () => {},
+            () => {
+            },
             err => this._logError(err),
             () => this._logOutput(`${this.netstatContainerName()} closed`),
           );
         }
-      } catch(err) {
+      } catch (err) {
         this._logError(err);
       }
     }
@@ -470,22 +482,22 @@ export class Fuse extends Ethereum {
   }
 
   async stop(): Promise<void> {
-    if(this.role === Role.VALIDATOR) {
+    if (this.role === Role.VALIDATOR) {
       try {
         await this._docker.kill(this.validatorAppContainerName());
-      } catch(err) {
+      } catch (err) {
         this._logError(err);
       }
       try {
         await this._docker.kill(this.netstatContainerName());
-      } catch(err) {
+      } catch (err) {
         this._logError(err);
       }
     }
     await new Promise<void>(resolve => {
-      if(this._instance) {
+      if (this._instance) {
         const { exitCode } = this._instance;
-        if(exitCode) {
+        if (exitCode) {
           resolve();
         } else {
           this._instance.on('exit', () => {
@@ -531,7 +543,7 @@ export class Fuse extends Ethereum {
     try {
       const web3 = new Web3(`http://localhost:${this.rpcPort}`);
       return await web3.eth.getBalance(this.address);
-    } catch(err) {
+    } catch (err) {
       return '';
     }
   }

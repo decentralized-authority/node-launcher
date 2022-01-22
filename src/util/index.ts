@@ -4,10 +4,10 @@ import { VersionDockerImage } from '../interfaces/crypto-node';
 export const aggregateStats = function(values: Array<string>): string {
   const pattern = /(\d*[.,]?\d*)([GM]iB)/;
 
-  const parsedValues: Array<Array<number|string>> = values.map((value) => {
+  const parsedValues: Array<Array<number | string>> = values.map((value) => {
     const matches = value.match(pattern);
-    if(!matches || !matches.length || matches.length < 2) return ['0', 'MiB'];
-    return [Number(matches[1]), matches[2]];
+    if (!matches || !matches.length || matches.length < 2) return [ '0', 'MiB' ];
+    return [ Number(matches[1]), matches[2] ];
   });
   const hasGiB = parsedValues.some((values: Array<number | string>) => values[1] === 'GiB');
   let totalInMiB = parsedValues.reduce((acc: number, cur: Array<number | string>) => {

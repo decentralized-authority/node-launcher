@@ -1,32 +1,32 @@
 /* eslint-disable new-cap */
 import 'should';
-import { Litecoin }       from './litecoin/litecoin';
-import { Docker }         from '../util/docker';
+import { Litecoin }     from './litecoin/litecoin';
+import { Docker }       from '../util/docker';
 import {
   CryptoNodeData,
   VersionDockerImage,
-} from '../interfaces/crypto-node';
+}                       from '../interfaces/crypto-node';
 import {
   NetworkType,
   NodeClient,
   NodeType,
   Status,
-} from '../constants';
-import { v4 as uuid }     from 'uuid';
-import { ChildProcess }   from 'child_process';
-import { timeout }        from '../util';
-import { Bitcoin } from './bitcoin/bitcoin';
-import { Dash }           from './dash/dash';
-import { BitcoinCash }    from './bitcoin-cash/bitcoin-cash';
-import { LBRY }           from './lbry/lbry';
-import { Ethereum } from './ethereum/ethereum';
-import { Xdai }           from './xdai/xdai';
-import { BinanceSC }      from './binance-sc/binance-sc';
-import { Avalanche }      from './avalanche/avalanche';
-import { Pocket }         from './pocket/pocket';
-import { Fuse }           from './fuse/fuse';
-import { isNull }         from 'lodash';
-import { Harmony }        from './harmony/harmony';
+}                       from '../constants';
+import { v4 as uuid }   from 'uuid';
+import { ChildProcess } from 'child_process';
+import { timeout }      from '../util';
+import { Bitcoin }      from './bitcoin/bitcoin';
+import { Dash }         from './dash/dash';
+import { BitcoinCash }  from './bitcoin-cash/bitcoin-cash';
+import { LBRY }         from './lbry/lbry';
+import { Ethereum }     from './ethereum/ethereum';
+import { Xdai }         from './xdai/xdai';
+import { BinanceSC }    from './binance-sc/binance-sc';
+import { Avalanche }    from './avalanche/avalanche';
+import { Pocket }       from './pocket/pocket';
+import { Fuse }         from './fuse/fuse';
+import { isNull }       from 'lodash';
+import { Harmony }      from './harmony/harmony';
 
 interface KeyAnyMap {
   [key: string]: any;
@@ -38,18 +38,18 @@ interface ChainTester {
 }
 
 const chains: Array<ChainTester> = [
-  {name: 'Bitcoin', constructor: Bitcoin},
-  {name: 'BitcoinCash', constructor: BitcoinCash},
-  {name: 'Dash', constructor: Dash},
-  {name: 'LBRY', constructor: LBRY},
-  {name: 'Litecoin', constructor: Litecoin},
+  { name: 'Bitcoin', constructor: Bitcoin },
+  { name: 'BitcoinCash', constructor: BitcoinCash },
+  { name: 'Dash', constructor: Dash },
+  { name: 'LBRY', constructor: LBRY },
+  { name: 'Litecoin', constructor: Litecoin },
   { name: 'Ethereum', constructor: Ethereum },
-  {name: 'BinanceSC', constructor: BinanceSC},
-  {name: 'Xdai', constructor: Xdai},
-  {name: 'Avalanche', constructor: Avalanche},
-  {name: 'Pocket', constructor: Pocket},
-  {name: 'Fuse', constructor: Fuse},
-  {name: 'Harmony', constructor: Harmony},
+  { name: 'BinanceSC', constructor: BinanceSC },
+  { name: 'Xdai', constructor: Xdai },
+  { name: 'Avalanche', constructor: Avalanche },
+  { name: 'Pocket', constructor: Pocket },
+  { name: 'Fuse', constructor: Fuse },
+  { name: 'Harmony', constructor: Harmony },
 ];
 
 chains.forEach(({ name, constructor: NodeConstructor }) => {
@@ -101,7 +101,7 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
       it('should return an array of version data objects', function() {
         const versions = NodeConstructor.versions(NodeConstructor.clients[0], NodeConstructor.networkTypes[0]);
         versions.should.be.an.Array();
-        versions.forEach((v ) => {
+        versions.forEach((v) => {
           v.should.be.an.Object();
           v.version.should.be.a.String();
           v.image.should.be.a.String();

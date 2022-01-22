@@ -1,13 +1,25 @@
-import { Bitcoin } from '../bitcoin/bitcoin';
-import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role } from '../../constants';
-import { v4 as uuid } from 'uuid';
-import { filterVersionsByNetworkType, generateRandom } from '../../util';
-import { CryptoNodeData, VersionDockerImage } from '../../interfaces/crypto-node';
-import { Docker } from '../../util/docker';
+import { Bitcoin }      from '../bitcoin/bitcoin';
+import {
+  defaultDockerNetwork,
+  NetworkType,
+  NodeClient,
+  NodeType,
+  Role,
+}                       from '../../constants';
+import { v4 as uuid }   from 'uuid';
+import {
+  filterVersionsByNetworkType,
+  generateRandom,
+}                       from '../../util';
+import {
+  CryptoNodeData,
+  VersionDockerImage,
+}                       from '../../interfaces/crypto-node';
+import { Docker }       from '../../util/docker';
 import { ChildProcess } from 'child_process';
-import os from 'os';
-import path from 'path';
-import fs from 'fs-extra';
+import os               from 'os';
+import path             from 'path';
+import fs               from 'fs-extra';
 
 const coreConfig = `
 server=1
@@ -26,10 +38,10 @@ rpcport={{RPC_PORT}}
 
 export class Litecoin extends Bitcoin {
 
-  static versions(client : string, networkType: string): VersionDockerImage[] {
+  static versions(client: string, networkType: string): VersionDockerImage[] {
     client = client || Litecoin.clients[0];
     let versions: VersionDockerImage[];
-    switch(client) {
+    switch (client) {
       case NodeClient.CORE:
         versions = [
           {
@@ -39,7 +51,7 @@ export class Litecoin extends Bitcoin {
             dataDir: '/opt/blockchain/data',
             walletDir: '/opt/blockchain/wallets',
             configPath: '/opt/blockchain/litecoin.conf',
-            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            networks: [ NetworkType.MAINNET, NetworkType.TESTNET ],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               return ` litecoind -conf=${this.configPath}` + (data.network === NetworkType.TESTNET ? ' -testnet' : '');
@@ -92,7 +104,7 @@ export class Litecoin extends Bitcoin {
   static defaultMem = 8192;
 
   static generateConfig(client = Litecoin.clients[0], network = NetworkType.MAINNET, peerPort = Litecoin.defaultPeerPort[NetworkType.MAINNET], rpcPort = Litecoin.defaultRPCPort[NetworkType.MAINNET], rpcUsername = generateRandom(), rpcPassword = generateRandom()): string {
-    switch(client) {
+    switch (client) {
       case NodeClient.CORE:
         return coreConfig
           .replace('{{NETWORK}}', network === NetworkType.MAINNET ? 'main' : 'test')
@@ -154,14 +166,14 @@ export class Litecoin extends Bitcoin {
     this.dockerImage = this.remote ? '' : data.dockerImage ? data.dockerImage : (versionObj.image || '');
     this.archival = data.archival || this.archival;
     this.role = data.role || this.role;
-    if(docker)
+    if (docker)
       this._docker = docker;
   }
 
   async start(): Promise<ChildProcess> {
     const versions = Litecoin.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
-    if(!versionData)
+    if (!versionData)
       throw new Error(`Unknown version ${this.version}`);
     const {
       dataDir: containerDataDir,
@@ -180,18 +192,18 @@ export class Litecoin extends Bitcoin {
     ];
     const tmpdir = os.tmpdir();
     const dataDir = this.dataDir || path.join(tmpdir, uuid());
-    args = [...args, '-v', `${dataDir}:${containerDataDir}`];
+    args = [ ...args, '-v', `${dataDir}:${containerDataDir}` ];
     await fs.ensureDir(dataDir);
 
     const walletDir = this.walletDir || path.join(tmpdir, uuid());
-    args = [...args, '-v', `${walletDir}:${containerWalletDir}`];
+    args = [ ...args, '-v', `${walletDir}:${containerWalletDir}` ];
     await fs.ensureDir(walletDir);
 
     const configPath = this.configPath || path.join(tmpdir, uuid());
     const configExists = await fs.pathExists(configPath);
-    if(!configExists)
+    if (!configExists)
       await fs.writeFile(configPath, this.generateConfig(), 'utf8');
-    args = [...args, '-v', `${configPath}:${containerConfigPath}`];
+    args = [ ...args, '-v', `${configPath}:${containerConfigPath}` ];
 
     await this._docker.pull(this.dockerImage, str => this._logOutput(str));
 
