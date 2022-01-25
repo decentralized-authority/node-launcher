@@ -167,6 +167,13 @@ export class Fuse extends Ethereum {
     NetworkType.TESTNET,
   ];
 
+  static networkTypesByClient = {
+    [NodeClient.OPEN_ETHEREUM]: [
+      NetworkType.MAINNET,
+      NetworkType.TESTNET,
+    ],
+  };
+
   static roles = [
     Role.NODE,
     Role.VALIDATOR,
