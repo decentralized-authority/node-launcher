@@ -283,6 +283,13 @@ export class Pocket extends Bitcoin {
     NetworkType.TESTNET,
   ];
 
+  static networkTypesByClient = {
+    [NodeClient.CORE]: [
+      NetworkType.MAINNET,
+      NetworkType.TESTNET,
+    ],
+  };
+
   static defaultRPCPort = {
     [NetworkType.MAINNET]: 8081,
     [NetworkType.TESTNET]: 8081,

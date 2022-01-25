@@ -84,6 +84,15 @@ export class Xdai extends Ethereum {
     NetworkType.MAINNET,
   ];
 
+  static networkTypesByClient = {
+    [NodeClient.OPEN_ETHEREUM]: [
+      NetworkType.MAINNET,
+    ],
+    [NodeClient.NETHERMIND]: [
+      NetworkType.MAINNET,
+    ],
+  };
+
   static roles = [
     Role.NODE,
   ];
