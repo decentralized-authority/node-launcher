@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import crypto                 from 'crypto';
 import { VersionDockerImage } from '../interfaces/crypto-node';
 
 export const aggregateStats = function(values: Array<string>): string {
