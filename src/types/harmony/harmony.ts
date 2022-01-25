@@ -119,7 +119,7 @@ export class Harmony extends Ethereum {
             configPath: '/harmony/harmony.conf',
             networks: [NetworkType.MAINNET],
             breaking: false,
-            generateRuntimeArgs(): string {
+            generateRuntimeArgs(data: CryptoNodeData): string {
               return ` -c ${this.configPath}`;
             },
           },
@@ -132,7 +132,7 @@ export class Harmony extends Ethereum {
             configPath: '/harmony/harmony.conf',
             networks: [NetworkType.MAINNET],
             breaking: false,
-            generateRuntimeArgs(): string {
+            generateRuntimeArgs(data: CryptoNodeData): string {
               return ` -c ${this.configPath}`;
             },
           },
@@ -145,7 +145,7 @@ export class Harmony extends Ethereum {
             configPath: '/harmony/harmony.conf',
             networks: [NetworkType.MAINNET],
             breaking: false,
-            generateRuntimeArgs(): string {
+            generateRuntimeArgs(data: CryptoNodeData): string {
               return ` -c ${this.configPath}`;
             },
           },
@@ -168,12 +168,6 @@ export class Harmony extends Ethereum {
   static networkTypes = [
     NetworkType.MAINNET,
   ];
-
-  static networkTypesByClient = {
-    [NodeClient.CORE]: [
-      NetworkType.MAINNET,
-    ],
-  };
 
   static roles = [
     Role.NODE,

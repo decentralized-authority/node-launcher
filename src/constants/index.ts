@@ -1,8 +1,4 @@
-interface KeysMap {
-  [key: string]: string;
-}
-
-export const NetworkType: KeysMap = {
+export const NetworkType = {
   MAINNET: 'MAINNET',
   TESTNET: 'TESTNET',
   RINKEBY: 'RINKEBY',
@@ -11,12 +7,12 @@ export const NetworkType: KeysMap = {
   KOVAN: 'KOVAN',
 };
 
-export const NodeType: KeysMap = {
+export const NodeType = {
   FULL: 'FULL',
   ARCHIVAL: 'ARCHIVAL',
 };
 
-export const NodeClient: KeysMap = {
+export const NodeClient = {
   CORE: 'CORE',
   GETH: 'GETH',
   OPEN_ETHEREUM: 'OPEN_ETHEREUM',
@@ -25,12 +21,12 @@ export const NodeClient: KeysMap = {
   ERIGON: 'ERIGON',
 };
 
-export const Role: KeysMap = {
+export const Role = {
   NODE: 'NODE',
   VALIDATOR: 'VALIDATOR',
 };
 
-export const Status: KeysMap = {
+export const Status = {
   STOPPED: 'STOPPED',
   SYNCING: 'SYNCING',
   RUNNING: 'RUNNING',
@@ -38,13 +34,13 @@ export const Status: KeysMap = {
 
 export const defaultDockerNetwork = 'da-node-runner-network';
 
-export const NodeEvent: KeysMap = {
+export const NodeEvent = {
   CLOSE: 'CLOSE',
   ERROR: 'ERROR',
   OUTPUT: 'OUTPUT',
 };
 
-export const DockerEvent: KeysMap = {
+export const DockerEvent = {
   ERROR: 'ERROR',
   INFO: 'INFO',
 };

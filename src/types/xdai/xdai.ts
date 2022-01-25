@@ -1,24 +1,15 @@
-import { Ethereum }                    from '../ethereum/ethereum';
-import {
-  defaultDockerNetwork,
-  NetworkType,
-  NodeClient,
-  NodeType,
-  Role,
-}                                      from '../../constants';
-import { v4 as uuid }                  from 'uuid';
-import {
-  CryptoNodeData,
-  VersionDockerImage,
-}                                      from '../../interfaces/crypto-node';
-import { Docker }                      from '../../util/docker';
-import { ChildProcess }                from 'child_process';
-import os                              from 'os';
-import path                            from 'path';
-import fs                              from 'fs-extra';
+import { Ethereum } from '../ethereum/ethereum';
+import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role } from '../../constants';
+import { v4 as uuid } from 'uuid';
+import { CryptoNodeData, VersionDockerImage } from '../../interfaces/crypto-node';
+import { Docker } from '../../util/docker';
+import { ChildProcess } from 'child_process';
+import os from 'os';
+import path from 'path';
+import fs from 'fs-extra';
 import { filterVersionsByNetworkType } from '../../util';
-import { openEthereumConfig }          from './config/openethereum';
-import { nethermindConfig }            from './config/nethermind';
+import { openEthereumConfig } from './config/openethereum';
+import { nethermindConfig } from './config/nethermind';
 
 
 export class Xdai extends Ethereum {
@@ -26,7 +17,7 @@ export class Xdai extends Ethereum {
   static versions(client: string, networkType: string): VersionDockerImage[] {
     client = client || Xdai.clients[0];
     let versions: VersionDockerImage[];
-    switch (client) {
+    switch(client) {
       case NodeClient.OPEN_ETHEREUM:
         versions = [
           {
@@ -36,9 +27,9 @@ export class Xdai extends Ethereum {
             dataDir: '/blockchain/data',
             walletDir: '/blockchain/keys',
             configPath: '/blockchain/config.toml',
-            networks: [ NetworkType.MAINNET, NetworkType.TESTNET ],
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
             breaking: false,
-            generateRuntimeArgs(): string {
+            generateRuntimeArgs(data: CryptoNodeData): string {
               return ` --config=${this.configPath}`;
             },
           },
@@ -49,9 +40,9 @@ export class Xdai extends Ethereum {
             dataDir: '/blockchain/data',
             walletDir: '/blockchain/keys',
             configPath: '/blockchain/config.toml',
-            networks: [ NetworkType.MAINNET, NetworkType.TESTNET ],
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
             breaking: false,
-            generateRuntimeArgs(): string {
+            generateRuntimeArgs(data: CryptoNodeData): string {
               return ` --config=${this.configPath}`;
             },
           },
@@ -66,10 +57,10 @@ export class Xdai extends Ethereum {
             dataDir: '/nethermind/nethermind_db',
             walletDir: '/nethermind/keystore',
             configPath: '/nethermind/configs/xdai.cfg',
-            networks: [ NetworkType.MAINNET ],
+            networks: [NetworkType.MAINNET],
             breaking: false,
-            generateRuntimeArgs(): string {
-              return ' --config xdai';
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              return ` --config xdai`;
             },
           },
         ];
@@ -93,15 +84,6 @@ export class Xdai extends Ethereum {
     NetworkType.MAINNET,
   ];
 
-  static networkTypesByClient = {
-    [NodeClient.OPEN_ETHEREUM]: [
-      NetworkType.MAINNET,
-    ],
-    [NodeClient.NETHERMIND]: [
-      NetworkType.MAINNET,
-    ],
-  };
-
   static roles = [
     Role.NODE,
   ];
@@ -120,7 +102,7 @@ export class Xdai extends Ethereum {
 
   static generateConfig(client = Xdai.clients[0], network = NetworkType.MAINNET, peerPort = Xdai.defaultPeerPort[NetworkType.MAINNET], rpcPort = Xdai.defaultRPCPort[NetworkType.MAINNET]): string {
     let cfg;
-    switch (client) {
+    switch(client) {
       case NodeClient.OPEN_ETHEREUM:
         return openEthereumConfig
           .replace('{{PEER_PORT}}', peerPort.toString(10))
@@ -185,14 +167,14 @@ export class Xdai extends Ethereum {
     this.dockerImage = this.remote ? '' : data.dockerImage ? data.dockerImage : (versionObj.image || '');
     this.archival = data.archival || this.archival;
     this.role = data.role || this.role;
-    if (docker)
+    if(docker)
       this._docker = docker;
   }
 
   async start(): Promise<ChildProcess> {
     const versions = Xdai.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
-    if (!versionData)
+    if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
     const {
       dataDir: containerDataDir,
@@ -211,18 +193,18 @@ export class Xdai extends Ethereum {
     ];
     const tmpdir = os.tmpdir();
     const dataDir = this.dataDir || path.join(tmpdir, uuid());
-    args = [ ...args, '-v', `${dataDir}:${containerDataDir}` ];
+    args = [...args, '-v', `${dataDir}:${containerDataDir}`];
     await fs.ensureDir(dataDir);
 
     const walletDir = this.walletDir || path.join(tmpdir, uuid());
-    args = [ ...args, '-v', `${walletDir}:${containerWalletDir}` ];
+    args = [...args, '-v', `${walletDir}:${containerWalletDir}`];
     await fs.ensureDir(walletDir);
 
     const configPath = this.configPath || path.join(tmpdir, uuid());
     const configExists = await fs.pathExists(configPath);
-    if (!configExists)
+    if(!configExists)
       await fs.writeFile(configPath, this.generateConfig(), 'utf8');
-    args = [ ...args, '-v', `${configPath}:${containerConfigPath}` ];
+    args = [...args, '-v', `${configPath}:${containerConfigPath}`];
 
     await this._docker.pull(this.dockerImage, str => this._logOutput(str));
 

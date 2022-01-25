@@ -1,29 +1,13 @@
-import {
-  CryptoNode,
-  CryptoNodeData,
-  CryptoNodeStatic,
-  VersionDockerImage,
-}                       from '../../interfaces/crypto-node';
-import {
-  defaultDockerNetwork,
-  NetworkType,
-  NodeClient,
-  NodeEvent,
-  NodeType,
-  Role,
-  Status,
-}                       from '../../constants';
-import {
-  filterVersionsByNetworkType,
-  generateRandom,
-}                       from '../../util';
-import { Docker }       from '../../util/docker';
+import { CryptoNode, CryptoNodeData, CryptoNodeStatic, VersionDockerImage } from '../../interfaces/crypto-node';
+import { defaultDockerNetwork, NetworkType, NodeClient, NodeEvent, NodeType, Role, Status } from '../../constants';
+import { filterVersionsByNetworkType, generateRandom } from '../../util';
+import { Docker } from '../../util/docker';
 import { ChildProcess } from 'child_process';
-import { v4 as uuid }   from 'uuid';
-import request          from 'superagent';
-import fs               from 'fs-extra';
-import path             from 'path';
-import os               from 'os';
+import { v4 as uuid} from 'uuid';
+import request from 'superagent';
+import fs from 'fs-extra';
+import path from 'path';
+import os from 'os';
 import { EventEmitter } from 'events';
 
 const coreConfig = `
@@ -46,7 +30,7 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
   static versions(client: string, networkType: string): VersionDockerImage[] {
     client = client || Bitcoin.clients[0];
     let versions: VersionDockerImage[];
-    switch (client) {
+    switch(client) {
       case NodeClient.CORE:
         versions = [
           {
@@ -56,7 +40,7 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
             dataDir: '/opt/blockchain/data',
             walletDir: '/opt/blockchain/wallets',
             configPath: '/opt/blockchain/bitcoin.conf',
-            networks: [ NetworkType.MAINNET, NetworkType.TESTNET ],
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               return ` bitcoind -conf=${this.configPath}` + (data.network === NetworkType.TESTNET ? ' -testnet' : '');
@@ -83,13 +67,6 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
     NetworkType.TESTNET,
   ];
 
-  static networkTypesByClient = {
-    [NodeClient.CORE]: [
-      NetworkType.MAINNET,
-      NetworkType.TESTNET,
-    ],
-  };
-
   static roles = [
     Role.NODE,
   ];
@@ -105,15 +82,11 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
   };
 
   static defaultCPUs = 4;
-  static defaultArchivalCPUs = 8;
-  static rpcDaemonCPUs = 2;
 
   static defaultMem = 8192;
-  static defaultArchivalMem = 16384;
-  static rpcDaemonMem = 2048;
 
   static generateConfig(client = Bitcoin.clients[0], network = NetworkType.MAINNET, peerPort = Bitcoin.defaultPeerPort[NetworkType.MAINNET], rpcPort = Bitcoin.defaultRPCPort[NetworkType.MAINNET], rpcUsername = generateRandom(), rpcPassword = generateRandom()): string {
-    switch (client) {
+    switch(client) {
       case NodeClient.CORE:
         return coreConfig
           .replace('{{NETWORK}}', network === NetworkType.MAINNET ? 'main' : 'test')
@@ -127,19 +100,19 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
     }
   }
 
-  static getAvailableUpgrade(node: CryptoNodeData, versions: VersionDockerImage[], nonBreaking = false): VersionDockerImage | null {
+  static getAvailableUpgrade(node: CryptoNodeData, versions: VersionDockerImage[], nonBreaking = false): VersionDockerImage|null {
     const { version } = node;
     const idx = versions.findIndex(v => v.version === version);
     // Already the latest version
-    if (idx < 1)
+    if(idx < 1)
       return null;
     let updateIdx = 0;
-    for (let i = idx - 1; i >= 0; i--) {
-      if (versions[i].breaking) {
-        if (nonBreaking) {
+    for(let i = idx - 1; i >= 0; i--) {
+      if(versions[i].breaking) {
+        if(nonBreaking) {
           updateIdx = i + 1;
           // There is no non-breaking update available
-          if (updateIdx === idx)
+          if(updateIdx === idx)
             return null;
           break;
         } else {
@@ -160,19 +133,19 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
     node.version = versionData.version;
     node.clientVersion = versionData.clientVersion;
     node.dockerImage = versionData.image;
-    if (versionData.upgrade) {
+    if(versionData.upgrade) {
       let success = false;
-      let upgradeErr: Error | null = null;
+      let upgradeErr: Error|null = null;
       try {
         success = await versionData.upgrade(node);
-      } catch (err) {
+      } catch(err) {
         upgradeErr = err;
       }
-      if (!success) {
+      if(!success) {
         node.version = origVersion;
         node.clientVersion = origClientVersion;
         node.dockerImage = origDockerImage;
-        if (upgradeErr)
+        if(upgradeErr)
           throw upgradeErr;
         else
           return false;
@@ -210,16 +183,13 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
   _docker = new Docker();
   _instance?: ChildProcess;
   _requestTimeout = 10000;
-
-  _logError(err: string | Error): void {
+  _logError(err: string|Error): void {
     err = typeof err === 'string' ? new Error(err) : err;
     this.emit(NodeEvent.ERROR, err);
   }
-
   _logOutput(output: string): void {
     this.emit(NodeEvent.OUTPUT, output);
   }
-
   _logClose(exitCode: number): void {
     this.emit(NodeEvent.CLOSE, exitCode);
   }
@@ -251,15 +221,15 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
     this.dockerImage = this.remote ? '' : data.dockerImage ? data.dockerImage : (versionObj.image || '');
     this.archival = data.archival || this.archival;
     this.role = data.role || this.role;
-    if (docker)
+    if(docker)
       this._docker = docker;
   }
 
   endpoint(): string {
-    if (this.remote) {
-      if (!this.remoteDomain || !this.remoteProtocol)
+    if(this.remote) {
+      if(!this.remoteDomain || !this.remoteProtocol)
         throw new Error('remoteDomain and remoteProtocol must be entered for a remote domain.');
-      if (!this.rpcPort
+      if(!this.rpcPort
         || (this.remoteProtocol === 'http' && this.rpcPort === 80)
         || (this.remoteProtocol === 'https' && this.rpcPort === 443)
       ) {
@@ -314,10 +284,10 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
       this.rpcPassword);
   }
 
-  async start(): Promise<ChildProcess | Array<ChildProcess>> {
+  async start(): Promise<ChildProcess> {
     const versions = Bitcoin.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
-    if (!versionData)
+    if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
     const {
       dataDir: containerDataDir,
@@ -336,18 +306,18 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
     ];
     const tmpdir = os.tmpdir();
     const dataDir = this.dataDir || path.join(tmpdir, uuid());
-    args = [ ...args, '-v', `${dataDir}:${containerDataDir}` ];
+    args = [...args, '-v', `${dataDir}:${containerDataDir}`];
     await fs.ensureDir(dataDir);
 
     const walletDir = this.walletDir || path.join(tmpdir, uuid());
-    args = [ ...args, '-v', `${walletDir}:${containerWalletDir}` ];
+    args = [...args, '-v', `${walletDir}:${containerWalletDir}`];
     await fs.ensureDir(walletDir);
 
     const configPath = this.configPath || path.join(tmpdir, uuid());
     const configExists = await fs.pathExists(configPath);
-    if (!configExists)
+    if(!configExists)
       await fs.writeFile(configPath, this.generateConfig(), 'utf8');
-    args = [ ...args, '-v', `${configPath}:${containerConfigPath}` ];
+    args = [...args, '-v', `${configPath}:${containerConfigPath}`];
 
     await this._docker.pull(this.dockerImage, str => this._logOutput(str));
 
@@ -363,11 +333,11 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
     return instance;
   }
 
-  stop(): Promise<void> {
+  stop():Promise<void> {
     return new Promise<void>(resolve => {
-      if (this._instance) {
+      if(this._instance) {
         const { exitCode } = this._instance;
-        if (typeof exitCode === 'number') {
+        if(typeof exitCode === 'number') {
           resolve();
         } else {
           this._instance.on('exit', () => {
@@ -397,16 +367,16 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
   }
 
   _runCheck(method: string): void {
-    if (!this.remote && !this._instance)
+    if(!this.remote && !this._instance)
       throw new Error(`Instance must be running before you can call ${method}()`);
   }
 
   async isRunning(): Promise<boolean> {
-    if (this.remote) {
+    if(this.remote) {
       try {
         const version = await this.rpcGetVersion();
         return !!version;
-      } catch (err) {
+      } catch(err) {
         // ignore error
         return false;
       }
@@ -431,13 +401,13 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
           params: [],
         });
       const matchPatt = /:(.+?)[/(]/;
-      if (body && body.result && body.result.subversion && matchPatt.test(body.result.subversion)) {
+      if(body && body.result && body.result.subversion && matchPatt.test(body.result.subversion)) {
         const matches = body.result.subversion.match(matchPatt);
         return matches[1];
       } else {
         return '';
       }
-    } catch (err) {
+    } catch(err) {
       this._logError(err);
       return '';
     }
@@ -458,13 +428,13 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
           params: [],
         });
       return String(body.result);
-    } catch (err) {
+    } catch(err) {
       this._logError(err);
       return '0';
     }
   }
 
-  async getMemUsage(): Promise<[ usagePercent: string, used: string, allocated: string ]> {
+  async getMemUsage(): Promise<[usagePercent: string, used: string, allocated: string]> {
     try {
       this._runCheck('getMemUsage');
       const containerStats = await this._docker.containerStats(this.id);
@@ -472,14 +442,14 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
       const split = containerStats.MemUsage
         .split('/')
         .map((s: string): string => s.trim());
-      if (split.length > 1) {
-        return [ percent, split[0], split[1] ];
+      if(split.length > 1) {
+        return [percent, split[0], split[1]];
       } else {
         throw new Error('Split containerStats/MemUsage length less than two.');
       }
-    } catch (err) {
+    } catch(err) {
       this._logError(err);
-      return [ '0', '0', '0' ];
+      return ['0', '0', '0'];
     }
   }
 
@@ -488,7 +458,7 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
       this._runCheck('getCPUUsage');
       const containerStats = await this._docker.containerStats(this.id);
       return containerStats.CPUPerc;
-    } catch (err) {
+    } catch(err) {
       this._logError(err);
       return '0';
     }
@@ -499,7 +469,7 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
       this._runCheck('getStartTime');
       const stats = await this._docker.containerInspect(this.id);
       return stats.State.StartedAt;
-    } catch (err) {
+    } catch(err) {
       this._logError(err);
       return '';
     }
@@ -507,14 +477,14 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
 
   async getStatus(): Promise<string> {
     try {
-      if (this.remote) {
+      if(this.remote) {
         const version = await this.rpcGetVersion();
         return version ? Status.RUNNING : Status.STOPPED;
       } else {
         const stats = await this._docker.containerInspect(this.id);
         return stats.State.Running ? Status.RUNNING : Status.STOPPED;
       }
-    } catch (err) {
+    } catch(err) {
       return Status.STOPPED;
     }
   }

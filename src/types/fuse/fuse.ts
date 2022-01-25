@@ -94,7 +94,7 @@ export class Fuse extends Ethereum {
             passwordPath: '/root/pass.pwd',
             networks: [NetworkType.TESTNET],
             breaking: false,
-            generateRuntimeArgs(): string {
+            generateRuntimeArgs(data: CryptoNodeData): string {
               return ` --no-warp --config=${this.configPath}`;
             },
           },
@@ -110,7 +110,7 @@ export class Fuse extends Ethereum {
             passwordPath: '/root/pass.pwd',
             networks: [NetworkType.TESTNET],
             breaking: false,
-            generateRuntimeArgs(): string {
+            generateRuntimeArgs(data: CryptoNodeData): string {
               return ` --no-warp --config=${this.configPath} --bootnodes ${testnetBootnodes}`;
             },
           },
@@ -126,7 +126,7 @@ export class Fuse extends Ethereum {
             passwordPath: '/root/pass.pwd',
             networks: [NetworkType.MAINNET],
             breaking: false,
-            generateRuntimeArgs(): string {
+            generateRuntimeArgs(data: CryptoNodeData): string {
               return ` --no-warp --config=${this.configPath}`;
             },
           },
@@ -142,7 +142,7 @@ export class Fuse extends Ethereum {
             passwordPath: '/root/pass.pwd',
             networks: [NetworkType.MAINNET],
             breaking: false,
-            generateRuntimeArgs(): string {
+            generateRuntimeArgs(data: CryptoNodeData): string {
               return ` --config=${this.configPath}`;
             },
           },
@@ -166,13 +166,6 @@ export class Fuse extends Ethereum {
     NetworkType.MAINNET,
     NetworkType.TESTNET,
   ];
-
-  static networkTypesByClient = {
-    [NodeClient.OPEN_ETHEREUM]: [
-      NetworkType.MAINNET,
-      NetworkType.TESTNET,
-    ],
-  };
 
   static roles = [
     Role.NODE,
@@ -199,6 +192,7 @@ export class Fuse extends Ethereum {
     if(typeof client !== 'string') { // node was passed in rather than client string
       const node = client;
       client = node.client;
+      network = node.network;
       peerPort = node.peerPort;
       rpcPort = node.rpcPort;
       address = node.address;
@@ -246,7 +240,6 @@ export class Fuse extends Ethereum {
   keyPass = '';
   address = '';
   role = Fuse.roles[0];
-  [key: string]: any;
 
   constructor(data: CryptoNodeData, docker?: Docker) {
     super(data, docker);
@@ -289,9 +282,9 @@ export class Fuse extends Ethereum {
     let keys = Object
       .keys(this)
       .filter(key => !/^_/.test(key));
-
+    // @ts-ignore
     keys = keys.filter(key => typeof this[key] !== 'function' && typeof this[key] !== 'undefined');
-
+    // @ts-ignore
     const dataObj = keys.reduce((obj: any, key) => ({...obj, [key]: this[key]}), {});
     return dataObj as CryptoNodeData;
   }
@@ -485,7 +478,7 @@ export class Fuse extends Ethereum {
     await new Promise<void>(resolve => {
       if(this._instance) {
         const { exitCode } = this._instance;
-        if(exitCode) {
+        if(typeof exitCode === 'number') {
           resolve();
         } else {
           this._instance.on('exit', () => {
