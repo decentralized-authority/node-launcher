@@ -73,7 +73,8 @@ export class Ethereum extends Bitcoin {
                     const split = str
                       .split('=')
                       .map(s => s.trim());
-                    return split[0] === 'SyncMode';
+                    const [ key = '', val = '' ] = split;
+                    return key === 'SyncMode' && val.includes('fast');
                   });
                 if(syncModeFastIdx >= 0) {
                   const newConf = [
