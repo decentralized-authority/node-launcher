@@ -35,6 +35,20 @@ export class Ethereum extends Bitcoin {
       case NodeClient.GETH:
         versions = [
           {
+            version: '1.10.15',
+            clientVersion: '1.10.15',
+            image: 'ethereum/client-go:v1.10.15',
+            dataDir: '/root/.ethereum',
+            walletDir: '/root/keystore',
+            configPath: '/root/config.toml',
+            networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              const { network = '' } = data;
+              return ` --config=${this.configPath} --syncmode snap` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
+            },
+          },
+          {
             version: '1.10.14',
             clientVersion: '1.10.14',
             image: 'ethereum/client-go:v1.10.14',
