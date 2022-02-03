@@ -59,18 +59,25 @@ export class Ethereum extends Bitcoin {
             breaking: true,
             generateRuntimeArgs(data: CryptoNodeData): string {
               const { network = '' } = data;
-              return ` --config=${this.configPath} --syncmode snap` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
+              return ` --config=${this.configPath}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
             },
             async upgrade(data: CryptoNodeData): Promise<boolean> {
               const { configPath } = data;
               if(configPath && (await fs.pathExists(configPath))) {
                 const conf = await fs.readFile(configPath, 'utf8');
-                const newConf = conf
+                const splitConf = conf
                   .split('\n')
-                  .map(str => str.trim())
-                  .filter(str => !/^SyncMode\s*=/.test(str))
-                  .join('\n');
-                await fs.writeFile(configPath, newConf, 'utf8');
+                  .map(str => str.trim());
+                const syncModeFastIdx = splitConf
+                  .findIndex(str => !/^SyncMode\s*=\s*"fast"/.test(str));
+                if(syncModeFastIdx >= 0) {
+                  const newConf = [
+                    ...splitConf.slice(0, syncModeFastIdx),
+                    'SyncMode = "snap"',
+                    ...splitConf.slice(syncModeFastIdx + 1),
+                  ].join('\n');
+                  await fs.writeFile(configPath, newConf, 'utf8');
+                }
               }
               return true;
             },
