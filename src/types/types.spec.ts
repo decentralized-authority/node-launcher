@@ -1,37 +1,55 @@
+/* eslint-disable new-cap */
 import 'should';
-import { Litecoin } from './litecoin/litecoin';
-import { Docker } from '../util/docker';
-import { CryptoNodeData } from '../interfaces/crypto-node';
-import { DockerEvent, NetworkType, NodeEvent, NodeType, Status } from '../constants';
-import { v4 as uuid } from 'uuid';
+import { Litecoin }     from './litecoin/litecoin';
+import { Docker }       from '../util/docker';
+import {
+  CryptoNodeData,
+  VersionDockerImage,
+}                       from '../interfaces/crypto-node';
+import {
+  NetworkType,
+  NodeClient,
+  NodeType,
+  Status,
+}                       from '../constants';
+import { v4 as uuid }   from 'uuid';
 import { ChildProcess } from 'child_process';
-import { timeout } from '../util';
-import { Bitcoin } from './bitcoin/bitcoin';
-import { Dash } from './dash/dash';
-import { BitcoinCash } from './bitcoin-cash/bitcoin-cash';
-import { LBRY } from './lbry/lbry';
-import { Ethereum } from './ethereum/ethereum';
-import { Xdai } from './xdai/xdai';
-import { BinanceSC } from './binance-sc/binance-sc';
-import { Avalanche } from './avalanche/avalanche';
-import { Pocket } from './pocket/pocket';
-import { Fuse } from './fuse/fuse';
-import { isNull } from 'lodash';
-import { Harmony } from './harmony/harmony';
+import { timeout }      from '../util';
+import { Bitcoin }      from './bitcoin/bitcoin';
+import { Dash }         from './dash/dash';
+import { BitcoinCash }  from './bitcoin-cash/bitcoin-cash';
+import { LBRY }         from './lbry/lbry';
+import { Ethereum }     from './ethereum/ethereum';
+import { Xdai }         from './xdai/xdai';
+import { BinanceSC }    from './binance-sc/binance-sc';
+import { Avalanche }    from './avalanche/avalanche';
+import { Pocket }       from './pocket/pocket';
+import { Fuse }         from './fuse/fuse';
+import { isNull }       from 'lodash';
+import { Harmony }      from './harmony/harmony';
 
-const chains: [{name: string, constructor: any}] = [
-  {name: 'Bitcoin', constructor: Bitcoin},
-  {name: 'BitcoinCash', constructor: BitcoinCash},
-  {name: 'Dash', constructor: Dash},
-  {name: 'LBRY', constructor: LBRY},
-  {name: 'Litecoin', constructor: Litecoin},
-  {name: 'Ethereum', constructor: Ethereum},
-  {name: 'BinanceSC', constructor: BinanceSC},
-  {name: 'Xdai', constructor: Xdai},
-  {name: 'Avalanche', constructor: Avalanche},
-  {name: 'Pocket', constructor: Pocket},
-  {name: 'Fuse', constructor: Fuse},
-  {name: 'Harmony', constructor: Harmony},
+interface KeyAnyMap {
+  [key: string]: any;
+}
+
+interface ChainTester {
+  name: string;
+  constructor: typeof Bitcoin | typeof Ethereum;
+}
+
+const chains: Array<ChainTester> = [
+  { name: 'Bitcoin', constructor: Bitcoin },
+  { name: 'BitcoinCash', constructor: BitcoinCash },
+  { name: 'Dash', constructor: Dash },
+  { name: 'LBRY', constructor: LBRY },
+  { name: 'Litecoin', constructor: Litecoin },
+  { name: 'Ethereum', constructor: Ethereum },
+  { name: 'BinanceSC', constructor: BinanceSC },
+  { name: 'Xdai', constructor: Xdai },
+  { name: 'Avalanche', constructor: Avalanche },
+  { name: 'Pocket', constructor: Pocket },
+  { name: 'Fuse', constructor: Fuse },
+  { name: 'Harmony', constructor: Harmony },
 ];
 
 chains.forEach(({ name, constructor: NodeConstructor }) => {
@@ -40,12 +58,24 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
 
     this.timeout(30000);
 
+    const emptyVersionCfg = {
+      version: '',
+      clientVersion: '',
+      image: '',
+      dataDir: '',
+      walletDir: '',
+      configPath: '',
+      networks: [],
+      breaking: false,
+      generateRuntimeArgs: () => '',
+    };
+
     const docker = new Docker({
       logDriver: 'none',
     });
     // docker.on(DockerEvent.INFO, console.log);
 
-    let node;
+    let node: any;
     const initialNodeData: CryptoNodeData = {
       id: 'test-id',
       version: '1.2.3',
@@ -68,10 +98,10 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
       NodeConstructor.should.be.a.constructor();
     });
     describe(`static ${name}.versions`, function() {
-      it('should return an array of version data objects', function () {
+      it('should return an array of version data objects', function() {
         const versions = NodeConstructor.versions(NodeConstructor.clients[0], NodeConstructor.networkTypes[0]);
         versions.should.be.an.Array();
-        versions.forEach(v => {
+        versions.forEach((v) => {
           v.should.be.an.Object();
           v.version.should.be.a.String();
           v.image.should.be.a.String();
@@ -87,7 +117,7 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
       it('should be an array of node type strings', function() {
         NodeConstructor.nodeTypes.should.be.an.Array();
         NodeConstructor.nodeTypes.length.should.be.greaterThan(0);
-        NodeConstructor.nodeTypes.every(t => NodeType[t]).should.be.True();
+        NodeConstructor.nodeTypes.every((t: string) => NodeType[t]).should.be.True();
       });
     });
     describe(`static ${name}.networkTypes`, function() {
@@ -97,13 +127,27 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
         NodeConstructor.networkTypes.every(t => NetworkType[t]).should.be.True();
       });
     });
+    describe(`static ${name}.networkTypesByClient`, function() {
+      it('should be an object mapping node client to an array of supported network types', function() {
+        const networkTypesByClient = (NodeConstructor as unknown as typeof Ethereum).networkTypesByClient;
+        networkTypesByClient.should.be.an.Object();
+        const keys = Object.keys(networkTypesByClient);
+        keys.length.should.be.greaterThan(0);
+        keys.length.should.equal(NodeConstructor.clients.length);
+        keys.every(k => NodeClient[k]).should.be.True();
+        Object.values(networkTypesByClient).every(v => {
+          v.should.be.an.Array();
+          v.length.should.be.greaterThan(0);
+          v.every(t => NetworkType[t]).should.be.True();
+        });
+      });
+    });
     describe(`static ${name}.defaultRPCPort`, function() {
       it('should be an object mapping network type to port number', function() {
         NodeConstructor.defaultRPCPort.should.be.an.Object();
         const keys = Object.keys(NodeConstructor.defaultRPCPort);
         keys.length.should.be.greaterThan(0);
         keys.length.should.equal(NodeConstructor.networkTypes.length);
-        // @ts-ignore
         keys.every(k => NetworkType[k]).should.be.True();
         Object.values(NodeConstructor.defaultRPCPort).every(v => v.should.be.a.Number());
       });
@@ -114,7 +158,6 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
         const keys = Object.keys(NodeConstructor.defaultPeerPort);
         keys.length.should.be.greaterThan(0);
         keys.length.should.equal(NodeConstructor.networkTypes.length);
-        // @ts-ignore
         keys.every(k => NetworkType[k]).should.be.True();
         Object.values(NodeConstructor.defaultPeerPort).every(v => v.should.be.a.Number());
       });
@@ -131,6 +174,34 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
         NodeConstructor.defaultMem.should.be.greaterThan(0);
       });
     });
+    describe(`static ${name}.defaultArchivalCPUs`, function() {
+      it('should be the default CPU number', function() {
+        const defaultArchivalCPUs = (NodeConstructor as unknown as typeof Ethereum).defaultArchivalCPUs;
+        defaultArchivalCPUs.should.be.a.Number();
+        defaultArchivalCPUs.should.be.greaterThan(0);
+      });
+    });
+    describe(`static ${name}.defaultArchivalMem`, function() {
+      it('should be the default archival memory size', function() {
+        const defaultArchivalMem = (NodeConstructor as unknown as typeof Ethereum).defaultArchivalMem;
+        defaultArchivalMem.should.be.a.Number();
+        defaultArchivalMem.should.be.greaterThan(0);
+      });
+    });
+    describe(`static ${name}.rpcDaemonCPUs`, function() {
+      it('should be the default RPC Daemon CPU number', function() {
+        const rpcDaemonCPUs = (NodeConstructor as unknown as typeof Ethereum).rpcDaemonCPUs;
+        rpcDaemonCPUs.should.be.a.Number();
+        rpcDaemonCPUs.should.be.greaterThan(0);
+      });
+    });
+    describe(`static ${name}.rpcDaemonMem`, function() {
+      it('should be the default RPC Daemon memory size', function() {
+        const rpcDaemonMem = (NodeConstructor as unknown as typeof Ethereum).rpcDaemonMem;
+        rpcDaemonMem.should.be.a.Number();
+        rpcDaemonMem.should.be.greaterThan(0);
+      });
+    });
     describe(`static ${name}.generateConfig()`, function() {
       it('should generate a default config file', function() {
         const config = NodeConstructor.generateConfig();
@@ -140,60 +211,47 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
     });
     describe(`static ${name}.getAvailableUpgrade()`, function() {
       it('should return new version data if available', function() {
-        const versions1 = [
-          {version: '2345'},
-          {version: '1234'},
+        const versions1: VersionDockerImage[] = [
+          { ...emptyVersionCfg, version: '2345' },
+          { ...emptyVersionCfg, version: '1234' },
         ];
-        const res1 = NodeConstructor.getAvailableUpgrade({version: versions1[0].version}, versions1);
+        const res1 = NodeConstructor.getAvailableUpgrade({ version: versions1[0].version }, versions1);
         isNull(res1).should.be.true();
         const versions2 = [
-          {version: '2345', breaking: true},
-          {version: '1234'},
+          { ...emptyVersionCfg, version: '2345', breaking: true },
+          { ...emptyVersionCfg, version: '1234' },
         ];
-        const res2 = NodeConstructor.getAvailableUpgrade({version: versions2[0].version}, versions2);
+        const res2 = NodeConstructor.getAvailableUpgrade({ version: versions2[0].version }, versions2);
         isNull(res2).should.be.true();
         const versions3 = [
-          {version: '4123'},
-          {version: '3412'},
-          {version: '2341'},
-          {version: '1234'},
+          { ...emptyVersionCfg, version: '4123' },
+          { ...emptyVersionCfg, version: '3412' },
+          { ...emptyVersionCfg, version: '2341' },
+          { ...emptyVersionCfg, version: '1234' },
         ];
-        const res3 = NodeConstructor.getAvailableUpgrade({version: versions3[versions3.length - 1].version}, versions3);
-        res3.version.should.equal(versions3[0].version);
+        const res3 = NodeConstructor.getAvailableUpgrade({ version: versions3[versions3.length - 1].version }, versions3);
+        res3?.version.should.equal(versions3[0].version);
 
         const versions4 = [
-          {version: '34512'},
-          {version: '23451', breaking: true},
-          {version: '12345', breaking: true},
-          {version: '4123'},
-          {version: '3412', breaking: true},
-          {version: '2341'},
-          {version: '1234'},
+          { ...emptyVersionCfg, version: '34512' },
+          { ...emptyVersionCfg, version: '23451', breaking: true },
+          { ...emptyVersionCfg, version: '12345', breaking: true },
+          { ...emptyVersionCfg, version: '4123' },
+          { ...emptyVersionCfg, version: '3412', breaking: true },
+          { ...emptyVersionCfg, version: '2341' },
+          { ...emptyVersionCfg, version: '1234' },
         ];
-        NodeConstructor.getAvailableUpgrade(
-          {version: '1234'},
-          versions4
-        ).version.should.equal('3412');
-        NodeConstructor.getAvailableUpgrade(
-          {version: '1234'},
-          versions4
-        ).version.should.equal('3412');
-        NodeConstructor.getAvailableUpgrade(
-          {version: '1234'},
-          versions4,
-          true,
-        ).version.should.equal('2341');
-        isNull(NodeConstructor.getAvailableUpgrade(
-          {version: '12345'},
-          versions4,
-          true,
-        )).should.be.true();
+        NodeConstructor.getAvailableUpgrade({ version: '1234' }, versions4)?.version.should.equal('3412');
+        NodeConstructor.getAvailableUpgrade({ version: '1234' }, versions4)?.version.should.equal('3412');
+        NodeConstructor.getAvailableUpgrade({ version: '1234' }, versions4, true)?.version.should.equal('2341');
+        isNull(NodeConstructor.getAvailableUpgrade({ version: '12345' }, versions4, true)).should.be.true();
       });
     });
 
     describe(`static ${name}.upgradeNode()`, function() {
       it('should upgrade a node to a newer version', async function() {
-        const versionData = {
+        const versionData: VersionDockerImage = {
+          ...emptyVersionCfg,
           version: '2345',
           clientVersion: '3456',
           image: 'some-image',
@@ -210,7 +268,7 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
           node = new NodeConstructor(initialNodeData);
           let upgradeCalled = false;
           versionData.upgrade = async function() {
-            upgradeCalled = true;
+            upgradeCalled = await Promise.resolve(true);
             return true;
           };
           const res = await NodeConstructor.upgradeNode(node, versionData);
@@ -227,7 +285,7 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
           const origDockerImage = node.dockerImage;
           let upgradeCalled = false;
           versionData.upgrade = async function() {
-            upgradeCalled = true;
+            upgradeCalled = await Promise.resolve(true);
             return false;
           };
           const res = await NodeConstructor.upgradeNode(node, versionData);
@@ -244,7 +302,7 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
           const origDockerImage = node.dockerImage;
           let upgradeCalled = false;
           versionData.upgrade = async function() {
-            upgradeCalled = true;
+            upgradeCalled = await Promise.resolve(true);
             throw new Error('something');
           };
           await NodeConstructor.upgradeNode(node, versionData).should.be.rejected();
@@ -257,28 +315,31 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
     });
 
     describe(`${name}.toObject()`, function() {
-      it('should return a node data object', async function() {
+      it('should return a node data object', function() {
         node = new NodeConstructor(initialNodeData);
-        const nodeData = node.toObject();
+        const nodeData: KeyAnyMap = node.toObject();
         nodeData.should.be.an.Object();
-        for(const key of Object.keys(initialNodeData)) {
+        for (const key of Object.keys(initialNodeData)) {
           nodeData[key].should.equal(initialNodeData[key]);
         }
       });
     });
-    describe(`${name}.generateConfig()`, async function() {
-      it('should return an instance-specific config', async function() {
+    describe(`${name}.generateConfig()`, function() {
+      it('should return an instance-specific config', function() {
         node = new NodeConstructor(initialNodeData);
         const config = node.generateConfig();
         config.should.be.a.String();
-        config.length.should.be.greaterThan(0);
-        config.includes(initialNodeData.peerPort).should.be.True();
-        config.includes(initialNodeData.rpcPort).should.be.True();
+        if (node.client !== NodeClient.ERIGON) {
+          config.includes(`${initialNodeData.peerPort}`).should.be.True();
+          config.includes(`${initialNodeData.rpcPort}`).should.be.True();
+        } else {
+          config.length.should.be.greaterThan(0);
+        }
       });
     });
 
     NodeConstructor.clients.forEach(client => {
-      NodeConstructor.networkTypes.forEach(network => {
+      NodeConstructor.networkTypesByClient[client].forEach(network => {
         describe(`${name}.start() with ${client} client & ${network} network`, function() {
           it('should start a node', async function() {
             const id = uuid();
@@ -290,10 +351,12 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
             // node.on(NodeEvent.OUTPUT, console.log);
             // node.on(NodeEvent.ERROR, console.error);
             // node.on(NodeEvent.CLOSE, console.log);
-            const res = await node.start();
-            res.should.be.an.instanceOf(ChildProcess);
+            await node.start();
             await new Promise(resolve => setTimeout(resolve, 2000));
             await docker.kill(id);
+            if (client === NodeClient.ERIGON) {
+              await docker.kill((node as unknown as Ethereum).rpcDaemonId);
+            }
           });
           it('should resolve with a ChildProcess', async function() {
             node = new NodeConstructor({
@@ -304,15 +367,31 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
             // node.on(NodeEvent.ERROR, console.error);
             // node.on(NodeEvent.CLOSE, console.log);
             const instance = await node.start();
-            instance.should.be.an.instanceOf(ChildProcess);
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            await new Promise(resolve => {
-              node._instance.on('close', resolve);
-              node._instance.kill();
-            });
+
+            if (client === NodeClient.ERIGON) {
+              const instances = instance as Array<ChildProcess>;
+              instances.should.be.an.Array();
+              instances.length.should.be.equal(2);
+              instances.every(i => i.should.be.an.instanceOf(ChildProcess));
+              await new Promise(resolve => setTimeout(resolve, 2000 * instances.length));
+              const kills = instances.map(i => {
+                return new Promise(resolve => {
+                  i.on('close', resolve);
+                  i.kill();
+                });
+              });
+              await Promise.allSettled(kills);
+            } else {
+              instance.should.be.an.instanceOf(ChildProcess);
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              await new Promise(resolve => {
+                node._instance?.on('close', resolve);
+                node._instance?.kill();
+              });
+            }
           });
         });
-        describe(`${name}.stop() with ${client} client & ${network} network`, async function() {
+        describe(`${name}.stop() with ${client} client & ${network} network`, function() {
           it('should stop a node', async function() {
             node = new NodeConstructor({
               network,
@@ -321,14 +400,16 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
             await node.start();
             await new Promise(resolve => setTimeout(resolve, 2000));
             await node.stop();
-            node._instance.exitCode.should.be.a.Number();
+            node._instance?.exitCode?.should.be.a.Number();
+            if (client === NodeClient.ERIGON) {
+              node._rpcInstance.exitCode.should.be.a.Number();
+            }
           });
         });
         describe(`${name} runtime methods with ${client} client & ${network} network`, function() {
-
           this.timeout(60000 * 30);
 
-          let remoteNode;
+          let remoteNode: any;
 
           before(async function() {
             node = new NodeConstructor({
@@ -402,7 +483,7 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
           });
           describe(`${name}.getMemUsage()`, function() {
             it('should resolve with the percentage of allocated memory used, the amount used, and the amount allocated', async function() {
-              const res = await node.getMemUsage();
+              const res: Array<string> = await node.getMemUsage();
               res.should.be.an.Array();
               res.length.should.equal(3);
               res.forEach(val => val.should.be.a.String());

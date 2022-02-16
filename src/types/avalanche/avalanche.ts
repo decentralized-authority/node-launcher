@@ -1,9 +1,19 @@
-import { CryptoNodeData, VersionDockerImage } from '../../interfaces/crypto-node';
-import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role, Status } from '../../constants';
-import { filterVersionsByNetworkType, generateRandom } from '../../util';
+import {
+  CryptoNodeData,
+  VersionDockerImage,
+} from '../../interfaces/crypto-node';
+import {
+  defaultDockerNetwork,
+  NetworkType,
+  NodeClient,
+  NodeType,
+  Role,
+  Status,
+} from '../../constants';
+import { filterVersionsByNetworkType } from '../../util';
 import { Docker } from '../../util/docker';
 import { ChildProcess } from 'child_process';
-import { v4 as uuid} from 'uuid';
+import { v4 as uuid } from 'uuid';
 import request from 'superagent';
 import fs from 'fs-extra';
 import path from 'path';
@@ -33,7 +43,7 @@ export class Avalanche extends Bitcoin {
   static versions(client: string, networkType: string): VersionDockerImage[] {
     client = client || Avalanche.clients[0];
     let versions: VersionDockerImage[];
-    switch(client) {
+    switch (client) {
       case NodeClient.CORE:
         versions = [
           {
@@ -44,9 +54,9 @@ export class Avalanche extends Bitcoin {
             walletDir: '/root/keystore',
             logDir: '/root/logs',
             configPath: '/root/config.json',
-            networks: [NetworkType.MAINNET],
+            networks: [ NetworkType.MAINNET ],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(): string {
               return ` --config-file=${this.configPath}`;
             },
           },
@@ -58,9 +68,9 @@ export class Avalanche extends Bitcoin {
             walletDir: '/root/keystore',
             logDir: '/root/logs',
             configPath: '/root/config.json',
-            networks: [NetworkType.MAINNET],
+            networks: [ NetworkType.MAINNET ],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(): string {
               return ` --config-file=${this.configPath}`;
             },
           },
@@ -72,9 +82,9 @@ export class Avalanche extends Bitcoin {
             walletDir: '/root/keystore',
             logDir: '/root/logs',
             configPath: '/root/config.json',
-            networks: [NetworkType.MAINNET],
+            networks: [ NetworkType.MAINNET ],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(): string {
               return ` --config-file=${this.configPath}`;
             },
           },
@@ -86,9 +96,9 @@ export class Avalanche extends Bitcoin {
             walletDir: '/root/keystore',
             logDir: '/root/logs',
             configPath: '/root/config.json',
-            networks: [NetworkType.MAINNET],
+            networks: [ NetworkType.MAINNET ],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(): string {
               return ` --config-file=${this.configPath}`;
             },
           },
@@ -100,9 +110,9 @@ export class Avalanche extends Bitcoin {
             walletDir: '/root/keystore',
             logDir: '/root/logs',
             configPath: '/root/config.json',
-            networks: [NetworkType.MAINNET],
+            networks: [ NetworkType.MAINNET ],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(): string {
               return ` --config-file=${this.configPath}`;
             },
           },
@@ -114,9 +124,9 @@ export class Avalanche extends Bitcoin {
             walletDir: '/root/keystore',
             logDir: '/root/logs',
             configPath: '/root/config.json',
-            networks: [NetworkType.MAINNET],
+            networks: [ NetworkType.MAINNET ],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(): string {
               return ` --config-file=${this.configPath}`;
             },
           },
@@ -128,9 +138,9 @@ export class Avalanche extends Bitcoin {
             walletDir: '/root/keystore',
             logDir: '/root/logs',
             configPath: '/root/config.json',
-            networks: [NetworkType.MAINNET],
+            networks: [ NetworkType.MAINNET ],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(): string {
               return ` --config-file=${this.configPath}`;
             },
           },
@@ -142,9 +152,9 @@ export class Avalanche extends Bitcoin {
             walletDir: '/root/keystore',
             logDir: '/root/logs',
             configPath: '/root/config.json',
-            networks: [NetworkType.MAINNET],
+            networks: [ NetworkType.MAINNET ],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(): string {
               return ` --config-file=${this.configPath}`;
             },
           },
@@ -168,6 +178,12 @@ export class Avalanche extends Bitcoin {
     NetworkType.MAINNET,
   ];
 
+  static networkTypesByClient = {
+    [NodeClient.CORE]: [
+      NetworkType.MAINNET,
+    ],
+  };
+
   static roles = [
     Role.NODE,
   ];
@@ -185,7 +201,7 @@ export class Avalanche extends Bitcoin {
   static defaultMem = 16384;
 
   static generateConfig(client = Avalanche.clients[0], network = NetworkType.MAINNET, peerPort = Avalanche.defaultPeerPort[NetworkType.MAINNET], rpcPort = Avalanche.defaultRPCPort[NetworkType.MAINNET]): string {
-    switch(client) {
+    switch (client) {
       case NodeClient.CORE:
         return coreConfig
           .replace('{{PEER_PORT}}', peerPort.toString(10))
@@ -241,14 +257,14 @@ export class Avalanche extends Bitcoin {
     this.dockerImage = this.remote ? '' : data.dockerImage ? data.dockerImage : (versionObj.image || '');
     this.archival = data.archival || this.archival;
     this.role = data.role || this.role;
-    if(docker)
+    if (docker)
       this._docker = docker;
   }
 
   async start(): Promise<ChildProcess> {
     const versions = Avalanche.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
-    if(!versionData)
+    if (!versionData)
       throw new Error(`Unknown version ${this.version}`);
     const {
       dataDir: containerDataDir,
@@ -271,21 +287,21 @@ export class Avalanche extends Bitcoin {
     const dataDir = this.dataDir || path.join(tmpdir, uuid());
     const dbDir = path.join(dataDir, 'db');
     const logDir = path.join(dataDir, 'logs');
-    args = [...args, '-v', `${dbDir}:${containerDataDir}`];
-    args = [...args, '-v', `${logDir}:${containerLogDir}`];
+    args = [ ...args, '-v', `${dbDir}:${containerDataDir}` ];
+    args = [ ...args, '-v', `${logDir}:${containerLogDir}` ];
     await fs.ensureDir(dataDir);
     await fs.ensureDir(dbDir);
     await fs.ensureDir(logDir);
 
     const walletDir = this.walletDir || path.join(tmpdir, uuid());
-    args = [...args, '-v', `${walletDir}:${containerWalletDir}`];
+    args = [ ...args, '-v', `${walletDir}:${containerWalletDir}` ];
     await fs.ensureDir(walletDir);
 
     const configPath = this.configPath || path.join(tmpdir, uuid());
     const configExists = await fs.pathExists(configPath);
-    if(!configExists)
+    if (!configExists)
       await fs.writeFile(configPath, this.generateConfig(), 'utf8');
-    args = [...args, '-v', `${configPath}:${containerConfigPath}`];
+    args = [ ...args, '-v', `${configPath}:${containerConfigPath}` ];
 
     await this._docker.createNetwork(this.dockerNetwork);
     const instance = this._docker.run(
@@ -324,12 +340,12 @@ export class Avalanche extends Bitcoin {
       const { result = {} } = body;
       const { version = '' } = result;
       const splitResult = version.split('/');
-      if(splitResult.length > 1) {
+      if (splitResult.length > 1) {
         return splitResult[1];
       } else {
         return '';
       }
-    } catch(err) {
+    } catch (err) {
       this._logError(err);
       return '';
     }
@@ -349,12 +365,12 @@ export class Avalanche extends Bitcoin {
             chain,
           },
         });
-      if(res.body && res.body.result) {
+      if (res.body && res.body.result) {
         return res.body.result.isBootstrapped || false;
       } else {
         return false;
       }
-    } catch(err) {
+    } catch (err) {
       this._logError(err);
       return false;
     }
@@ -373,14 +389,14 @@ export class Avalanche extends Bitcoin {
         });
       const { height = '0' } = res.body.result;
       return Number(height) > 0 ? height : '';
-    } catch(err) {
+    } catch (err) {
       this._logError(err);
       return '';
     }
   }
 
   async getXHeight(): Promise<string> {
-    return '';
+    return Promise.resolve('');
   }
 
   async getCHeight(): Promise<string> {
@@ -398,7 +414,7 @@ export class Avalanche extends Bitcoin {
       const currentBlock = res.body.result;
       const blockNum = parseInt(currentBlock, 16);
       return blockNum > 0 ? blockNum.toString(10) : '';
-    } catch(err) {
+    } catch (err) {
       this._logError(err);
       return '';
     }
@@ -412,7 +428,7 @@ export class Avalanche extends Bitcoin {
         this.isBootstrapped('X'),
         this.isBootstrapped('C'),
       ]);
-      if(!p || !c || !x) {
+      if (!p || !c || !x) {
         const { text = '' } = await request
           .post(`${this.endpoint()}/ext/metrics`)
           .timeout(this._requestTimeout);
@@ -421,19 +437,19 @@ export class Avalanche extends Bitcoin {
           .map(s => s.trim())
           .filter(s => s);
         // const [ pCount, cCount, xCount ] = ['avalanche_P_bs_fetched', 'avalanche_C_bs_fetched', 'avalanche_X_bs_fetched_vts']
-        const countArr = ['avalanche_P_bs_fetched', 'avalanche_C_bs_fetched', 'avalanche_X_bs_fetched_vts']
+        const countArr = [ 'avalanche_P_bs_fetched', 'avalanche_C_bs_fetched', 'avalanche_X_bs_fetched_vts' ]
           .map(key => {
             let count = 0;
             const patt = new RegExp(`^${key}.+?(\\d+)$`);
             const countIndex = splitText.findIndex(s => patt.test(s));
-            if(countIndex > -1) {
+            if (countIndex > -1) {
               const matches = splitText[countIndex].match(patt);
               const countStr = matches ? matches[1] : p;
               count = Number(countStr);
             }
             return count;
           });
-        return [countArr].map(count => String(count)).join(',');
+        return [ countArr ].map(count => String(count)).join(',');
       } else {
         const [
           pHeight,
@@ -446,7 +462,7 @@ export class Avalanche extends Bitcoin {
         ]);
         return `${pHeight}/${xHeight}/${cHeight}`;
       }
-    } catch(err) {
+    } catch (err) {
       this._logError(err);
       return '';
     }
@@ -455,26 +471,26 @@ export class Avalanche extends Bitcoin {
   async getStatus(): Promise<string> {
     let status;
     try {
-      if(this.remote) {
+      if (this.remote) {
         const version = await this.rpcGetVersion();
         status = version ? Status.RUNNING : Status.STOPPED;
       } else {
         const stats = await this._docker.containerInspect(this.id);
         status = stats.State.Running ? Status.RUNNING : Status.STOPPED;
       }
-    } catch(err) {
+    } catch (err) {
       status = Status.STOPPED;
     }
-    if(status !== Status.STOPPED) {
+    if (status !== Status.STOPPED) {
       try {
         const [ p, c, x ] = await Promise.all([
           this.isBootstrapped('P'),
           this.isBootstrapped('X'),
           this.isBootstrapped('C'),
         ]);
-        if(!p || !c || !x)
+        if (!p || !c || !x)
           status = Status.SYNCING;
-      } catch(err) {
+      } catch (err) {
         // do nothing with the error
       }
     }

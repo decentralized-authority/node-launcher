@@ -1,14 +1,23 @@
-import { CryptoNodeData, VersionDockerImage } from '../../interfaces/crypto-node';
-import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role } from '../../constants';
-import { Bitcoin } from '../bitcoin/bitcoin';
-import { Docker } from '../../util/docker';
-import { v4 as uuid } from 'uuid';
-import { ChildProcess } from 'child_process';
-import os from 'os';
-import path from 'path';
-import fs from 'fs-extra';
-import { PocketGenesis } from './genesis';
-import request from 'superagent';
+import {
+  CryptoNodeData,
+  VersionDockerImage,
+}                                      from '../../interfaces/crypto-node';
+import {
+  defaultDockerNetwork,
+  NetworkType,
+  NodeClient,
+  NodeType,
+  Role,
+}                                      from '../../constants';
+import { Bitcoin }                     from '../bitcoin/bitcoin';
+import { Docker }                      from '../../util/docker';
+import { v4 as uuid }                  from 'uuid';
+import { ChildProcess }                from 'child_process';
+import os                              from 'os';
+import path                            from 'path';
+import fs                              from 'fs-extra';
+import { PocketGenesis }               from './genesis';
+import request                         from 'superagent';
 import { filterVersionsByNetworkType } from '../../util';
 
 const coreConfig = `
@@ -175,7 +184,7 @@ export class Pocket extends Bitcoin {
   static versions(client: string, networkType: string): VersionDockerImage[] {
     client = client || Pocket.clients[0];
     let versions: VersionDockerImage[];
-    switch(client) {
+    switch (client) {
       case NodeClient.CORE:
         versions = [
           {
@@ -185,7 +194,7 @@ export class Pocket extends Bitcoin {
             dataDir: '/root/.pocket',
             walletDir: '/root/pocket-keys',
             configPath: '',
-            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            networks: [ NetworkType.MAINNET, NetworkType.TESTNET ],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               const { network = '' } = data;
@@ -199,7 +208,7 @@ export class Pocket extends Bitcoin {
             dataDir: '/root/.pocket',
             walletDir: '/root/pocket-keys',
             configPath: '',
-            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            networks: [ NetworkType.MAINNET, NetworkType.TESTNET ],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               const { network = '' } = data;
@@ -213,7 +222,7 @@ export class Pocket extends Bitcoin {
             dataDir: '/root/.pocket',
             walletDir: '/root/pocket-keys',
             configPath: '',
-            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            networks: [ NetworkType.MAINNET, NetworkType.TESTNET ],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               const { network = '' } = data;
@@ -227,7 +236,7 @@ export class Pocket extends Bitcoin {
             dataDir: '/root/.pocket',
             walletDir: '/root/pocket-keys',
             configPath: '',
-            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            networks: [ NetworkType.MAINNET, NetworkType.TESTNET ],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               const { network = '' } = data;
@@ -241,7 +250,7 @@ export class Pocket extends Bitcoin {
             dataDir: '/root/.pocket',
             walletDir: '/root/pocket-keys',
             configPath: '',
-            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            networks: [ NetworkType.MAINNET, NetworkType.TESTNET ],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               const { network = '' } = data;
@@ -255,7 +264,7 @@ export class Pocket extends Bitcoin {
             dataDir: '/root/.pocket',
             walletDir: '/root/pocket-keys',
             configPath: '',
-            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            networks: [ NetworkType.MAINNET, NetworkType.TESTNET ],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               const { network = '' } = data;
@@ -283,6 +292,13 @@ export class Pocket extends Bitcoin {
     NetworkType.TESTNET,
   ];
 
+  static networkTypesByClient = {
+    [NodeClient.CORE]: [
+      NetworkType.MAINNET,
+      NetworkType.TESTNET,
+    ],
+  };
+
   static defaultRPCPort = {
     [NetworkType.MAINNET]: 8081,
     [NetworkType.TESTNET]: 8081,
@@ -308,18 +324,19 @@ export class Pocket extends Bitcoin {
   static defaultMem = 8192;
 
   static generateConfig(client = Pocket.clients[0], network = NetworkType.MAINNET, peerPort = Pocket.defaultPeerPort[NetworkType.MAINNET], rpcPort = Pocket.defaultRPCPort[NetworkType.MAINNET], domain = ''): string {
-    switch(client) {
+    switch (client) {
       case NodeClient.CORE: {
         const config = JSON.parse(coreConfig);
         config.pocket_config.rpc_port = rpcPort.toString(10);
         config.pocket_config.remote_cli_url = `http://localhost:${rpcPort}`;
         config.tendermint_config.P2P.Seeds = Pocket.defaultSeeds[network];
         config.tendermint_config.P2P.ListenAddress = `tcp://0.0.0.0:${peerPort}`;
-        if(domain) {
+        if (domain) {
           config.tendermint_config.P2P.ExternalAddress = `tcp://${domain}:${peerPort}`;
         }
         return JSON.stringify(config, null, '    ');
-      } default:
+      }
+      default:
         return '';
     }
   }
@@ -381,14 +398,14 @@ export class Pocket extends Bitcoin {
     this.privKeyPass = data.privKeyPass || uuid();
     this.role = data.role || this.role;
 
-    if(docker)
+    if (docker)
       this._docker = docker;
   }
 
   async start(): Promise<ChildProcess> {
     const versions = Pocket.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
-    if(!versionData)
+    if (!versionData)
       throw new Error(`Unknown version ${this.version}`);
     const {
       dataDir: containerDataDir,
@@ -406,7 +423,7 @@ export class Pocket extends Bitcoin {
 
     const configPath = this.configPath || path.join(tmpdir, uuid());
     const configExists = await fs.pathExists(configPath);
-    if(!configExists)
+    if (!configExists)
       await fs.writeFile(configPath, this.generateConfig(), 'utf8');
 
     const configDir = path.join(dataDir, 'config');
@@ -414,15 +431,15 @@ export class Pocket extends Bitcoin {
 
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
-    await fs.copy(configPath, path.join(configDir, 'config.json'), {force: true});
+    await fs.copy(configPath, path.join(configDir, 'config.json'), { force: true });
 
     const genesisPath = path.join(configDir, 'genesis.json');
     const genesisExists = await fs.pathExists(genesisPath);
-    if(!genesisExists)
+    if (!genesisExists)
       await fs.writeFile(genesisPath, PocketGenesis[this.network].trim(), 'utf8');
 
     const keybaseExists = await fs.pathExists(path.join(walletDir, 'pocket-keybase.db'));
-    if(!keybaseExists) {
+    if (!keybaseExists) {
       const args = [
         '-i',
         '--rm',
@@ -440,7 +457,7 @@ export class Pocket extends Bitcoin {
           },
           () => {
             resolve();
-          }
+          },
         );
       });
     }
@@ -486,7 +503,7 @@ export class Pocket extends Bitcoin {
         .get(`${this.endpoint()}/v1`)
         .timeout(this._requestTimeout);
       return version;
-    } catch(err) {
+    } catch (err) {
       this._logError(err);
       return '';
     }
@@ -500,7 +517,7 @@ export class Pocket extends Bitcoin {
         .timeout(this._requestTimeout)
         .set('Accept', 'application/json');
       return String(body.height) || '0';
-    } catch(err) {
+    } catch (err) {
       this._logError(err);
       return '0';
     }

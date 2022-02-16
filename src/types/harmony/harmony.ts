@@ -1,14 +1,23 @@
-import { Ethereum } from '../ethereum/ethereum';
-import { CryptoNodeData, VersionDockerImage } from '../../interfaces/crypto-node';
-import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role } from '../../constants';
-import { Docker } from '../../util/docker';
-import { v4 as uuid } from 'uuid';
+import { Ethereum }                    from '../ethereum/ethereum';
+import {
+  CryptoNodeData,
+  VersionDockerImage,
+}                                      from '../../interfaces/crypto-node';
+import {
+  defaultDockerNetwork,
+  NetworkType,
+  NodeClient,
+  NodeType,
+  Role,
+}                                      from '../../constants';
+import { Docker }                      from '../../util/docker';
+import { v4 as uuid }                  from 'uuid';
 import { filterVersionsByNetworkType } from '../../util';
-import { ChildProcess } from 'child_process';
-import os from 'os';
-import path from 'path';
-import fs from 'fs-extra';
-import request from 'superagent';
+import { ChildProcess }                from 'child_process';
+import os                              from 'os';
+import path                            from 'path';
+import fs                              from 'fs-extra';
+import request                         from 'superagent';
 
 const coreConfig = `
 Version = "2.5.0"
@@ -99,7 +108,7 @@ Version = "2.5.0"
 `;
 
 interface HarmonyNodeData extends CryptoNodeData {
-  shard: number
+  shard: number;
 }
 
 export class Harmony extends Ethereum {
@@ -107,7 +116,7 @@ export class Harmony extends Ethereum {
   static versions(client: string, networkType: string): VersionDockerImage[] {
     client = client || Harmony.clients[0];
     let versions: VersionDockerImage[];
-    switch(client) {
+    switch (client) {
       case NodeClient.CORE:
         versions = [
           {
@@ -130,9 +139,9 @@ export class Harmony extends Ethereum {
             dataDir: '/root/data',
             walletDir: '/root/keystore',
             configPath: '/harmony/harmony.conf',
-            networks: [NetworkType.MAINNET],
+            networks: [ NetworkType.MAINNET ],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(): string {
               return ` -c ${this.configPath}`;
             },
           },
@@ -143,9 +152,9 @@ export class Harmony extends Ethereum {
             dataDir: '/root/data',
             walletDir: '/root/keystore',
             configPath: '/harmony/harmony.conf',
-            networks: [NetworkType.MAINNET],
+            networks: [ NetworkType.MAINNET ],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(): string {
               return ` -c ${this.configPath}`;
             },
           },
@@ -156,9 +165,9 @@ export class Harmony extends Ethereum {
             dataDir: '/root/data',
             walletDir: '/root/keystore',
             configPath: '/harmony/harmony.conf',
-            networks: [NetworkType.MAINNET],
+            networks: [ NetworkType.MAINNET ],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(): string {
               return ` -c ${this.configPath}`;
             },
           },
@@ -182,6 +191,12 @@ export class Harmony extends Ethereum {
     NetworkType.MAINNET,
   ];
 
+  static networkTypesByClient = {
+    [NodeClient.CORE]: [
+      NetworkType.MAINNET,
+    ],
+  };
+
   static roles = [
     Role.NODE,
   ];
@@ -199,7 +214,7 @@ export class Harmony extends Ethereum {
   static defaultMem = 32768;
 
   static generateConfig(client = Harmony.clients[0], network = NetworkType.MAINNET, peerPort = Harmony.defaultPeerPort[NetworkType.MAINNET], rpcPort = Harmony.defaultRPCPort[NetworkType.MAINNET], shard = 0): string {
-    switch(client) {
+    switch (client) {
       case NodeClient.CORE:
         return coreConfig
           .replace('{{PEER_PORT}}', peerPort.toString(10))
@@ -264,7 +279,7 @@ export class Harmony extends Ethereum {
     this.archival = data.archival || this.archival;
     this.shard = data.shard || this.shard;
     this.role = data.role || this.role;
-    if(docker)
+    if (docker)
       this._docker = docker;
   }
 
@@ -272,7 +287,7 @@ export class Harmony extends Ethereum {
     // const versionData = Harmony.versions(this.client, this.network).find(({ version }) => version === this.version);
     const versions = Harmony.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
-    if(!versionData)
+    if (!versionData)
       throw new Error(`Unknown version ${this.version}`);
     const {
       dataDir: containerDataDir,
@@ -291,18 +306,18 @@ export class Harmony extends Ethereum {
     ];
     const tmpdir = os.tmpdir();
     const dataDir = this.dataDir || path.join(tmpdir, uuid());
-    args = [...args, '-v', `${dataDir}:${containerDataDir}`];
+    args = [ ...args, '-v', `${dataDir}:${containerDataDir}` ];
     await fs.ensureDir(dataDir);
 
     const walletDir = this.walletDir || path.join(tmpdir, uuid());
-    args = [...args, '-v', `${walletDir}:${containerWalletDir}`];
+    args = [ ...args, '-v', `${walletDir}:${containerWalletDir}` ];
     await fs.ensureDir(walletDir);
 
     const configPath = this.configPath || path.join(tmpdir, uuid());
     const configExists = await fs.pathExists(configPath);
-    if(!configExists)
+    if (!configExists)
       await fs.writeFile(configPath, this.generateConfig(), 'utf8');
-    args = [...args, '-v', `${configPath}:${containerConfigPath}`];
+    args = [ ...args, '-v', `${configPath}:${containerConfigPath}` ];
 
     await this._docker.pull(this.dockerImage, str => this._logOutput(str));
 

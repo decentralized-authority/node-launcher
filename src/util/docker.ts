@@ -1,6 +1,10 @@
-import { ChildProcess, execFile, spawn } from 'child_process';
+import {
+  ChildProcess,
+  execFile,
+  spawn,
+}                       from 'child_process';
 import { EventEmitter } from 'events';
-import { DockerEvent } from '../constants';
+import { DockerEvent }  from '../constants';
 
 export class Docker extends EventEmitter {
 
@@ -20,12 +24,12 @@ export class Docker extends EventEmitter {
     this.emit(DockerEvent.INFO, str);
   }
 
-  constructor(dockerParams = {logDriver: ''}) {
+  constructor(dockerParams = { logDriver: '' }) {
     super();
     this._logDriver = dockerParams.logDriver;
   }
 
-  public async listNetworks():Promise<{Name: string}[]> {
+  public async listNetworks(): Promise<{ Name: string }[]> {
     try {
       let encodedOutput = '';
       await new Promise<void>((resolve, reject) => {
@@ -55,29 +59,29 @@ export class Docker extends EventEmitter {
         .split('\n')
         .map(s => s.trim())
         .filter(s => s)
-        .map((s): {Name: string} => {
+        .map((s): { Name: string } => {
           try {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-return
             return JSON.parse(s.slice(1, s.length - 1));
           } catch (err) {
-            return {Name: ''};
+            return { Name: '' };
           }
         })
         .filter(data => data.Name);
-    } catch(err) {
+    } catch (err) {
       this._logError(err);
       return [];
     }
   }
 
   public async createNetwork(networkName: string): Promise<boolean> {
-      if(!networkName) {
+    if (!networkName) {
       this._logError(new Error('networkName argument missing in createNetwork call'));
       return false;
     }
     const networks = await this.listNetworks();
     const found = networks.find(n => n.Name === networkName);
-    if(found) return true;
+    if (found) return true;
     try {
       await new Promise<void>((resolve, reject) => {
         const command = 'docker';
@@ -102,7 +106,7 @@ export class Docker extends EventEmitter {
         //   const str = data.toString();
         // });
       });
-    } catch(err) {
+    } catch (err) {
       this._logError(err);
       return false;
     }
@@ -113,7 +117,7 @@ export class Docker extends EventEmitter {
     try {
       const data = await this.containerInspect(name);
       return Object.keys(data).length > 0;
-    } catch(err) {
+    } catch (err) {
       return false;
     }
   }
@@ -121,7 +125,7 @@ export class Docker extends EventEmitter {
   public async containerInspect(name: string): Promise<any> {
     try {
       const output: string = await new Promise((resolve, reject) => {
-        this._execFile('docker', ['container', 'inspect', '--format', '"{{json .}}"', name], {}, (err, output) => {
+        this._execFile('docker', [ 'container', 'inspect', '--format', '"{{json .}}"', name ], {}, (err, output) => {
           if (err)
             reject(err);
           else
@@ -141,7 +145,7 @@ export class Docker extends EventEmitter {
   public async containerStats(name: string): Promise<any> {
     try {
       const output: string = await new Promise((resolve, reject) => {
-        this._execFile('docker', ['container', 'stats', '--no-stream', '--no-trunc', '--format', '"{{json .}}"', name], {}, (err, output) => {
+        this._execFile('docker', [ 'container', 'stats', '--no-stream', '--no-trunc', '--format', '"{{json .}}"', name ], {}, (err, output) => {
           if (err)
             reject(err);
           else
@@ -160,7 +164,7 @@ export class Docker extends EventEmitter {
 
   public run(image: string, args: string[], onOutput?: (output: string) => void, onErr?: (err: Error) => void, onClose?: (statusCode: number) => void): ChildProcess {
     const command = 'docker';
-    if(this._logDriver) {
+    if (this._logDriver) {
       args = [
         '--log-driver',
         'none',
@@ -179,19 +183,19 @@ export class Docker extends EventEmitter {
     const instance = this._spawn(command, spawnArgs);
     instance.on('error', err => {
       this._logError(err);
-      if(onErr)
+      if (onErr)
         onErr(err);
     });
     instance.on('close', code => {
-      if(onClose)
+      if (onClose)
         onClose(code || 0);
     });
     instance.stdout.on('data', (data: Buffer) => {
-      if(onOutput)
+      if (onOutput)
         onOutput(data.toString());
     });
     instance.stderr.on('data', (data: Buffer) => {
-      if(onOutput)
+      if (onOutput)
         onOutput(data.toString());
     });
     return instance;
@@ -212,19 +216,19 @@ export class Docker extends EventEmitter {
     const instance = this._spawn(spawnCommand, spawnArgs);
     instance.on('error', err => {
       this._logError(err);
-      if(onErr)
+      if (onErr)
         onErr(err);
     });
     instance.on('close', code => {
-      if(onClose)
+      if (onClose)
         onClose(code || 0);
     });
     instance.stdout.on('data', (data: Buffer) => {
-      if(onOutput)
+      if (onOutput)
         onOutput(data.toString());
     });
     instance.stderr.on('data', (data: Buffer) => {
-      if(onOutput)
+      if (onOutput)
         onOutput(data.toString());
     });
     return instance;
@@ -233,10 +237,10 @@ export class Docker extends EventEmitter {
   public kill(name: string): Promise<string> {
     return new Promise(resolve => {
       const command = 'docker';
-      const args = ['kill', name];
+      const args = [ 'kill', name ];
       this.emit(DockerEvent.INFO, `${command} ${args.join(' ')}`);
       execFile(command, args, {}, (err, output) => {
-        if(err) {
+        if (err) {
           this._logError(err);
           resolve('');
         } else {
@@ -250,10 +254,10 @@ export class Docker extends EventEmitter {
   public stop(name: string): Promise<string> {
     return new Promise(resolve => {
       const command = 'docker';
-      const args = ['stop', name];
+      const args = [ 'stop', name ];
       this.emit(DockerEvent.INFO, `${command} ${args.join(' ')}`);
       execFile(command, args, {}, (err, output) => {
-        if(err) {
+        if (err) {
           this._logError(err);
           resolve('');
         } else {
@@ -264,17 +268,17 @@ export class Docker extends EventEmitter {
     });
   }
 
-  pull(image: string, onOutput?: (output: string)=>void): Promise<number> {
+  pull(image: string, onOutput?: (output: string) => void): Promise<number> {
     return new Promise((resolve, reject) => {
-      const instance = spawn('docker', ['pull', image]);
+      const instance = spawn('docker', [ 'pull', image ]);
       instance.stdout.on('data', data => {
         const str = data.toString();
-        if(onOutput)
+        if (onOutput)
           onOutput(str);
       });
       instance.stderr.on('data', data => {
         const str = data.toString();
-        if(onOutput)
+        if (onOutput)
           onOutput(str);
       });
       instance.on('error', err => {
@@ -289,10 +293,10 @@ export class Docker extends EventEmitter {
   public rm(name: string): Promise<boolean> {
     return new Promise(resolve => {
       const command = 'docker';
-      const args = ['rm', name];
+      const args = [ 'rm', name ];
       this.emit(DockerEvent.INFO, `${command} ${args.join(' ')}`);
       execFile(command, args, {}, err => {
-        if(err) {
+        if (err) {
           resolve(false);
         } else {
           resolve(true);

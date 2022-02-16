@@ -1,24 +1,30 @@
 # Node Launcher
-Programmatically create, start, and stop crypto nodes in Node JS using Docker. Check out our [video demo](https://www.youtube.com/watch?v=T9Lm0iShA0I).
+
+Programmatically create, start, and stop crypto nodes in Node JS using Docker. Check out
+our [video demo](https://www.youtube.com/watch?v=T9Lm0iShA0I).
 
 ## Getting Started
 
 ### Install Docker
+
 https://docs.docker.com/engine/install/
 
 #### Clone the library
+
 ```bash
 $ git clone https://github.com/rBurgett/da-node-runner.git
 $ cd da-node-runner
 ```
 
 #### Build the library
+
 ```bash
 $ npm install
 $ npm run build
 ```
 
 #### Try it out!
+
 ```js
 // Start a mainnet node
 const nr = require('[path to da-node-runner]/lib');
@@ -90,7 +96,7 @@ let bitcoin;
 if(fs.pathExistsSync(nodeJsonPath)) { // start using previous configuration and data
 
   bitcoin = new nr.BTC(fs.readJsonSync(nodeJsonPath));
-  
+
 } else { // start and persist configuration and data
 
   // Create local data paths
@@ -145,6 +151,7 @@ setTimeout(() => {
 ```
 
 ## Roadmap
+
 * Add support for Ethereum, Pocket, and many other chains
 * Use event listeners rather than callbacks to subscribe to node output and errors
 * Create standard methods for getting memory usage and other metadata including block height and sync status
@@ -152,9 +159,12 @@ setTimeout(() => {
 * Reach 100% test coverage
 
 ## Contributions
-Contributions are welcome! If you have any issues and/or contributions you would like to make, feel free to file an issue and/or issue a pull request.
+
+Contributions are welcome! If you have any issues and/or contributions you would like to make, feel free to file an
+issue and/or issue a pull request.
 
 ## License
+
 Apache License Version 2.0
 
 Copyright (c) 2021 by Ryan Burgett.

@@ -15387,7 +15387,7 @@ const testnet = `
 }
 `;
 
-export const PocketGenesis: {[key: string]: string} = {
+export const PocketGenesis: { [key: string]: string } = {
   MAINNET: mainnet,
   TESTNET: testnet,
 };

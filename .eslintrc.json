@@ -15,19 +15,34 @@
     "plugin:@typescript-eslint/recommended-requiring-type-checking"
   ],
   "rules": {
-    "comma-dangle": [1, "always-multiline"],
+    "comma-dangle": [
+      1,
+      "always-multiline"
+    ],
     "eol-last": 1,
-    "func-call-spacing": [1, "never"],
-    "func-style": [2, "expression"],
+    "func-call-spacing": [
+      1,
+      "never"
+    ],
+    "func-style": [
+      2,
+      "expression"
+    ],
     "new-cap": 2,
-    "quotes": [1, "single"],
+    "quotes": [
+      1,
+      "single"
+    ],
     "semi": 1,
     "space-before-blocks": 1,
-    "space-before-function-paren": [1, {
-      "anonymous": "never",
-      "named": "never",
-      "asyncArrow": "always"
-    }],
+    "space-before-function-paren": [
+      1,
+      {
+        "anonymous": "never",
+        "named": "never",
+        "asyncArrow": "always"
+      }
+    ],
     "@typescript-eslint/semi": 1,
     "@typescript-eslint/no-explicit-any": 0,
     "@typescript-eslint/prefer-regexp-exec": 0,

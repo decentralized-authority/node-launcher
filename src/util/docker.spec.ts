@@ -10,7 +10,7 @@ describe('Docker', function() {
   const stderrOutput = 'some stderr output';
   const testErr = new Error('Some error!');
   const testCloseStatusCode = 1;
-  const args = ['-t', '-i'];
+  const args = [ '-t', '-i' ];
 
   it('should be a constructor', function() {
     Docker.should.be.a.constructor();
@@ -32,7 +32,7 @@ describe('Docker', function() {
         const outputArr = [];
         docker.run(image, args, output => {
           outputArr.push(output);
-          if(outputArr.length === 2) resolve(outputArr);
+          if (outputArr.length === 2) resolve(outputArr);
         });
       });
       output.includes(stdoutOutput).should.be.True();
@@ -74,7 +74,7 @@ describe('Docker', function() {
         const outputArr = [];
         docker.exec(container, args, command, output => {
           outputArr.push(output);
-          if(outputArr.length === 2) resolve(outputArr);
+          if (outputArr.length === 2) resolve(outputArr);
         });
       });
       output.includes(stdoutOutput).should.be.True();
@@ -113,7 +113,7 @@ describe('Docker', function() {
       fakeExecFile.getExecuted().should.equal(`docker container inspect --format "{{json .}}" ${containerName}`);
     });
     it('should resolve the promise with a parsed object of container information', async function() {
-      const testOutput = '"' + JSON.stringify({State: {Running: true}}) + '"';
+      const testOutput = '"' + JSON.stringify({ State: { Running: true } }) + '"';
       const fakeExecFile = new FakeExecFile(testOutput);
       docker._execFile = fakeExecFile.execFile;
       const output = await docker.containerInspect(containerName);
@@ -144,7 +144,7 @@ describe('Docker', function() {
       fakeExecFile.getExecuted().should.equal(`docker container stats --no-stream --no-trunc --format "{{json .}}" ${containerName}`);
     });
     it('should resolve the promise with a parsed object of container stats', async function() {
-      const testOutput = '"' + JSON.stringify({Container: containerName}) + '"';
+      const testOutput = '"' + JSON.stringify({ Container: containerName }) + '"';
       const fakeExecFile = new FakeExecFile(testOutput);
       docker._execFile = fakeExecFile.execFile;
       const output = await docker.containerStats(containerName);
@@ -168,7 +168,7 @@ function FakeSpawn(testOutput?: string, testErrOutput?: string, testErr?: Error,
 
   this.getSpawned = function() {
     return spawned;
-  }
+  };
 
   this.spawn = function(command: string, args: string[]) {
     const events = {};
@@ -178,19 +178,19 @@ function FakeSpawn(testOutput?: string, testErrOutput?: string, testErr?: Error,
     spawned = command + ' ' + args.join(' ');
 
     setTimeout(() => {
-      if(events['error'])
+      if (events['error'])
         events['error'](testErr);
     }, 5);
     setTimeout(() => {
-      if(testOutput && stdoutEvents['data'])
+      if (testOutput && stdoutEvents['data'])
         stdoutEvents['data'](Buffer.from(testOutput));
     }, 10);
     setTimeout(() => {
-      if(testErrOutput && stderrEvents['data'])
+      if (testErrOutput && stderrEvents['data'])
         stderrEvents['data'](Buffer.from(testErrOutput));
     }, 15);
     setTimeout(() => {
-      if(events['close'])
+      if (events['close'])
         events['close'](closeStatusCode);
     }, 20);
 
@@ -203,13 +203,13 @@ function FakeSpawn(testOutput?: string, testErrOutput?: string, testErr?: Error,
         on(event: string, callback: (output: Buffer) => void) {
           // @ts-ignore
           stdoutEvents[event] = callback;
-        }
+        },
       },
       stderr: {
         on(event: string, callback: (output: Buffer) => void) {
           // @ts-ignore
           stderrEvents[event] = callback;
-        }
+        },
       },
     };
   };
@@ -222,18 +222,18 @@ function FakeExecFile(testOutput = '', testErr) {
 
   this.getExecuted = function() {
     return executed;
-  }
+  };
 
   this.execFile = function(command: string, args: string[], options: {}, callback: (err?: Error, output?: Buffer) => void) {
 
-    executed = `${command} ${args.join(' ')}`
+    executed = `${command} ${args.join(' ')}`;
 
     setTimeout(() => {
-      if(testErr)
+      if (testErr)
         callback(testErr);
-      else if(testOutput)
+      else if (testOutput)
         callback(undefined, Buffer.from(testOutput));
     }, 10);
-  }
+  };
 
 }

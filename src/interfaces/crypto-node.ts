@@ -1,5 +1,5 @@
 import { ChildProcess } from 'child_process';
-import { Docker } from '../util/docker';
+import { Docker }       from '../util/docker';
 
 export interface VersionDockerImage {
   version: string;
@@ -11,11 +11,15 @@ export interface VersionDockerImage {
   configPath: string;
   networks: string[],
   breaking: boolean,
+
   generateRuntimeArgs(data: CryptoNodeData): string;
+
   upgrade?(data: CryptoNodeData): Promise<boolean>;
 }
+
 export interface CryptoNodeData {
   id?: string;
+  rpcDaemonId?: string;
   ticker?: string;
   name?: string;
   version?: string;
@@ -47,39 +51,67 @@ export interface CryptoNodeData {
   remoteProtocol?: string;
   remotePort?: number;
   role?: string;
+
+  [key: string]: any;
 }
 
 export interface CryptoNode {
   _docker: Docker,
   _instance?: ChildProcess;
+  _rpcInstance?: ChildProcess;
+
   _logError(message: string): void;
+
   _logOutput(output: string): void;
+
   _logClose(exitCode: number): void;
+
   _requestTimeout: number;
-  start(): Promise<ChildProcess>;
+
+  start(): Promise<ChildProcess | Array<ChildProcess>>;
+
   stop(): void;
+
   isRunning(): Promise<boolean>;
+
   toObject(): CryptoNodeData;
+
   generateConfig(): string;
+
   endpoint(): string;
+
   rpcGetVersion(): Promise<string>;
+
   rpcGetBlockCount(): Promise<string>;
+
   getCPUUsage(): Promise<string>;
-  getMemUsage(): Promise<[usagePercent: string, used: string, allocated: string]>;
+
+  getMemUsage(): Promise<[ usagePercent: string, used: string, allocated: string ]>;
+
   getStartTime(): Promise<string>;
+
   getStatus(): Promise<string>;
 }
 
 export abstract class CryptoNodeStatic {
   static nodeTypes: string[];
   static networkTypes: string[];
+  static networkTypesByClient: {
+    [key: string]: Array<string>
+  };
   static defaultPeerPort: any;
   static defaultRPCPort: any;
   static defaultCPUs: number;
   static defaultMem: number;
+  static defaultArchivalCPUs?: number;
+  static defaultArchivalMem?: number;
+  static rpcDaemonCPUs?: number;
+  static rpcDaemonMem?: number;
+
   static versions(client: string, network: string): VersionDockerImage[] {
     return [];
   }
+
   static generateConfig(client: string, network: string, peerPort: number, rpcPort: number, rpcUsername: string, rpcPassword: string): string {
     return '';
   }
