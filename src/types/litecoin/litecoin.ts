@@ -7,7 +7,7 @@ import { Docker } from '../../util/docker';
 import { ChildProcess } from 'child_process';
 import os from 'os';
 import path from 'path';
-import fs from 'fs-extra';
+import { FS } from '../../util/fs';
 
 const coreConfig = `
 server=1
@@ -151,11 +151,14 @@ export class Litecoin extends Bitcoin {
     this.dockerImage = this.remote ? '' : data.dockerImage ? data.dockerImage : (versionObj.image || '');
     this.archival = data.archival || this.archival;
     this.role = data.role || this.role;
-    if(docker)
+    if(docker) {
       this._docker = docker;
+      this._fs = new FS(docker);
+    }
   }
 
   async start(): Promise<ChildProcess> {
+    const fs = this._fs;
     const versions = Litecoin.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
     if(!versionData)

@@ -5,10 +5,10 @@ import { Docker } from '../../util/docker';
 import { ChildProcess } from 'child_process';
 import { v4 as uuid} from 'uuid';
 import request from 'superagent';
-import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
 import { Bitcoin } from '../bitcoin/bitcoin';
+import { FS } from '../../util/fs';
 
 const coreConfig = `
 {
@@ -245,11 +245,14 @@ export class Avalanche extends Bitcoin {
     this.dockerImage = this.remote ? '' : data.dockerImage ? data.dockerImage : (versionObj.image || '');
     this.archival = data.archival || this.archival;
     this.role = data.role || this.role;
-    if(docker)
+    if(docker) {
       this._docker = docker;
+      this._fs = new FS(docker);
+    }
   }
 
   async start(): Promise<ChildProcess> {
+    const fs = this._fs;
     const versions = Avalanche.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
     if(!versionData)
