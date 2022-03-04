@@ -40,12 +40,12 @@ export class Ethereum extends Bitcoin {
             image: 'ethereum/client-go:v1.10.15',
             dataDir: '/root/.ethereum',
             walletDir: '/root/keystore',
-            configPath: '/root/config.toml',
+            configDir: '/root/config',
             networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               const { network = '' } = data;
-              return ` --config=${this.configPath}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
+              return ` --config=${path.join(this.configDir, Ethereum.configName(data))}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
             },
           },
           {
@@ -54,15 +54,16 @@ export class Ethereum extends Bitcoin {
             image: 'ethereum/client-go:v1.10.14',
             dataDir: '/root/.ethereum',
             walletDir: '/root/keystore',
-            configPath: '/root/config.toml',
+            configDir: '/root/config',
             networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
             breaking: true,
             generateRuntimeArgs(data: CryptoNodeData): string {
               const { network = '' } = data;
-              return ` --config=${this.configPath}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
+              return ` --config=${path.join(this.configDir, Ethereum.configName(data))}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
             },
             async upgrade(data: CryptoNodeData): Promise<boolean> {
-              const { configPath } = data;
+              const { configDir } = data;
+              const configPath = configDir ? path.join(configDir, Ethereum.configName(data)) : '';
               if(configPath && (await fs.pathExists(configPath))) {
                 const conf = await fs.readFile(configPath, 'utf8');
                 const splitConf = conf
@@ -94,12 +95,12 @@ export class Ethereum extends Bitcoin {
             image: 'ethereum/client-go:v1.10.13',
             dataDir: '/root/.ethereum',
             walletDir: '/root/keystore',
-            configPath: '/root/config.toml',
+            configDir: '/root/config',
             networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               const { network = '' } = data;
-              return ` --config=${this.configPath}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
+              return ` --config=${path.join(this.configDir, Ethereum.configName(data))}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
             },
           },
           {
@@ -108,12 +109,12 @@ export class Ethereum extends Bitcoin {
             image: 'ethereum/client-go:v1.10.12',
             dataDir: '/root/.ethereum',
             walletDir: '/root/keystore',
-            configPath: '/root/config.toml',
+            configDir: '/root/config',
             networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               const { network = '' } = data;
-              return ` --config=${this.configPath}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
+              return ` --config=${path.join(this.configDir, Ethereum.configName(data))}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
             },
           },
           {
@@ -122,12 +123,12 @@ export class Ethereum extends Bitcoin {
             image: 'ethereum/client-go:v1.10.11',
             dataDir: '/root/.ethereum',
             walletDir: '/root/keystore',
-            configPath: '/root/config.toml',
+            configDir: '/root/config',
             networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               const { network = '' } = data;
-              return ` --config=${this.configPath}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
+              return ` --config=${path.join(this.configDir, Ethereum.configName(data))}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
             },
           },
           {
@@ -136,12 +137,12 @@ export class Ethereum extends Bitcoin {
             image: 'ethereum/client-go:v1.10.10',
             dataDir: '/root/.ethereum',
             walletDir: '/root/keystore',
-            configPath: '/root/config.toml',
+            configDir: '/root/config',
             networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               const { network = '' } = data;
-              return ` --config=${this.configPath}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
+              return ` --config=${path.join(this.configDir, Ethereum.configName(data))}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
             },
           },
           {
@@ -150,12 +151,12 @@ export class Ethereum extends Bitcoin {
             image: 'ethereum/client-go:v1.10.3',
             dataDir: '/root/.ethereum',
             walletDir: '/root/keystore',
-            configPath: '/root/config.toml',
+            configDir: '/root/config',
             networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               const { network = '' } = data;
-              return ` --config=${this.configPath}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
+              return ` --config=${path.join(this.configDir, Ethereum.configName(data))}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
             },
           },
         ];
@@ -210,6 +211,10 @@ export class Ethereum extends Bitcoin {
     }
   }
 
+  static configName(data: CryptoNodeData): string {
+    return 'config.toml';
+  }
+
   id: string;
   ticker = 'eth';
   name = 'Ethereum';
@@ -228,7 +233,7 @@ export class Ethereum extends Bitcoin {
   dockerNetwork = defaultDockerNetwork;
   dataDir = '';
   walletDir = '';
-  configPath = '';
+  configDir = '';
   remote = false;
   remoteDomain = '';
   remoteProtocol = '';
@@ -248,7 +253,7 @@ export class Ethereum extends Bitcoin {
     this.dockerNetwork = data.dockerNetwork || this.dockerNetwork;
     this.dataDir = data.dataDir || this.dataDir;
     this.walletDir = data.walletDir || this.walletDir;
-    this.configPath = data.configPath || this.configPath;
+    this.configDir = data.configDir || this.configDir;
     this.createdAt = data.createdAt || this.createdAt;
     this.updatedAt = data.updatedAt || this.updatedAt;
     this.remote = data.remote || this.remote;
@@ -273,7 +278,7 @@ export class Ethereum extends Bitcoin {
     const {
       dataDir: containerDataDir,
       walletDir: containerWalletDir,
-      configPath: containerConfigPath,
+      configDir: containerConfigDir,
     } = versionData;
     let args = [
       '-i',
@@ -294,11 +299,13 @@ export class Ethereum extends Bitcoin {
     args = [...args, '-v', `${walletDir}:${containerWalletDir}`];
     await fs.ensureDir(walletDir);
 
-    const configPath = this.configPath || path.join(tmpdir, uuid());
+    const configDir = this.configDir || path.join(tmpdir, uuid());
+    await fs.ensureDir(configDir);
+    const configPath = path.join(configDir, Ethereum.configName(this));
     const configExists = await fs.pathExists(configPath);
     if(!configExists)
       await fs.writeFile(configPath, this.generateConfig(), 'utf8');
-    args = [...args, '-v', `${configPath}:${containerConfigPath}`];
+    args = [...args, '-v', `${configDir}:${containerConfigDir}`];
 
     await this._docker.pull(this.dockerImage, str => this._logOutput(str));
 

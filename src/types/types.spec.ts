@@ -61,7 +61,7 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
       dockerNetwork: 'some network',
       dataDir: '/some/dir',
       walletDir: '/some/wallet/dir/',
-      configPath: '/some/config/path',
+      configDir: '/some/config/path',
     };
 
     it('should be a constructor', function() {
@@ -77,7 +77,7 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
           v.image.should.be.a.String();
           v.dataDir.should.be.a.String();
           v.walletDir.should.be.a.String();
-          v.configPath.should.be.a.String();
+          v.configDir.should.be.a.String();
           const runtimeArgs = v.generateRuntimeArgs(new NodeConstructor({}));
           runtimeArgs.should.be.a.String();
         });
