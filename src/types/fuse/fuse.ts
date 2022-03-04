@@ -6,9 +6,9 @@ import { Docker } from '../../util/docker';
 import { ChildProcess } from 'child_process';
 import os from 'os';
 import path from 'path';
-import fs from 'fs-extra';
 import { filterVersionsByNetworkType } from '../../util';
 import Web3 from 'web3';
+import { FS } from '../../util/fs';
 
 const testnetBootnodes = [
   'enode://aaa92938fb3b4b073ea811894376d597a3feef30ce999a8bee617c24b7acd4021f16f94856e5c48f25b4fde999fc5df27de73d2c394e6c46cc5d44e012dd9e35@3.123.228.59:30303',
@@ -278,8 +278,10 @@ export class Fuse extends Ethereum {
     this.address = data.address || this.address;
     if(this.role === Role.VALIDATOR && !this.key)
       this.createAccount();
-    if(docker)
+    if(docker) {
       this._docker = docker;
+      this._fs = new FS(docker);
+    }
   }
 
   toObject(): CryptoNodeData {
@@ -294,6 +296,7 @@ export class Fuse extends Ethereum {
   }
 
   async start(): Promise<ChildProcess> {
+    const fs = this._fs;
     const versions = Fuse.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
     if(!versionData)
@@ -341,7 +344,7 @@ export class Fuse extends Ethereum {
       if(!passwordFileExists)
         await fs.writeFile(passwordPath, this.keyPass, 'utf8');
       args = [...args, '-v', `${passwordPath}:${containerPasswordPath}`];
-      if(fs.readdirSync(walletDir).length === 0) {
+      if((await fs.readdir(walletDir)).length === 0) {
         const keyFilePath = path.join(os.tmpdir(), uuid());
         await fs.writeJson(keyFilePath, this.key);
         const accountPath = `/UTC--${new Date().toISOString().replace(/:/g, '-')}--${this.address}.json`;

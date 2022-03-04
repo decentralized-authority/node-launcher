@@ -6,9 +6,9 @@ import { Docker } from '../../util/docker';
 import { ChildProcess } from 'child_process';
 import os from 'os';
 import path from 'path';
-import fs from 'fs-extra';
 import { filterVersionsByNetworkType } from '../../util';
 import * as genesis from './genesis';
+import { FS } from '../../util/fs';
 
 const coreConfig = `
 [Eth]
@@ -210,11 +210,14 @@ export class BinanceSC extends Ethereum {
     this.clientVersion = data.clientVersion || versionObj.clientVersion || '';
     this.dockerImage = this.remote ? '' : data.dockerImage ? data.dockerImage : (versionObj.image || '');
     this.archival = data.archival || this.archival;
-    if(docker)
+    if(docker) {
       this._docker = docker;
+      this._fs = new FS(docker);
+    }
   }
 
   async start(): Promise<ChildProcess> {
+    const fs = this._fs;
     const versions = BinanceSC.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
     if(!versionData)

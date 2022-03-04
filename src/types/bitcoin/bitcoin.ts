@@ -5,10 +5,12 @@ import { Docker } from '../../util/docker';
 import { ChildProcess } from 'child_process';
 import { v4 as uuid} from 'uuid';
 import request from 'superagent';
-import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
 import { EventEmitter } from 'events';
+import { FS } from '../../util/fs';
+
+const defaultDocker = new Docker();
 
 const coreConfig = `
 server=1
@@ -184,7 +186,8 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
   remoteProtocol = '';
   role = Bitcoin.roles[0];
 
-  _docker = new Docker();
+  _docker = defaultDocker;
+  _fs = new FS(defaultDocker);
   _instance?: ChildProcess;
   _requestTimeout = 10000;
   _logError(err: string|Error): void {
@@ -225,8 +228,10 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
     this.dockerImage = this.remote ? '' : data.dockerImage ? data.dockerImage : (versionObj.image || '');
     this.archival = data.archival || this.archival;
     this.role = data.role || this.role;
-    if(docker)
+    if(docker) {
       this._docker = docker;
+      this._fs = new FS(docker);
+    }
   }
 
   endpoint(): string {
@@ -289,6 +294,7 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
   }
 
   async start(): Promise<ChildProcess> {
+    const fs = this._fs;
     const versions = Bitcoin.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
     if(!versionData)

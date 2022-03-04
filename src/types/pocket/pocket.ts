@@ -6,10 +6,10 @@ import { v4 as uuid } from 'uuid';
 import { ChildProcess } from 'child_process';
 import os from 'os';
 import path from 'path';
-import fs from 'fs-extra';
 import { PocketGenesis } from './genesis';
 import request from 'superagent';
 import { filterVersionsByNetworkType } from '../../util';
+import { FS } from '../../util/fs';
 
 const coreConfig = `
 {
@@ -385,11 +385,14 @@ export class Pocket extends Bitcoin {
     this.privKeyPass = data.privKeyPass || uuid();
     this.role = data.role || this.role;
 
-    if(docker)
+    if(docker) {
       this._docker = docker;
+      this._fs = new FS(docker);
+    }
   }
 
   async start(): Promise<ChildProcess> {
+    const fs = this._fs;
     const versions = Pocket.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
     if(!versionData)

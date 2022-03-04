@@ -4,11 +4,11 @@ import { Docker } from '../../util/docker';
 import { ChildProcess } from 'child_process';
 import { v4 as uuid} from 'uuid';
 import request from 'superagent';
-import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
 import { Bitcoin } from '../bitcoin/bitcoin';
 import { filterVersionsByNetworkType } from '../../util';
+import { FS } from '../../util/fs';
 
 const coreConfig = `
 [Eth]
@@ -62,6 +62,7 @@ export class Ethereum extends Bitcoin {
               return ` --config=${path.join(this.configDir, Ethereum.configName(data))}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
             },
             async upgrade(data: CryptoNodeData): Promise<boolean> {
+              const fs = new FS(new Docker());
               const { configDir } = data;
               const configPath = configDir ? path.join(configDir, Ethereum.configName(data)) : '';
               if(configPath && (await fs.pathExists(configPath))) {
@@ -266,11 +267,14 @@ export class Ethereum extends Bitcoin {
     this.dockerImage = this.remote ? '' : data.dockerImage ? data.dockerImage : (versionObj.image || '');
     this.archival = data.archival || this.archival;
     this.role = data.role || this.role;
-    if(docker)
+    if(docker) {
       this._docker = docker;
+      this._fs = new FS(docker);
+    }
   }
 
   async start(): Promise<ChildProcess> {
+    const fs = this._fs;
     const versions = Ethereum.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
     if(!versionData)

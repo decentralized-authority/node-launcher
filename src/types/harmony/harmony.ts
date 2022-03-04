@@ -7,8 +7,8 @@ import { filterVersionsByNetworkType } from '../../util';
 import { ChildProcess } from 'child_process';
 import os from 'os';
 import path from 'path';
-import fs from 'fs-extra';
 import request from 'superagent';
+import { FS } from '../../util/fs';
 
 const coreConfig = `
 Version = "2.5.0"
@@ -268,11 +268,14 @@ export class Harmony extends Ethereum {
     this.archival = data.archival || this.archival;
     this.shard = data.shard || this.shard;
     this.role = data.role || this.role;
-    if(docker)
+    if(docker) {
       this._docker = docker;
+      this._fs = new FS(docker);
+    }
   }
 
   async start(): Promise<ChildProcess> {
+    const fs = this._fs;
     // const versionData = Harmony.versions(this.client, this.network).find(({ version }) => version === this.version);
     const versions = Harmony.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
