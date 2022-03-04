@@ -38,11 +38,11 @@ export class BitcoinCash extends Bitcoin {
             image: 'zquestz/bitcoin-cash-node:23.0.0',
             dataDir: '/opt/blockchain-data',
             walletDir: '/opt/blockchain-wallets',
-            configPath: '/opt/bitcoincash.conf',
+            configDir: '/opt/blockchain-config',
             networks: [NetworkType.MAINNET, NetworkType.TESTNET],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
-              return ` -conf=${this.configPath}` + (data.network === NetworkType.TESTNET ? ' -testnet' : '');
+              return ` -conf=${path.join(this.configDir, BitcoinCash.configName(data))}` + (data.network === NetworkType.TESTNET ? ' -testnet' : '');
             },
           },
         ];
@@ -99,6 +99,10 @@ export class BitcoinCash extends Bitcoin {
     }
   }
 
+  static configName(data: CryptoNodeData): string {
+    return 'bitcoincash.conf';
+  }
+
   id: string;
   ticker = 'bch';
   name = 'Bitcoin Cash';
@@ -117,7 +121,7 @@ export class BitcoinCash extends Bitcoin {
   dockerNetwork = defaultDockerNetwork;
   dataDir = '';
   walletDir = '';
-  configPath = '';
+  configDir = '';
   role = BitcoinCash.roles[0];
 
   constructor(data: CryptoNodeData, docker?: Docker) {
@@ -134,7 +138,7 @@ export class BitcoinCash extends Bitcoin {
     this.dockerNetwork = data.dockerNetwork || this.dockerNetwork;
     this.dataDir = data.dataDir || this.dataDir;
     this.walletDir = data.walletDir || this.dataDir;
-    this.configPath = data.configPath || this.configPath;
+    this.configDir = data.configDir || this.configDir;
     this.createdAt = data.createdAt || this.createdAt;
     this.updatedAt = data.updatedAt || this.updatedAt;
     this.remote = data.remote || this.remote;
@@ -159,7 +163,7 @@ export class BitcoinCash extends Bitcoin {
     const {
       dataDir: containerDataDir,
       walletDir: containerWalletDir,
-      configPath: containerConfigPath,
+      configDir: containerConfigDir,
     } = versionData;
     let args = [
       '-i',
@@ -181,11 +185,13 @@ export class BitcoinCash extends Bitcoin {
     args = [...args, '-v', `${walletDir}:${containerWalletDir}`];
     await fs.ensureDir(walletDir);
 
-    const configPath = this.configPath || path.join(tmpdir, uuid());
+    const configDir = this.configDir || path.join(tmpdir, uuid());
+    await fs.ensureDir(configDir);
+    const configPath = path.join(configDir, BitcoinCash.configName(this));
     const configExists = await fs.pathExists(configPath);
     if(!configExists)
       await fs.writeFile(configPath, this.generateConfig(), 'utf8');
-    args = [...args, '-v', `${configPath}:${containerConfigPath}`];
+    args = [...args, '-v', `${configDir}:${containerConfigDir}`];
 
     await this._docker.pull(this.dockerImage, str => this._logOutput(str));
 

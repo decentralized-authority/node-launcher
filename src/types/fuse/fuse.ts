@@ -90,12 +90,12 @@ export class Fuse extends Ethereum {
             imageNetstat: 'fusenet/spark-netstat:1.0.0',
             dataDir: '/root/data',
             walletDir: '/root/keystore',
-            configPath: '/root/config.toml',
+            configDir: '/root/config',
             passwordPath: '/root/pass.pwd',
             networks: [NetworkType.TESTNET],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
-              return ` --no-warp --config=${this.configPath}`;
+              return ` --no-warp --config=${path.join(this.configDir, Fuse.configName(data))}`;
             },
           },
           {
@@ -106,12 +106,12 @@ export class Fuse extends Ethereum {
             imageNetstat: '',
             dataDir: '/root/data',
             walletDir: '/root/keystore',
-            configPath: '/root/config.toml',
+            configDir: '/root/config',
             passwordPath: '/root/pass.pwd',
             networks: [NetworkType.TESTNET],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
-              return ` --no-warp --config=${this.configPath} --bootnodes ${testnetBootnodes}`;
+              return ` --no-warp --config=${path.join(this.configDir, Fuse.configName(data))} --bootnodes ${testnetBootnodes}`;
             },
           },
           {
@@ -122,12 +122,12 @@ export class Fuse extends Ethereum {
             imageNetstat: '',
             dataDir: '/root/data',
             walletDir: '/root/keystore',
-            configPath: '/root/config.toml',
+            configDir: '/root/config',
             passwordPath: '/root/pass.pwd',
             networks: [NetworkType.MAINNET],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
-              return ` --no-warp --config=${this.configPath}`;
+              return ` --no-warp --config=${path.join(this.configDir, Fuse.configName(data))}`;
             },
           },
           {
@@ -138,12 +138,12 @@ export class Fuse extends Ethereum {
             imageNetstat: '',
             dataDir: '/root/data',
             walletDir: '/root/keystore',
-            configPath: '/root/config.toml',
+            configDir: '/root/config',
             passwordPath: '/root/pass.pwd',
             networks: [NetworkType.MAINNET],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
-              return ` --config=${this.configPath}`;
+              return ` --config=${path.join(this.configDir, Fuse.configName(data))}`;
             },
           },
         ];
@@ -216,6 +216,10 @@ export class Fuse extends Ethereum {
     }
   }
 
+  static configName(data: CryptoNodeData): string {
+    return 'config.toml';
+  }
+
   id: string;
   ticker = 'fuse';
   name = 'Fuse';
@@ -234,7 +238,7 @@ export class Fuse extends Ethereum {
   dockerNetwork = defaultDockerNetwork;
   dataDir = '';
   walletDir = '';
-  configPath = '';
+  configDir = '';
   passwordPath = '';
   key: any;
   keyPass = '';
@@ -255,7 +259,7 @@ export class Fuse extends Ethereum {
     this.dockerNetwork = data.dockerNetwork || this.dockerNetwork;
     this.dataDir = data.dataDir || this.dataDir;
     this.walletDir = data.walletDir || this.dataDir;
-    this.configPath = data.configPath || this.configPath;
+    this.configDir = data.configDir || this.configDir;
     this.passwordPath = data.passwordPath || this.passwordPath;
     this.createdAt = data.createdAt || this.createdAt;
     this.updatedAt = data.updatedAt || this.updatedAt;
@@ -297,7 +301,7 @@ export class Fuse extends Ethereum {
     const {
       dataDir: containerDataDir,
       walletDir: containerWalletDir,
-      configPath: containerConfigPath,
+      configDir: containerConfigDir,
       passwordPath: containerPasswordPath,
     } = versionData;
     let args = [
@@ -321,11 +325,13 @@ export class Fuse extends Ethereum {
     args = [...args, '-v', `${walletDir}:${containerWalletDir}`];
     await fs.ensureDir(walletDir);
 
-    const configPath = this.configPath || path.join(tmpdir, uuid());
+    const configDir = this.configDir || path.join(tmpdir, uuid());
+    await fs.ensureDir(configDir);
+    const configPath = path.join(configDir, Fuse.configName(this));
     const configExists = await fs.pathExists(configPath);
     if(!configExists)
       await fs.writeFile(configPath, this.generateConfig(), 'utf8');
-    args = [...args, '-v', `${configPath}:${containerConfigPath}`];
+    args = [...args, '-v', `${configDir}:${containerConfigDir}`];
 
     await this._docker.pull(this.dockerImage, str => this._logOutput(str));
 

@@ -43,11 +43,11 @@ export class Avalanche extends Bitcoin {
             dataDir: '/root/db',
             walletDir: '/root/keystore',
             logDir: '/root/logs',
-            configPath: '/root/config.json',
+            configDir: '/root/config',
             networks: [NetworkType.MAINNET],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
-              return ` --config-file=${this.configPath}`;
+              return ` --config-file=${path.join(this.configDir, Avalanche.configName(data))}`;
             },
           },
           {
@@ -57,11 +57,11 @@ export class Avalanche extends Bitcoin {
             dataDir: '/root/db',
             walletDir: '/root/keystore',
             logDir: '/root/logs',
-            configPath: '/root/config.json',
+            configDir: '/root/config',
             networks: [NetworkType.MAINNET],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
-              return ` --config-file=${this.configPath}`;
+              return ` --config-file=${path.join(this.configDir, Avalanche.configName(data))}`;
             },
           },
           {
@@ -71,11 +71,11 @@ export class Avalanche extends Bitcoin {
             dataDir: '/root/db',
             walletDir: '/root/keystore',
             logDir: '/root/logs',
-            configPath: '/root/config.json',
+            configDir: '/root/config',
             networks: [NetworkType.MAINNET],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
-              return ` --config-file=${this.configPath}`;
+              return ` --config-file=${path.join(this.configDir, Avalanche.configName(data))}`;
             },
           },
           {
@@ -85,11 +85,11 @@ export class Avalanche extends Bitcoin {
             dataDir: '/root/db',
             walletDir: '/root/keystore',
             logDir: '/root/logs',
-            configPath: '/root/config.json',
+            configDir: '/root/config',
             networks: [NetworkType.MAINNET],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
-              return ` --config-file=${this.configPath}`;
+              return ` --config-file=${path.join(this.configDir, Avalanche.configName(data))}`;
             },
           },
           {
@@ -99,11 +99,11 @@ export class Avalanche extends Bitcoin {
             dataDir: '/root/db',
             walletDir: '/root/keystore',
             logDir: '/root/logs',
-            configPath: '/root/config.json',
+            configDir: '/root/config',
             networks: [NetworkType.MAINNET],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
-              return ` --config-file=${this.configPath}`;
+              return ` --config-file=${path.join(this.configDir, Avalanche.configName(data))}`;
             },
           },
           {
@@ -113,11 +113,11 @@ export class Avalanche extends Bitcoin {
             dataDir: '/root/db',
             walletDir: '/root/keystore',
             logDir: '/root/logs',
-            configPath: '/root/config.json',
+            configDir: '/root/config',
             networks: [NetworkType.MAINNET],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
-              return ` --config-file=${this.configPath}`;
+              return ` --config-file=${path.join(this.configDir, Avalanche.configName(data))}`;
             },
           },
           {
@@ -127,11 +127,11 @@ export class Avalanche extends Bitcoin {
             dataDir: '/root/db',
             walletDir: '/root/keystore',
             logDir: '/root/logs',
-            configPath: '/root/config.json',
+            configDir: '/root/config',
             networks: [NetworkType.MAINNET],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
-              return ` --config-file=${this.configPath}`;
+              return ` --config-file=${path.join(this.configDir, Avalanche.configName(data))}`;
             },
           },
           {
@@ -141,11 +141,11 @@ export class Avalanche extends Bitcoin {
             dataDir: '/root/db',
             walletDir: '/root/keystore',
             logDir: '/root/logs',
-            configPath: '/root/config.json',
+            configDir: '/root/config',
             networks: [NetworkType.MAINNET],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
-              return ` --config-file=${this.configPath}`;
+              return ` --config-file=${path.join(this.configDir, Avalanche.configName(data))}`;
             },
           },
         ];
@@ -196,6 +196,10 @@ export class Avalanche extends Bitcoin {
     }
   }
 
+  static configName(data: CryptoNodeData): string {
+    return 'config.json';
+  }
+
   id: string;
   ticker = 'avax';
   version: string;
@@ -213,7 +217,7 @@ export class Avalanche extends Bitcoin {
   dockerNetwork = defaultDockerNetwork;
   dataDir = '';
   walletDir = '';
-  configPath = '';
+  configDir = '';
   role = Avalanche.roles[0];
 
   constructor(data: CryptoNodeData, docker?: Docker) {
@@ -230,7 +234,7 @@ export class Avalanche extends Bitcoin {
     this.dockerNetwork = data.dockerNetwork || this.dockerNetwork;
     this.dataDir = data.dataDir || this.dataDir;
     this.walletDir = data.walletDir || this.dataDir;
-    this.configPath = data.configPath || this.configPath;
+    this.configDir = data.configDir || this.configDir;
     this.remote = data.remote || this.remote;
     this.remoteDomain = data.remoteDomain || this.remoteDomain;
     this.remoteProtocol = data.remoteProtocol || this.remoteProtocol;
@@ -254,7 +258,7 @@ export class Avalanche extends Bitcoin {
       dataDir: containerDataDir,
       walletDir: containerWalletDir,
       logDir: containerLogDir,
-      configPath: containerConfigPath,
+      configDir: containerConfigDir,
     } = versionData;
     let args = [
       '-i',
@@ -281,11 +285,13 @@ export class Avalanche extends Bitcoin {
     args = [...args, '-v', `${walletDir}:${containerWalletDir}`];
     await fs.ensureDir(walletDir);
 
-    const configPath = this.configPath || path.join(tmpdir, uuid());
+    const configDir = this.configDir || path.join(tmpdir, uuid());
+    await fs.ensureDir(configDir);
+    const configPath = path.join(configDir, Avalanche.configName(this));
     const configExists = await fs.pathExists(configPath);
     if(!configExists)
       await fs.writeFile(configPath, this.generateConfig(), 'utf8');
-    args = [...args, '-v', `${configPath}:${containerConfigPath}`];
+    args = [...args, '-v', `${configDir}:${containerConfigDir}`];
 
     await this._docker.createNetwork(this.dockerNetwork);
     const instance = this._docker.run(
