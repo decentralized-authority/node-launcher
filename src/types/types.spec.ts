@@ -18,6 +18,7 @@ import { Pocket } from './pocket/pocket';
 import { Fuse } from './fuse/fuse';
 import { isNull } from 'lodash';
 import { Harmony } from './harmony/harmony';
+import { OKEX } from './oec/okex';
 
 const chains: [{name: string, constructor: any}] = [
   {name: 'Bitcoin', constructor: Bitcoin},
@@ -32,6 +33,7 @@ const chains: [{name: string, constructor: any}] = [
   {name: 'Pocket', constructor: Pocket},
   {name: 'Fuse', constructor: Fuse},
   {name: 'Harmony', constructor: Harmony},
+  {name: 'OEC', constructor: OKEX},
 ];
 
 chains.forEach(({ name, constructor: NodeConstructor }) => {
