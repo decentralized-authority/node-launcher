@@ -16,7 +16,7 @@ import { BinanceSC } from './binance-sc/binance-sc';
 import { Avalanche } from './avalanche/avalanche';
 import { Pocket } from './pocket/pocket';
 import { Fuse } from './fuse/fuse';
-import { isNull } from 'lodash';
+import { isNull, isNumber } from 'lodash';
 import { Harmony } from './harmony/harmony';
 
 const chains: [{name: string, constructor: any}] = [
@@ -292,7 +292,7 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
             // node.on(NodeEvent.CLOSE, console.log);
             const res = await node.start();
             res.should.be.an.instanceOf(ChildProcess);
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            await new Promise(resolve => setTimeout(resolve, 10000));
             await docker.kill(id);
           });
           it('should resolve with a ChildProcess', async function() {
@@ -305,10 +305,13 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
             // node.on(NodeEvent.CLOSE, console.log);
             const instance = await node.start();
             instance.should.be.an.instanceOf(ChildProcess);
-            await new Promise(resolve => setTimeout(resolve, 2000));
             await new Promise(resolve => {
-              node._instance.on('close', resolve);
-              node._instance.kill();
+              if(isNumber(node._instance.exitCode)) {
+                resolve();
+              } else {
+                node._instance.on('close', resolve);
+                node._instance.kill();
+              }
             });
           });
         });
@@ -318,8 +321,11 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
               network,
               client,
             }, docker);
+            // node.on(NodeEvent.OUTPUT, console.log);
+            // node.on(NodeEvent.ERROR, console.error);
+            // node.on(NodeEvent.CLOSE, console.log);
             await node.start();
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            await new Promise(resolve => setTimeout(resolve, 10000));
             await node.stop();
             node._instance.exitCode.should.be.a.Number();
           });
