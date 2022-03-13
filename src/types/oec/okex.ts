@@ -13,6 +13,12 @@ import { filterVersionsByNetworkType } from '../../util';
 const coreConfig = `
 moniker = "{{MONIKER}}"
 chainid = "exchain-66"
+db_dir = "data"
+node_key_file = "config/node_key.json"
+genesis_file = "config/genesis.json"
+priv_validator_key_file = "config/priv_validator_key.json"
+priv_validator_state_file = "data/priv_validator_state.json"
+addr_book_file = "config/addrbook.json"
 db_backend = "rocksdb"
 fast_sync = true
 auto_fast_sync = true
@@ -45,8 +51,8 @@ export class OKEX extends Ethereum {
             networks: [NetworkType.MAINNET],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
-              return ' start'
-            },
+              return ` start --home /root/.exchaind`;
+	    },
           },
           {
             version: '1.1.4',
@@ -58,8 +64,8 @@ export class OKEX extends Ethereum {
             networks: [NetworkType.MAINNET],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
-              return ' start'
-            },
+              return ` start --home /root/.exchaind`;
+	    },
           },
           {
             version: '1.1.2',
@@ -71,7 +77,7 @@ export class OKEX extends Ethereum {
             networks: [NetworkType.MAINNET],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
-              return ' start'
+              return ` start --home /root/.exchaind`;
             },
           },
         ];
@@ -121,21 +127,6 @@ export class OKEX extends Ethereum {
       default:
         return '';
     }
-  }
-  
-  static async generateGenesis(configDir: string, newtork: string) {
-    var wget = require('wget-improved');
-    const genesisPath = path.join(configDir, "genesis.json")
-    var source;
-    switch (newtork) {
-      case NetworkType.MAINNET:
-        source = "https://raw.githubusercontent.com/okex/mainnet/main/genesis.json"
-        break;
-        // case NetworkType.TESTNET:
-        // source = "https://raw.githubusercontent.com/okex/testnets/master/latest/genesis.json"
-        // break;
-    }
-    wget.download(source, genesisPath)
   }
 
   static configName(data: CryptoNodeData): string {
@@ -233,7 +224,11 @@ export class OKEX extends Ethereum {
       fs.mkdir(configDir)
       const configPath = path.join(configDir, OKEX.configName(this))
       await fs.writeFile(configPath, this.generateConfig(), 'utf8');
-      OKEX.generateGenesis(configDir, this.network);
+      const copyGenesisPath = path.resolve(__dirname, "genesis.json");
+      const genesisPath = path.join(configDir, 'genesis.json');
+      fs.copyFile(copyGenesisPath, genesisPath, (err) => {
+        if (err) throw err;
+      });
     }
     args = [...args, '-v', `${configDir}:${containerConfigDir}`];
 

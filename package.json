@@ -49,7 +49,6 @@
     "typescript": "4.3.4",
     "uuid": "^8.3.2",
     "web3": "^1.6.1",
-    "wget-improved": "^3.3.0",
     "winston": "^3.3.3"
   }
 }
