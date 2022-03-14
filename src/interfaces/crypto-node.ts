@@ -56,7 +56,7 @@ export interface CryptoNode {
   _logOutput(output: string): void;
   _logClose(exitCode: number): void;
   _requestTimeout: number;
-  start(): Promise<ChildProcess>;
+  start(): Promise<ChildProcess[]>;
   stop(): void;
   isRunning(): Promise<boolean>;
   toObject(): CryptoNodeData;

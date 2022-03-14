@@ -216,7 +216,7 @@ export class BinanceSC extends Ethereum {
     }
   }
 
-  async start(): Promise<ChildProcess> {
+  async start(): Promise<ChildProcess[]> {
     const fs = this._fs;
     const versions = BinanceSC.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
@@ -285,7 +285,10 @@ export class BinanceSC extends Ethereum {
       code => this._logClose(code),
     );
     this._instance = instance;
-    return instance;
+    this._instances = [
+      instance,
+    ];
+    return this.instances();
   }
 
   generateConfig(): string {

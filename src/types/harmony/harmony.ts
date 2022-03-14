@@ -274,7 +274,7 @@ export class Harmony extends Ethereum {
     }
   }
 
-  async start(): Promise<ChildProcess> {
+  async start(): Promise<ChildProcess[]> {
     const fs = this._fs;
     // const versionData = Harmony.versions(this.client, this.network).find(({ version }) => version === this.version);
     const versions = Harmony.versions(this.client, this.network);
@@ -324,7 +324,10 @@ export class Harmony extends Ethereum {
       code => this._logClose(code),
     );
     this._instance = instance;
-    return instance;
+    this._instances = [
+      instance,
+    ];
+    return this.instances();
   }
 
   toObject(): HarmonyNodeData {

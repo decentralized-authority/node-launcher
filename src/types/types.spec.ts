@@ -19,6 +19,7 @@ import { Fuse } from './fuse/fuse';
 import { isNull } from 'lodash';
 import { Harmony } from './harmony/harmony';
 import { OKEX } from './oec/okex';
+import { IOTEX } from './iotex/iotex';
 
 const chains: [{name: string, constructor: any}] = [
   {name: 'Bitcoin', constructor: Bitcoin},
@@ -34,6 +35,7 @@ const chains: [{name: string, constructor: any}] = [
   {name: 'Fuse', constructor: Fuse},
   {name: 'Harmony', constructor: Harmony},
   {name: 'OEC', constructor: OKEX},
+  {name: 'IoTeX', constructor: IOTEX},
 ];
 
 chains.forEach(({ name, constructor: NodeConstructor }) => {
@@ -275,7 +277,6 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
         config.should.be.a.String();
         config.length.should.be.greaterThan(0);
         config.includes(initialNodeData.peerPort).should.be.True();
-        config.includes(initialNodeData.rpcPort).should.be.True();
       });
     });
 
@@ -283,6 +284,9 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
       NodeConstructor.networkTypes.forEach(network => {
         describe(`${name}.start() with ${client} client & ${network} network`, function() {
           it('should start a node', async function() {
+
+            this.timeout(360000);
+
             const id = uuid();
             node = new NodeConstructor({
               id,
@@ -292,12 +296,26 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
             // node.on(NodeEvent.OUTPUT, console.log);
             // node.on(NodeEvent.ERROR, console.error);
             // node.on(NodeEvent.CLOSE, console.log);
-            const res = await node.start();
-            res.should.be.an.instanceOf(ChildProcess);
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            await docker.kill(id);
+            const instances = await node.start();
+            instances.should.be.an.Array();
+            for (const instance of instances) {
+              instance.should.be.an.instanceOf(ChildProcess);
+              await new Promise(resolve => {
+                const timeout = setTimeout(resolve, 30000);
+                instance.on('close', code => {
+                  clearTimeout(timeout);
+                  resolve(code);
+                });
+                instance.kill();
+              });
+            }
           });
-          it('should resolve with a ChildProcess', async function() {
+        });
+        describe(`${name}.stop() with ${client} client & ${network} network`, async function() {
+          it('should stop a node', async function() {
+
+            this.timeout(60000);
+
             node = new NodeConstructor({
               network,
               client,
@@ -305,25 +323,12 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
             // node.on(NodeEvent.OUTPUT, console.log);
             // node.on(NodeEvent.ERROR, console.error);
             // node.on(NodeEvent.CLOSE, console.log);
-            const instance = await node.start();
-            instance.should.be.an.instanceOf(ChildProcess);
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            await new Promise(resolve => {
-              node._instance.on('close', resolve);
-              node._instance.kill();
-            });
-          });
-        });
-        describe(`${name}.stop() with ${client} client & ${network} network`, async function() {
-          it('should stop a node', async function() {
-            node = new NodeConstructor({
-              network,
-              client,
-            }, docker);
             await node.start();
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            await new Promise(resolve => setTimeout(resolve, 10000));
             await node.stop();
-            node._instance.exitCode.should.be.a.Number();
+            for(const instance of node.instances()) {
+              instance.exitCode.should.be.a.Number();
+            }
           });
         });
         describe(`${name} runtime methods with ${client} client & ${network} network`, function() {
