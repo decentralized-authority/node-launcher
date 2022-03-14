@@ -189,6 +189,7 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
   _docker = defaultDocker;
   _fs = new FS(defaultDocker);
   _instance?: ChildProcess;
+  _instances: ChildProcess[] = [];
   _requestTimeout = 10000;
   _logError(err: string|Error): void {
     err = typeof err === 'string' ? new Error(err) : err;
@@ -293,7 +294,7 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
       this.rpcPassword);
   }
 
-  async start(): Promise<ChildProcess> {
+  async start(): Promise<ChildProcess[]> {
     const fs = this._fs;
     const versions = Bitcoin.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
@@ -342,7 +343,10 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
       code => this._logClose(code),
     );
     this._instance = instance;
-    return instance;
+    this._instances = [
+      instance,
+    ];
+    return this.instances();
   }
 
   stop():Promise<void> {
@@ -376,6 +380,10 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
         resolve();
       }
     });
+  }
+
+  instances(): ChildProcess[] {
+    return [...this._instances];
   }
 
   _runCheck(method: string): void {

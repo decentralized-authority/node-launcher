@@ -391,7 +391,7 @@ export class Pocket extends Bitcoin {
     }
   }
 
-  async start(): Promise<ChildProcess> {
+  async start(): Promise<ChildProcess[]> {
     const fs = this._fs;
     const versions = Pocket.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
@@ -469,14 +469,18 @@ export class Pocket extends Bitcoin {
       '-v', `${walletDir}:${containerWalletDir}`,
       '--entrypoint', 'pocket',
     ];
-    this._instance = this._docker.run(
+    const instance = this._docker.run(
       this.dockerImage + versionData.generateRuntimeArgs(this),
       args,
       output => this._logOutput(output),
       err => this._logError(err),
       code => this._logClose(code),
     );
-    return this._instance;
+    this._instance = instance;
+    this._instances = [
+      instance,
+    ];
+    return this.instances();
   }
 
   generateConfig(): string {

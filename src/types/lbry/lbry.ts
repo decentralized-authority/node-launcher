@@ -165,7 +165,7 @@ export class LBRY extends Bitcoin {
     }
   }
 
-  async start(): Promise<ChildProcess> {
+  async start(): Promise<ChildProcess[]> {
     const fs = this._fs;
     const versions = LBRY.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
@@ -214,7 +214,10 @@ export class LBRY extends Bitcoin {
       code => this._logClose(code),
     );
     this._instance = instance;
-    return instance;
+    this._instances = [
+      instance,
+    ];
+    return this.instances();
   }
 
   generateConfig(): string {

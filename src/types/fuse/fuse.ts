@@ -295,7 +295,7 @@ export class Fuse extends Ethereum {
     return dataObj as CryptoNodeData;
   }
 
-  async start(): Promise<ChildProcess> {
+  async start(): Promise<ChildProcess[]> {
     const fs = this._fs;
     const versions = Fuse.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
@@ -373,7 +373,6 @@ export class Fuse extends Ethereum {
       err => this._logError(err),
       code => this._logClose(code),
     );
-    this._instance = instance;
 
     if(this.role === Role.VALIDATOR) {
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -460,7 +459,11 @@ export class Fuse extends Ethereum {
       }
     }
 
-    return instance;
+    this._instance = instance;
+    this._instances = [
+      instance,
+    ];
+    return this.instances();
   }
 
   validatorAppContainerName(): string {

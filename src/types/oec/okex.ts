@@ -189,7 +189,7 @@ export class OKEX extends Ethereum {
       this._docker = docker;
   }
 
-  async start(): Promise<ChildProcess> {
+  async start(): Promise<ChildProcess[]> {
     const versions = OKEX.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
     if (!versionData)
@@ -246,7 +246,10 @@ export class OKEX extends Ethereum {
       code => this._logClose(code),
     );
     this._instance = instance;
-    return instance;
+    this._instances = [
+      instance,
+    ];
+    return this.instances();
   }
 
   generateConfig(): string {
