@@ -67,6 +67,13 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
     NetworkType.TESTNET,
   ];
 
+  static networkTypesByClient = {
+    [NodeClient.CORE]: [
+      NetworkType.MAINNET,
+      NetworkType.TESTNET,
+    ],
+  };
+
   static roles = [
     Role.NODE,
   ];
@@ -82,8 +89,12 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
   };
 
   static defaultCPUs = 4;
+  static defaultArchivalCPUs = 8;
+  static rpcDaemonCPUs = 2;
 
   static defaultMem = 8192;
+  static defaultArchivalMem = 16384;
+  static rpcDaemonMem = 2048;
 
   static generateConfig(client = Bitcoin.clients[0], network = NetworkType.MAINNET, peerPort = Bitcoin.defaultPeerPort[NetworkType.MAINNET], rpcPort = Bitcoin.defaultRPCPort[NetworkType.MAINNET], rpcUsername = generateRandom(), rpcPassword = generateRandom()): string {
     switch(client) {
@@ -284,7 +295,7 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
       this.rpcPassword);
   }
 
-  async start(): Promise<ChildProcess> {
+  async start(): Promise<ChildProcess | Array<ChildProcess>> {
     const versions = Bitcoin.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
     if(!versionData)

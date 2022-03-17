@@ -168,6 +168,12 @@ export class Avalanche extends Bitcoin {
     NetworkType.MAINNET,
   ];
 
+  static networkTypesByClient = {
+    [NodeClient.CORE]: [
+      NetworkType.MAINNET,
+    ],
+  };
+
   static roles = [
     Role.NODE,
   ];

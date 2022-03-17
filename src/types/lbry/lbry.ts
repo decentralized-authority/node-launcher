@@ -67,6 +67,13 @@ export class LBRY extends Bitcoin {
     NetworkType.TESTNET,
   ];
 
+  static networkTypesByClient = {
+    [NodeClient.CORE]: [
+      NetworkType.MAINNET,
+      NetworkType.TESTNET,
+    ],
+  };
+
   static roles = [
     Role.NODE,
   ];

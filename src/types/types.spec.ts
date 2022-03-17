@@ -1,8 +1,8 @@
 import 'should';
 import { Litecoin } from './litecoin/litecoin';
 import { Docker } from '../util/docker';
-import { CryptoNodeData } from '../interfaces/crypto-node';
-import { DockerEvent, NetworkType, NodeEvent, NodeType, Status } from '../constants';
+import { CryptoNodeData, VersionDockerImage } from '../interfaces/crypto-node';
+import { DockerEvent, NetworkType, NodeClient, NodeEvent, NodeType, Status } from '../constants';
 import { v4 as uuid } from 'uuid';
 import { ChildProcess } from 'child_process';
 import { timeout } from '../util';
@@ -97,6 +97,21 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
         NodeConstructor.networkTypes.every(t => NetworkType[t]).should.be.True();
       });
     });
+    describe(`static ${name}.networkTypesByClient`, function() {
+      it('should be an object mapping node client to an array of supported network types', function() {
+        const networkTypesByClient = (NodeConstructor as unknown as typeof Ethereum).networkTypesByClient;
+        networkTypesByClient.should.be.an.Object();
+        const keys = Object.keys(networkTypesByClient);
+        keys.length.should.be.greaterThan(0);
+        keys.length.should.equal(NodeConstructor.clients.length);
+        keys.every(k => NodeClient[k]).should.be.True();
+        Object.values(networkTypesByClient).every(v => {
+          v.should.be.an.Array();
+          v.length.should.be.greaterThan(0);
+          v.every(t => NetworkType[t]).should.be.True();
+        });
+      });
+    });
     describe(`static ${name}.defaultRPCPort`, function() {
       it('should be an object mapping network type to port number', function() {
         NodeConstructor.defaultRPCPort.should.be.an.Object();
@@ -129,6 +144,34 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
       it('should be the default memory size', function() {
         NodeConstructor.defaultMem.should.be.a.Number();
         NodeConstructor.defaultMem.should.be.greaterThan(0);
+      });
+    });
+    describe(`static ${name}.defaultArchivalCPUs`, function() {
+      it('should be the default CPU number', function() {
+        const defaultArchivalCPUs = (NodeConstructor as unknown as typeof Ethereum).defaultArchivalCPUs;
+        defaultArchivalCPUs.should.be.a.Number();
+        defaultArchivalCPUs.should.be.greaterThan(0);
+      });
+    });
+    describe(`static ${name}.defaultArchivalMem`, function() {
+      it('should be the default archival memory size', function() {
+        const defaultArchivalMem = (NodeConstructor as unknown as typeof Ethereum).defaultArchivalMem;
+        defaultArchivalMem.should.be.a.Number();
+        defaultArchivalMem.should.be.greaterThan(0);
+      });
+    });
+    describe(`static ${name}.rpcDaemonCPUs`, function() {
+      it('should be the default RPC Daemon CPU number', function() {
+        const rpcDaemonCPUs = (NodeConstructor as unknown as typeof Ethereum).rpcDaemonCPUs;
+        rpcDaemonCPUs.should.be.a.Number();
+        rpcDaemonCPUs.should.be.greaterThan(0);
+      });
+    });
+    describe(`static ${name}.rpcDaemonMem`, function() {
+      it('should be the default RPC Daemon memory size', function() {
+        const rpcDaemonMem = (NodeConstructor as unknown as typeof Ethereum).rpcDaemonMem;
+        rpcDaemonMem.should.be.a.Number();
+        rpcDaemonMem.should.be.greaterThan(0);
       });
     });
     describe(`static ${name}.generateConfig()`, function() {
@@ -271,14 +314,17 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
         node = new NodeConstructor(initialNodeData);
         const config = node.generateConfig();
         config.should.be.a.String();
-        config.length.should.be.greaterThan(0);
-        config.includes(initialNodeData.peerPort).should.be.True();
-        config.includes(initialNodeData.rpcPort).should.be.True();
+        if (node.client !== NodeClient.ERIGON) {
+          config.includes(`${initialNodeData.peerPort}`).should.be.True();
+          config.includes(`${initialNodeData.rpcPort}`).should.be.True();
+        } else {
+          config.length.should.be.greaterThan(0);
+        }
       });
     });
 
     NodeConstructor.clients.forEach(client => {
-      NodeConstructor.networkTypes.forEach(network => {
+      NodeConstructor.networkTypesByClient[client].forEach(network => {
         describe(`${name}.start() with ${client} client & ${network} network`, function() {
           it('should start a node', async function() {
             const id = uuid();
@@ -290,10 +336,12 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
             // node.on(NodeEvent.OUTPUT, console.log);
             // node.on(NodeEvent.ERROR, console.error);
             // node.on(NodeEvent.CLOSE, console.log);
-            const res = await node.start();
-            res.should.be.an.instanceOf(ChildProcess);
+            await node.start();
             await new Promise(resolve => setTimeout(resolve, 2000));
             await docker.kill(id);
+            if (client === NodeClient.ERIGON) {
+              await docker.kill((node as unknown as Ethereum).rpcDaemonId);
+            }
           });
           it('should resolve with a ChildProcess', async function() {
             node = new NodeConstructor({
@@ -304,12 +352,28 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
             // node.on(NodeEvent.ERROR, console.error);
             // node.on(NodeEvent.CLOSE, console.log);
             const instance = await node.start();
-            instance.should.be.an.instanceOf(ChildProcess);
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            await new Promise(resolve => {
-              node._instance.on('close', resolve);
-              node._instance.kill();
-            });
+
+            if (client === NodeClient.ERIGON) {
+              const instances = instance as Array<ChildProcess>;
+              instances.should.be.an.Array();
+              instances.length.should.be.equal(2);
+              instances.every(i => i.should.be.an.instanceOf(ChildProcess));
+              await new Promise(resolve => setTimeout(resolve, 2000 * instances.length));
+              const kills = instances.map(i => {
+                return new Promise(resolve => {
+                  i.on('close', resolve);
+                  i.kill();
+                });
+              });
+              await Promise.allSettled(kills);
+            } else {
+              instance.should.be.an.instanceOf(ChildProcess);
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              await new Promise(resolve => {
+                node._instance?.on('close', resolve);
+                node._instance?.kill();
+              });
+            }
           });
         });
         describe(`${name}.stop() with ${client} client & ${network} network`, async function() {
@@ -321,7 +385,10 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
             await node.start();
             await new Promise(resolve => setTimeout(resolve, 2000));
             await node.stop();
-            node._instance.exitCode.should.be.a.Number();
+            node._instance?.exitCode?.should.be.a.Number();
+            if (client === NodeClient.ERIGON) {
+              node._rpcInstance.exitCode.should.be.a.Number();
+            }
           });
         });
         describe(`${name} runtime methods with ${client} client & ${network} network`, function() {

@@ -123,6 +123,12 @@ export class BinanceSC extends Ethereum {
     NetworkType.MAINNET,
   ];
 
+  static networkTypesByClient = {
+    [NodeClient.GETH]: [
+      NetworkType.MAINNET,
+    ],
+  };
+
   static roles = [
     Role.NODE,
   ];
