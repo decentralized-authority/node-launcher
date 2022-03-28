@@ -12,6 +12,7 @@ import { Fuse as FUSE } from './types/fuse/fuse';
 import { Harmony as ONE } from './types/harmony/harmony';
 import { OKEX as OEC } from './types/oec/okex';
 import { IOTEX } from './types/iotex/iotex';
+import { Polygon as MATIC } from './types/polygon/polygon';
 import * as constants from './constants';
 import { Docker } from './util/docker';
 
@@ -32,4 +33,5 @@ export {
   ONE,
   OEC,
   IOTEX,
+  MATIC,
 };

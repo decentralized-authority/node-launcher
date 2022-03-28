@@ -20,6 +20,7 @@ import { isNull } from 'lodash';
 import { Harmony } from './harmony/harmony';
 import { OKEX } from './oec/okex';
 import { IOTEX } from './iotex/iotex';
+import { Polygon } from './polygon/polygon';
 
 const chains: [{name: string, constructor: any}] = [
   {name: 'Bitcoin', constructor: Bitcoin},
@@ -36,6 +37,7 @@ const chains: [{name: string, constructor: any}] = [
   {name: 'Harmony', constructor: Harmony},
   {name: 'OEC', constructor: OKEX},
   {name: 'IoTeX', constructor: IOTEX},
+  {name: 'Polygon', constructor: Polygon},
 ];
 
 chains.forEach(({ name, constructor: NodeConstructor }) => {
