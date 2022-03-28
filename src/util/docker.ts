@@ -167,12 +167,32 @@ export class Docker extends EventEmitter {
         ...args,
       ];
     }
+    const splitImage = image.split(/\s+/);
+    const runArgsStr = splitImage.slice(1).join(' ');
+    const splitRunArgs = [''];
+    let quotedStr = '';
+    for(let i = 0; i < runArgsStr.length; i++) {
+      const char = runArgsStr[i];
+      const isQuote = /['"]/.test(char);
+      if(quotedStr) {
+        quotedStr += char;
+        if(isQuote) {
+          splitRunArgs.push(quotedStr);
+          quotedStr = '';
+        }
+      } else if(isQuote) { // if it is an opening quote
+        quotedStr += char;
+      } else if(/\s/.test(char)) { // if it is white space
+        splitRunArgs.push('');
+      } else { // if it is not whitespace
+        splitRunArgs[splitRunArgs.length - 1] += char;
+      }
+    }
     const spawnArgs = [
       'run',
       ...args,
-      ...image
-        .split(/\s/g)
-        .map(s => s.trim())
+      splitImage[0],
+      ...splitRunArgs
         .filter(s => s),
     ];
     this.emit(DockerEvent.INFO, `${command} ${spawnArgs.join(' ')}`);

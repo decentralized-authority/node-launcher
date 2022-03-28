@@ -8,8 +8,7 @@
     "build": "tsc",
     "watch": "tsc -w",
     "test": "ts-mocha -p ./tsconfig.json src/**/*.spec.ts",
-    "test-types": "ts-mocha -p ./tsconfig.json src/types/**/*.spec.ts",
-    "fuse-test": "node fuse-test"
+    "test-types": "ts-mocha -p ./tsconfig.json src/types/**/*.spec.ts"
   },
   "repository": {
     "type": "git",
