@@ -106,10 +106,8 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
         NodeConstructor.defaultRPCPort.should.be.an.Object();
         const keys = Object.keys(NodeConstructor.defaultRPCPort);
         keys.length.should.be.greaterThan(0);
-        keys.length.should.equal(NodeConstructor.networkTypes.length);
-        // @ts-ignore
-        keys.every(k => NetworkType[k]).should.be.True();
-        Object.values(NodeConstructor.defaultRPCPort).every(v => v.should.be.a.Number());
+        NodeConstructor.networkTypes.forEach((network:string) => NodeConstructor.defaultRPCPort[network].should.be.a.Number());
+        Object.values(NodeConstructor.defaultRPCPort).every(p => p.should.be.a.Number());
       });
     });
     describe(`static ${name}.defaultPeerPort`, function() {
@@ -117,10 +115,8 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
         NodeConstructor.defaultPeerPort.should.be.an.Object();
         const keys = Object.keys(NodeConstructor.defaultPeerPort);
         keys.length.should.be.greaterThan(0);
-        keys.length.should.equal(NodeConstructor.networkTypes.length);
-        // @ts-ignore
-        keys.every(k => NetworkType[k]).should.be.True();
-        Object.values(NodeConstructor.defaultPeerPort).every(v => v.should.be.a.Number());
+        NodeConstructor.networkTypes.forEach((network:string) => NodeConstructor.defaultPeerPort[network].should.be.a.Number());
+        Object.values(NodeConstructor.defaultPeerPort).every(p => p.should.be.a.Number());
       });
     });
     describe(`static ${name}.defaultCPUs`, function() {
@@ -357,13 +353,13 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
               remoteDomain: 'localhost',
               remoteProtocol: 'http',
             });
-            // node
-            //   .on(NodeEvent.ERROR, console.error)
-            //   .on(NodeEvent.OUTPUT, console.log)
-            //   .on(NodeEvent.CLOSE, (exitCode: number) => console.log(`Exited with code ${exitCode}`));
+            node
+              .on(NodeEvent.ERROR, console.error)
+              // .on(NodeEvent.OUTPUT, console.log)
+              .on(NodeEvent.CLOSE, (exitCode: number) => console.log(`Exited with code ${exitCode}`));
 
             // Give the node a little time to connect and get up and running
-            await timeout(60000 * .5);
+            await timeout(60000 * 1);
           });
 
           describe(`${name}.rpcGetVersion()`, function() {
