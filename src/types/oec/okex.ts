@@ -1,5 +1,5 @@
 import { CryptoNodeData, VersionDockerImage } from '../../interfaces/crypto-node';
-import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role, Status } from '../../constants';
+import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role } from '../../constants';
 import { Docker } from '../../util/docker';
 import { ChildProcess } from 'child_process';
 import { v4 as uuid } from 'uuid';
@@ -7,8 +7,9 @@ import request from 'superagent';
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
-import { Ethereum } from "../ethereum/ethereum"
+import { Ethereum } from '../ethereum/ethereum';
 import { filterVersionsByNetworkType } from '../../util';
+import * as genesis from './config/genesis';
 
 const coreConfig = `
 moniker = "{{MONIKER}}"
@@ -51,8 +52,8 @@ export class OKEX extends Ethereum {
             networks: [NetworkType.MAINNET],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
-              return ` start --home /root/.exchaind`;
-	    },
+              return ' start --home /root/.exchaind';
+            },
           },
           {
             version: '1.1.4',
@@ -64,8 +65,8 @@ export class OKEX extends Ethereum {
             networks: [NetworkType.MAINNET],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
-              return ` start --home /root/.exchaind`;
-	    },
+              return ' start --home /root/.exchaind';
+            },
           },
           {
             version: '1.1.2',
@@ -77,7 +78,7 @@ export class OKEX extends Ethereum {
             networks: [NetworkType.MAINNET],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
-              return ` start --home /root/.exchaind`;
+              return ' start --home /root/.exchaind';
             },
           },
         ];
@@ -116,7 +117,7 @@ export class OKEX extends Ethereum {
 
   static defaultMem = 8192;
 
-  static generateConfig(client = OKEX.clients[0], network = NetworkType.MAINNET, peerPort = OKEX.defaultPeerPort[NetworkType.MAINNET], rpcPort = OKEX.defaultRPCPort[NetworkType.MAINNET], moniker = 'nodepilot'): string {
+  static generateConfig(client = OKEX.clients[0], network = NetworkType.MAINNET, peerPort = OKEX.defaultPeerPort[NetworkType.MAINNET], rpcPort = OKEX.defaultRPCPort[NetworkType.MAINNET], moniker = uuid()): string {
     switch (client) {
       case NodeClient.CORE:
         return coreConfig
@@ -136,7 +137,6 @@ export class OKEX extends Ethereum {
   id: string;
   ticker = 'oec';
   name = 'OKEx';
-  moniker = "nodepilot"
   version: string;
   clientVersion: string;
   archival = false;
@@ -221,23 +221,17 @@ export class OKEX extends Ethereum {
     const configDir = this.configDir || path.join(tmpdir, uuid());
     const configExists = await fs.pathExists(configDir);
     if (!configExists) {
-      fs.mkdir(configDir)
-      const configPath = path.join(configDir, OKEX.configName(this))
+      await fs.mkdir(configDir);
+      const configPath = path.join(configDir, OKEX.configName(this));
       await fs.writeFile(configPath, this.generateConfig(), 'utf8');
-      const copyGenesisPath = path.resolve(__dirname, "genesis.json");
       const genesisPath = path.join(configDir, 'genesis.json');
-      fs.copyFile(copyGenesisPath, genesisPath, (err) => {
-        if (err) throw err;
-      });
+      await fs.writeFile(genesisPath, genesis.mainnet, 'utf8');
     }
     args = [...args, '-v', `${configDir}:${containerConfigDir}`];
 
     await this._docker.pull(this.dockerImage, str => this._logOutput(str));
 
     await this._docker.createNetwork(this.dockerNetwork);
-    // console.log("ARGS:\n");
-    // console.log(args);
-    // console.log(versionData.generateRuntimeArgs(this));
     const instance = this._docker.run(
       this.dockerImage + versionData.generateRuntimeArgs(this),
       args,
@@ -258,7 +252,7 @@ export class OKEX extends Ethereum {
       this.network,
       this.peerPort,
       this.rpcPort,
-      this.moniker,
+      this.id,
     );
   }
 
@@ -278,7 +272,7 @@ export class OKEX extends Ethereum {
         });
       const { result = '' } = body;
       // first, check for RC matches
-      let matches = result.split("v")
+      const matches = result.split('v');
       if(matches && matches.length > 1) {
         return matches[1];
       } else {
