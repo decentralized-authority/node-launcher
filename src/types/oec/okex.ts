@@ -220,14 +220,16 @@ export class OKEX extends Ethereum {
 
     const configDir = this.configDir || path.join(tmpdir, uuid());
     const configExists = await fs.pathExists(configDir);
+    const configConfigDir = path.join(configDir, 'config');
     if (!configExists) {
       await fs.mkdir(configDir);
-      const configPath = path.join(configDir, OKEX.configName(this));
+      await fs.mkdir(configConfigDir);
+      const configPath = path.join(configConfigDir, OKEX.configName(this));
       await fs.writeFile(configPath, this.generateConfig(), 'utf8');
-      const genesisPath = path.join(configDir, 'genesis.json');
+      const genesisPath = path.join(configConfigDir, 'genesis.json');
       await fs.writeFile(genesisPath, genesis.mainnet, 'utf8');
     }
-    args = [...args, '-v', `${configDir}:${containerConfigDir}`];
+    args = [...args, '-v', `${configConfigDir}:${containerConfigDir}`];
 
     await this._docker.pull(this.dockerImage, str => this._logOutput(str));
 
