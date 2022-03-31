@@ -219,11 +219,11 @@ export class OKEX extends Ethereum {
     await fs.ensureDir(this.walletDir);
 
     const configDir = this.configDir || path.join(tmpdir, uuid());
-    const configExists = await fs.pathExists(configDir);
     const configConfigDir = path.join(configDir, 'config');
-    if (!configExists) {
-      await fs.mkdir(configDir);
-      await fs.mkdir(configConfigDir);
+    const configConfigExists = await fs.pathExists(configConfigDir);
+    if (!configConfigExists) {
+      await fs.ensureDir(configDir);
+      await fs.ensureDir(configConfigDir);
       const configPath = path.join(configConfigDir, OKEX.configName(this));
       await fs.writeFile(configPath, this.generateConfig(), 'utf8');
       const genesisPath = path.join(configConfigDir, 'genesis.json');
