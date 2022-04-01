@@ -525,4 +525,104 @@ export class Polygon extends Ethereum {
     return Polygon.generateHeimdallDockerName(this.id);
   }
 
+  async rpcGetVersion(): Promise<string> {
+    let borVersion: string;
+    try {
+      borVersion = await this.rpcGetBorVersion();
+    } catch(err) {
+      borVersion = '';
+    }
+    let heimdallVersion: string;
+    try {
+      heimdallVersion = await this.rpcGetHeimdallVersion();
+    } catch(err) {
+      heimdallVersion = '';
+    }
+    const joinedVersion = `${heimdallVersion}/${borVersion}`;
+    return joinedVersion === '/' ? '' : joinedVersion;
+  }
+
+  async rpcGetBorVersion(): Promise<string> {
+    return this._rpcGetVersion();
+  }
+
+  async rpcGetHeimdallVersion(): Promise<string> {
+    try {
+      const version: string = await new Promise((resolve, reject) => {
+        let res = '';
+        this._docker.exec(
+          this.polygonGenerateHeimdallDockerName(),
+          [],
+          'heimdalld version',
+          output => {
+            res += output;
+          }, err => {
+            reject(err);
+          },
+          () => {
+            resolve(res);
+          });
+      });
+      const trimmedVersion = version.trim();
+      return /^\d+\.\d+\.\d+/.test(trimmedVersion) ? trimmedVersion : '';
+    } catch(err) {
+      return '';
+    }
+  }
+
+  async rpcGetBlockCount(): Promise<string> {
+    let borBlockCount: string;
+    try {
+      borBlockCount = await this.rpcGetBorBlockCount();
+    } catch(err) {
+      borBlockCount = '';
+    }
+    let heimdallBlockCount: string;
+    try {
+      heimdallBlockCount = await this.rpcGetHeimdallBlockCount();
+    } catch(err) {
+      heimdallBlockCount = '';
+    }
+    const joinedBlockCount = `${heimdallBlockCount}/${borBlockCount}`;
+    return joinedBlockCount === '/' ? '' : joinedBlockCount;
+  }
+
+  async rpcGetBorBlockCount(): Promise<string> {
+    return this._rpcGetBlockCount();
+  }
+
+  async rpcGetHeimdallBlockCount(): Promise<string> {
+    const { blockCount = '' } = await this.rpcGetHeimdallStatus();
+    return blockCount;
+  }
+
+  async rpcGetHeimdallStatus(): Promise<{syncing?: boolean, blockCount?: string}> {
+    try {
+      const statusJson: string = await new Promise((resolve, reject) => {
+        let res = '';
+        this._docker.exec(
+          this.polygonGenerateHeimdallDockerName(),
+          [],
+          'curl -s http://localhost:26657/status',
+          output => {
+            res += output;
+          }, err => {
+            reject(err);
+          },
+          () => {
+            resolve(res);
+          });
+      });
+      const status = JSON.parse(statusJson.trim());
+      const syncing: boolean = status.result.sync_info.catching_up;
+      const blockCount: string = status.result.sync_info.latest_block_height;
+      return {
+        syncing,
+        blockCount,
+      };
+    } catch(err) {
+      return {};
+    }
+  }
+
 }

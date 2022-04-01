@@ -336,7 +336,7 @@ export class Ethereum extends Bitcoin {
       this.rpcPort);
   }
 
-  async rpcGetVersion(): Promise<string> {
+  async _rpcGetVersion(): Promise<string> {
     try {
       this._runCheck('rpcGetVersion');
       const { body } = await request
@@ -367,7 +367,11 @@ export class Ethereum extends Bitcoin {
     }
   }
 
-  async rpcGetBlockCount(): Promise<string> {
+  async rpcGetVersion(): Promise<string> {
+    return this._rpcGetVersion();
+  }
+
+  async _rpcGetBlockCount(): Promise<string> {
     let blockHeight;
     try {
       this._runCheck('rpcGetBlockCount');
@@ -407,6 +411,10 @@ export class Ethereum extends Bitcoin {
     return blockHeight || '';
   }
 
+  async rpcGetBlockCount(): Promise<string> {
+    return this._rpcGetBlockCount();
+  }
+
   _makeSyncingCall(): Promise<any> {
     return request
       .post(this.endpoint())
@@ -420,7 +428,7 @@ export class Ethereum extends Bitcoin {
       });
   }
 
-  async getStatus(): Promise<string> {
+  async _getStatus(): Promise<string> {
     let status;
     try {
       if(this.remote) {
@@ -445,6 +453,10 @@ export class Ethereum extends Bitcoin {
     }
 
     return status;
+  }
+
+  async getStatus(): Promise<string> {
+    return this._getStatus();
   }
 
 }

@@ -368,14 +368,14 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
             it('should resolve with the client version', async function() {
               const version = await node.rpcGetVersion();
               version.should.be.a.String();
-              version.should.equal(node.clientVersion);
+              version.includes(node.clientVersion).should.be.true();
             });
           });
           describe(`Remote ${name}.rpcGetVersion()`, function() {
             it('should resolve with the remote client version', async function() {
               const version = await remoteNode.rpcGetVersion();
               version.should.be.a.String();
-              version.should.equal(node.clientVersion);
+              version.includes(node.clientVersion).should.be.true();
             });
           });
           describe(`${name}.isRunning() while running`, function() {
