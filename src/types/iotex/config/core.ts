@@ -124,7 +124,7 @@ blockSync:
 
 log:
   zap:
-    level: info
+    level: warn
     encoding: json
     disableStacktrace: true
     outputPaths: ["stderr", "stdout"]

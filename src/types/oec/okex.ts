@@ -23,7 +23,7 @@ addr_book_file = "config/addrbook.json"
 db_backend = "rocksdb"
 fast_sync = true
 auto_fast_sync = true
-log_level = "info"
+log_level = "error"
 log_format = "plain"
 minimum-gas-prices = "0.0000000001okt"
 
