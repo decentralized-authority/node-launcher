@@ -366,9 +366,10 @@ GasPrice = 30000000000
 [Eth.TxPool]
 NoLocals = true
 AccountSlots = 16
-GlobalSlots = 131072
-AccountQueue = 64
-GlobalQueue = 131072
+GlobalSlots = 32768
+AccountQueue = 16
+GlobalQueue = 32768
+PriceLimit = 30000000000
 Lifetime = 5400000000000
 
 [Node]
