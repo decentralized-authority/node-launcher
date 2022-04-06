@@ -6,7 +6,7 @@ import { Docker } from '../../util/docker';
 import { ChildProcess } from 'child_process';
 import os from 'os';
 import path from 'path';
-import { filterVersionsByNetworkType } from '../../util';
+import { filterVersionsByNetworkType, timeout } from '../../util';
 import Web3 from 'web3';
 import { FS } from '../../util/fs';
 
@@ -301,163 +301,196 @@ export class Fuse extends Ethereum {
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
     if(!versionData)
       throw new Error(`Unknown ${this.ticker} version ${this.version}`);
-    const {
-      dataDir: containerDataDir,
-      walletDir: containerWalletDir,
-      configDir: containerConfigDir,
-      passwordPath: containerPasswordPath,
-    } = versionData;
-    let args = [
-      '-i',
-      '--rm',
-      '--memory', this.dockerMem.toString(10) + 'MB',
-      '--cpus', this.dockerCPUs.toString(10),
-      '--name', this.id,
-      '--network', this.dockerNetwork,
-      '-p', `${this.rpcPort}:${this.rpcPort}`,
-      '-p', `${this.peerPort}:${this.peerPort}/tcp`,
-      '-p', `${this.peerPort}:${this.peerPort}/udp`,
-      '--entrypoint', '/usr/local/bin/parity',
-    ];
-    const tmpdir = os.tmpdir();
-    const dataDir = this.dataDir || path.join(tmpdir, uuid());
-    args = [...args, '-v', `${dataDir}:${containerDataDir}`];
-    await fs.ensureDir(dataDir);
 
-    const walletDir = this.walletDir || path.join(tmpdir, uuid());
-    args = [...args, '-v', `${walletDir}:${containerWalletDir}`];
-    await fs.ensureDir(walletDir);
+    const running = await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.id);
 
-    const configDir = this.configDir || path.join(tmpdir, uuid());
-    await fs.ensureDir(configDir);
-    const configPath = path.join(configDir, Fuse.configName(this));
-    const configExists = await fs.pathExists(configPath);
-    if(!configExists)
-      await fs.writeFile(configPath, this.generateConfig(), 'utf8');
-    args = [...args, '-v', `${configDir}:${containerConfigDir}`];
+    if(!running) {
+      const {
+        dataDir: containerDataDir,
+        walletDir: containerWalletDir,
+        configDir: containerConfigDir,
+        passwordPath: containerPasswordPath,
+      } = versionData;
+      let args = [
+        '--memory', this.dockerMem.toString(10) + 'MB',
+        '--cpus', this.dockerCPUs.toString(10),
+        '--name', this.id,
+        '--network', this.dockerNetwork,
+        '-p', `${this.rpcPort}:${this.rpcPort}`,
+        '-p', `${this.peerPort}:${this.peerPort}/tcp`,
+        '-p', `${this.peerPort}:${this.peerPort}/udp`,
+        '--entrypoint', '/usr/local/bin/parity',
+      ];
+      const tmpdir = os.tmpdir();
+      const dataDir = this.dataDir || path.join(tmpdir, uuid());
+      args = [...args, '-v', `${dataDir}:${containerDataDir}`];
+      await fs.ensureDir(dataDir);
 
-    await this._docker.pull(this.dockerImage, str => this._logOutput(str));
+      const walletDir = this.walletDir || path.join(tmpdir, uuid());
+      args = [...args, '-v', `${walletDir}:${containerWalletDir}`];
+      await fs.ensureDir(walletDir);
 
-    if(this.key) {
-      const passwordPath = this.passwordPath || path.join(tmpdir, uuid());
-      const passwordFileExists = await fs.pathExists(passwordPath);
-      if(!passwordFileExists)
-        await fs.writeFile(passwordPath, this.keyPass, 'utf8');
-      args = [...args, '-v', `${passwordPath}:${containerPasswordPath}`];
-      if((await fs.readdir(walletDir)).length === 0) {
-        const keyFilePath = path.join(os.tmpdir(), uuid());
-        await fs.writeJson(keyFilePath, this.key);
-        const accountPath = `/UTC--${new Date().toISOString().replace(/:/g, '-')}--${this.address}.json`;
-        const newArgs = [
-          ...args,
-          '-v', `${keyFilePath}:${accountPath}`,
+      const configDir = this.configDir || path.join(tmpdir, uuid());
+      await fs.ensureDir(configDir);
+      const configPath = path.join(configDir, Fuse.configName(this));
+      const configExists = await fs.pathExists(configPath);
+      if (!configExists)
+        await fs.writeFile(configPath, this.generateConfig(), 'utf8');
+      args = [...args, '-v', `${configDir}:${containerConfigDir}`];
+
+      await this._docker.pull(this.dockerImage, str => this._logOutput(str));
+
+      if (this.key) {
+        const passwordPath = this.passwordPath || path.join(tmpdir, uuid());
+        const passwordFileExists = await fs.pathExists(passwordPath);
+        if (!passwordFileExists)
+          await fs.writeFile(passwordPath, this.keyPass, 'utf8');
+        args = [...args, '-v', `${passwordPath}:${containerPasswordPath}`];
+        if ((await fs.readdir(walletDir)).length === 0) {
+          const keyFilePath = path.join(os.tmpdir(), uuid());
+          await fs.writeJson(keyFilePath, this.key);
+          const accountPath = `/UTC--${new Date().toISOString().replace(/:/g, '-')}--${this.address}.json`;
+          const newArgs = [
+            ...args,
+            '-i',
+            '--rm',
+            '-v', `${keyFilePath}:${accountPath}`,
+          ];
+          await new Promise<void>(resolve => {
+            this._docker.run(
+              this.dockerImage + ` account import ${accountPath}${versionData.generateRuntimeArgs(this)}`,
+              newArgs,
+              output => this._logOutput(output),
+              err => this._logError(err),
+              () => resolve(),
+            );
+          });
+          await fs.remove(keyFilePath);
+        }
+      }
+
+      args = [
+        ...args,
+        '-d',
+        `--restart=on-failure:${this.restartAttempts}`,
+      ];
+
+      await this._docker.createNetwork(this.dockerNetwork);
+      const exitCode = await new Promise<number>((resolve, reject) => {
+        this._docker.run(
+          this.dockerImage + versionData.generateRuntimeArgs(this),
+          args,
+          output => this._logOutput(output),
+          err => {
+            this._logError(err);
+            reject(err);
+          },
+          code => {
+            resolve(code);
+          },
+        );
+      });
+      if(exitCode !== 0)
+        throw new Error(`Docker run for ${this.id} with ${this.dockerImage} failed with exit code ${exitCode}`);
+
+      if (this.role === Role.VALIDATOR) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        // start validator app
+        const validatorAppArgs = [
+          '--rm',
+          '-i',
+          '--memory', '250m',
+          '-v', `${path.resolve(walletDir, '..')}:/config`,
+          '-e', 'CONFIG_DIR=/config',
+          '-e', `RPC=http://${this.id}:${this.rpcPort}`,
+          '--network', this.dockerNetwork,
+          '--name', this.validatorAppContainerName(),
         ];
-        await new Promise<void>(resolve => {
-          this._docker.run(
-            this.dockerImage + ` account import ${accountPath}${versionData.generateRuntimeArgs(this)}`,
-            newArgs,
-            output => this._logOutput(output),
-            err => this._logError(err),
-            () => resolve(),
-          );
-        });
-        await fs.remove(keyFilePath);
-      }
-    }
-
-    await this._docker.createNetwork(this.dockerNetwork);
-    const instance = this._docker.run(
-      this.dockerImage + versionData.generateRuntimeArgs(this),
-      args,
-      output => this._logOutput(output),
-      err => this._logError(err),
-      code => this._logClose(code),
-    );
-
-    if(this.role === Role.VALIDATOR) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      // start validator app
-      const validatorAppArgs = [
-        '--rm',
-        '-i',
-        '--memory', '250m',
-        '-v', `${path.resolve(walletDir, '..')}:/config`,
-        '-e', 'CONFIG_DIR=/config',
-        '-e', `RPC=http://${this.id}:${this.rpcPort}`,
-        '--network', this.dockerNetwork,
-        '--name', this.validatorAppContainerName(),
-      ];
-      try {
-        const validatorAppExists = await this._docker.containerExists(this.validatorAppContainerName());
-        if(!validatorAppExists) {
-          this._docker.run(
-            versionData.imageValidatorApp,
-            validatorAppArgs,
-            () => {},
-            err => this._logError(err),
-            () => this._logOutput(`${this.validatorAppContainerName()} closed`),
-          );
-        }
-      } catch(err) {
-        this._logError(err);
-      }
-      // start netstats
-      const netstatConfig = `
-        [
-          {
-            "name"              : "netstat_daemon",
-            "script"            : "app.js",
-            "log_date_format"   : "YYYY-MM-DD HH:mm Z",
-            "merge_logs"        : false,
-            "watch"             : false,
-            "max_restarts"      : 100,
-            "exec_interpreter"  : "node",
-            "exec_mode"         : "fork_mode",
-            "env":
-            {
-              "NODE_ENV"        : "production",
-              "INSTANCE_NAME"   : "",
-              "BRIDGE_VERSION"  : "",
-              "ROLE"            : "",
-              "FUSE_APP_VERSION": "",
-              "PARITY_VERSION"  : "",
-              "NETSTATS_VERSION": "",
-              "CONTACT_DETAILS" : "",
-              "WS_SECRET"       : "see http://forum.ethereum.org/discussion/2112/how-to-add-yourself-to-the-stats-dashboard-its-not-automatic",
-              "WS_SERVER"       : "https://health.fuse.io",
-              "VERBOSITY"       : 2
-            }
+        try {
+          const validatorAppExists = await this._docker.containerExists(this.validatorAppContainerName());
+          if (!validatorAppExists) {
+            this._docker.run(
+              versionData.imageValidatorApp,
+              validatorAppArgs,
+              () => {
+              },
+              err => this._logError(err),
+              () => this._logOutput(`${this.validatorAppContainerName()} closed`),
+            );
           }
-        ]`;
-      const netstatConfigPath = path.join(tmpdir, uuid());
-      await fs.writeJson(netstatConfigPath, JSON.parse(netstatConfig), {spaces: 2});
-      const netstatArgs = [
-        '--rm',
-        '-i',
-        '--memory', '250m',
-        '--name', this.netstatContainerName(),
-        '--network', this.dockerNetwork,
-        '--user', 'root',
-        '-e', `RPC_HOST=${this.id}`,
-        '-e', `RPC_PORT=${this.rpcPort}`,
-        '-e', `LISTENING_PORT=${this.peerPort}`,
-        '-v', `${netstatConfigPath}:/home/ethnetintel/eth-net-intelligence-api/app.json.example`,
-      ];
-      try {
-        const netstatExists = await this._docker.containerExists(this.netstatContainerName());
-        if(!netstatExists) {
-          this._docker.run(
-            `${versionData.imageNetstat} --instance-name ${this.address} --role validator --parity-version ${versionData.version} --fuseapp-version ${this.validatorAppContainerName().split(':')[1]} --netstats-version ${this.netstatContainerName().split(':')[1]}`,
-            netstatArgs,
-            () => {},
-            err => this._logError(err),
-            () => this._logOutput(`${this.netstatContainerName()} closed`),
-          );
+        } catch (err) {
+          this._logError(err);
         }
-      } catch(err) {
-        this._logError(err);
+        // start netstats
+        const netstatConfig = `
+          [
+            {
+              "name"              : "netstat_daemon",
+              "script"            : "app.js",
+              "log_date_format"   : "YYYY-MM-DD HH:mm Z",
+              "merge_logs"        : false,
+              "watch"             : false,
+              "max_restarts"      : 100,
+              "exec_interpreter"  : "node",
+              "exec_mode"         : "fork_mode",
+              "env":
+              {
+                "NODE_ENV"        : "production",
+                "INSTANCE_NAME"   : "",
+                "BRIDGE_VERSION"  : "",
+                "ROLE"            : "",
+                "FUSE_APP_VERSION": "",
+                "PARITY_VERSION"  : "",
+                "NETSTATS_VERSION": "",
+                "CONTACT_DETAILS" : "",
+                "WS_SECRET"       : "see http://forum.ethereum.org/discussion/2112/how-to-add-yourself-to-the-stats-dashboard-its-not-automatic",
+                "WS_SERVER"       : "https://health.fuse.io",
+                "VERBOSITY"       : 2
+              }
+            }
+          ]`;
+        const netstatConfigPath = path.join(tmpdir, uuid());
+        await fs.writeJson(netstatConfigPath, JSON.parse(netstatConfig), {spaces: 2});
+        const netstatArgs = [
+          '--rm',
+          '-i',
+          '--memory', '250m',
+          '--name', this.netstatContainerName(),
+          '--network', this.dockerNetwork,
+          '--user', 'root',
+          '-e', `RPC_HOST=${this.id}`,
+          '-e', `RPC_PORT=${this.rpcPort}`,
+          '-e', `LISTENING_PORT=${this.peerPort}`,
+          '-v', `${netstatConfigPath}:/home/ethnetintel/eth-net-intelligence-api/app.json.example`,
+        ];
+        try {
+          const netstatExists = await this._docker.containerExists(this.netstatContainerName());
+          if (!netstatExists) {
+            this._docker.run(
+              `${versionData.imageNetstat} --instance-name ${this.address} --role validator --parity-version ${versionData.version} --fuseapp-version ${this.validatorAppContainerName().split(':')[1]} --netstats-version ${this.netstatContainerName().split(':')[1]}`,
+              netstatArgs,
+              () => {
+              },
+              err => this._logError(err),
+              () => this._logOutput(`${this.netstatContainerName()} closed`),
+            );
+          }
+        } catch (err) {
+          this._logError(err);
+        }
       }
     }
+
+    const instance = this._docker.attach(
+      this.id,
+      output => this._logOutput(output),
+      err => {
+        this._logError(err);
+      },
+      code => {
+        this._logClose(code);
+      },
+    );
 
     this._instance = instance;
     this._instances = [
@@ -487,36 +520,13 @@ export class Fuse extends Ethereum {
         this._logError(err);
       }
     }
-    await new Promise<void>(resolve => {
-      if(this._instance) {
-        const { exitCode } = this._instance;
-        if(typeof exitCode === 'number') {
-          resolve();
-        } else {
-          this._instance.on('exit', () => {
-            clearTimeout(timeout);
-            setTimeout(() => {
-              resolve();
-            }, 1000);
-          });
-          this._instance.kill();
-          const timeout = setTimeout(() => {
-            this._docker.stop(this.id)
-              .then(() => {
-                setTimeout(() => {
-                  resolve();
-                }, 1000);
-              })
-              .catch(err => {
-                this._logError(err);
-                resolve();
-              });
-          }, 30000);
-        }
-      } else {
-        resolve();
-      }
-    });
+    try {
+      await this._docker.stop(this.id);
+      await this._docker.rm(this.id);
+      await timeout(1000);
+    } catch(err) {
+      this._logError(err);
+    }
   }
 
   generateConfig(): string {

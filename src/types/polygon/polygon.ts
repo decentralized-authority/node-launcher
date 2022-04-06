@@ -272,13 +272,57 @@ export class Polygon extends Ethereum {
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
 
-    const {
-      heimdallArgs,
-      borArgs,
-    } = await this.prestart(versionData);
+    let heimdallRunning = await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.polygonGenerateHeimdallDockerName());
+    let borRunning = await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.id);
 
-    const heimdallInstance = this.startHeimdall(versionData, heimdallArgs);
-    const borInstance = this.startBor(versionData, borArgs);
+    let heimdallArgs: string[] = [];
+    let borArgs: string[] = [];
+    if(!heimdallRunning || !borRunning) {
+
+      if(heimdallRunning || borRunning) {
+        await this.stop();
+        heimdallRunning = false;
+        borRunning = false;
+      }
+
+      const res = await this.prestart(versionData);
+      heimdallArgs = res.heimdallArgs;
+      borArgs = res.borArgs;
+
+    }
+    if(!heimdallRunning) {
+      const exitCode = await this.startHeimdall(versionData, heimdallArgs);
+      if(exitCode !== 0)
+        throw new Error(`Docker run for ${this.id} with ${this.heimdallDockerImage} failed with exit code ${exitCode}`);
+    }
+
+    const heimdallInstance = this._docker.attach(
+      this.polygonGenerateHeimdallDockerName(),
+      output => this._logOutput('heimdall - ' + output),
+      err => {
+        this._logError(err);
+      },
+      code => {
+        this._logClose(code);
+      },
+    );
+
+    if(!borRunning) {
+      const exitCode = await this.startBor(versionData, borArgs);
+      if(exitCode !== 0)
+        throw new Error(`Docker run for ${this.id} with ${this.dockerImage} failed with exit code ${exitCode}`);
+    }
+
+    const borInstance = this._docker.attach(
+      this.id,
+      output => this._logOutput('bor - ' + output),
+      err => {
+        this._logError(err);
+      },
+      code => {
+        this._logClose(code);
+      },
+    );
 
     this._instance = borInstance;
     this._instances = [
@@ -306,8 +350,6 @@ export class Polygon extends Ethereum {
     await fs.writeFile(heimdallStartScriptPath, heimdallStartScript, 'utf8');
 
     let borArgs = [
-      '-i',
-      '--rm',
       '--memory', `${this.dockerMem}MB`,
       '--cpus', this.dockerCPUs.toString(10),
       '--name', this.id,
@@ -317,8 +359,6 @@ export class Polygon extends Ethereum {
     ];
 
     let heimdallArgs = [
-      '-i',
-      '--rm',
       '--memory', `${this.heimdallDockerMem}MB`,
       '--cpus', this.heimdallDockerCPUs.toString(10),
       '--name', this.polygonGenerateHeimdallDockerName(),
@@ -378,7 +418,11 @@ export class Polygon extends Ethereum {
       await new Promise((resolve, reject) => {
         this._docker.run(
           this.heimdallDockerImage + ` heimdalld init --chain-id ${Polygon.getHeimdallChainId(this.network)}`,
-          heimdallArgs,
+          [
+            ...heimdallArgs,
+            '-i',
+            '--rm',
+          ],
           output => this._logOutput(output),
           err => {
             this._logError(err);
@@ -406,7 +450,11 @@ export class Polygon extends Ethereum {
       await new Promise((resolve, reject) => {
         this._docker.run(
           this.dockerImage + ` bor --config=${versionData.configDir}/${Polygon.fileName.config} init ${versionData.configDir}/${Polygon.fileName.genesis}`,
-          borArgs,
+          [
+            ...borArgs,
+            '-i',
+            '--rm',
+          ],
           output => this._logOutput(output),
           err => {
             this._logError(err);
@@ -425,24 +473,46 @@ export class Polygon extends Ethereum {
     };
   }
 
-  startHeimdall(versionData: PolygonVersionDockerImage, heimdallArgs: string[]): ChildProcess {
-    return this._docker.run(
-      this.heimdallDockerImage + versionData.generateHeimdallRuntimeArgs(this),
-      heimdallArgs,
-      output => this._logOutput('heimdall - ' + output),
-      err => this._logError(err),
-      code => this._logClose(code),
-    );
+  startHeimdall(versionData: PolygonVersionDockerImage, heimdallArgs: string[]): Promise<number> {
+    return new Promise<number>((resolve, reject) => {
+      this._docker.run(
+        this.heimdallDockerImage + versionData.generateHeimdallRuntimeArgs(this),
+        [
+          ...heimdallArgs,
+          '-d',
+          `--restart=on-failure:${this.restartAttempts}`,
+        ],
+        output => this._logOutput('heimdall - ' + output),
+        err => {
+          this._logError(err);
+          reject(err);
+        },
+        code => {
+          resolve(code);
+        },
+      );
+    });
   }
 
-  startBor(versionData: PolygonVersionDockerImage, borArgs: string[]): ChildProcess {
-    return this._docker.run(
-      this.dockerImage + versionData.generateRuntimeArgs(this),
-      borArgs,
-      output => this._logOutput('bor - ' + output),
-      err => this._logError(err),
-      code => this._logClose(code),
-    );
+  startBor(versionData: PolygonVersionDockerImage, borArgs: string[]): Promise<number> {
+    return new Promise<number>((resolve, reject) => {
+      this._docker.run(
+        this.dockerImage + versionData.generateRuntimeArgs(this),
+        [
+          ...borArgs,
+          '-d',
+          `--restart=on-failure:${this.restartAttempts}`,
+        ],
+        output => this._logOutput('bor - ' + output),
+        err => {
+          this._logError(err);
+          reject(err);
+        },
+        code => {
+          resolve(code);
+        },
+      );
+    });
   }
 
   async stop(): Promise<void> {
@@ -452,23 +522,23 @@ export class Polygon extends Ethereum {
     ]);
   }
 
-  async stopHeimdall(): Promise<string|undefined> {
+  async stopHeimdall(): Promise<void> {
     try {
       const name = this.polygonGenerateHeimdallDockerName();
-      const success = await this._docker.stop(name);
+      await this._docker.stop(name);
+      await this._docker.rm(name);
       await timeout(1000);
-      return success;
     } catch(err) {
       this._logError(err);
     }
   }
 
-  async stopBor(): Promise<string|undefined> {
+  async stopBor(): Promise<void> {
     try {
       const name = this.id;
-      const success = await this._docker.stop(name);
+      await this._docker.stop(name);
+      await this._docker.rm(name);
       await timeout(1000);
-      return success;
     } catch(err) {
       this._logError(err);
     }
