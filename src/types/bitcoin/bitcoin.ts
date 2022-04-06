@@ -1,6 +1,6 @@
 import { CryptoNode, CryptoNodeData, CryptoNodeStatic, VersionDockerImage } from '../../interfaces/crypto-node';
 import { defaultDockerNetwork, NetworkType, NodeClient, NodeEvent, NodeType, Role, Status } from '../../constants';
-import { filterVersionsByNetworkType, generateRandom } from '../../util';
+import { filterVersionsByNetworkType, generateRandom, timeout } from '../../util';
 import { Docker } from '../../util/docker';
 import { ChildProcess } from 'child_process';
 import { v4 as uuid} from 'uuid';
@@ -185,6 +185,7 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
   remoteDomain = '';
   remoteProtocol = '';
   role = Bitcoin.roles[0];
+  restartAttempts = 10;
 
   _docker = defaultDocker;
   _fs = new FS(defaultDocker);
@@ -229,6 +230,7 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
     this.dockerImage = this.remote ? '' : data.dockerImage ? data.dockerImage : (versionObj.image || '');
     this.archival = data.archival || this.archival;
     this.role = data.role || this.role;
+    this.restartAttempts = data.restartAttempts || this.restartAttempts;
     if(docker) {
       this._docker = docker;
       this._fs = new FS(docker);
@@ -277,6 +279,8 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
       clientVersion: this.clientVersion,
       archival: this.archival,
       dockerImage: this.dockerImage,
+      role: this.role,
+      restartAttempts: this.restartAttempts,
     };
   }
 
@@ -300,48 +304,74 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
-    const {
-      dataDir: containerDataDir,
-      walletDir: containerWalletDir,
-      configDir: containerConfigDir,
-    } = versionData;
-    let args = [
-      '-i',
-      '--rm',
-      '--memory', this.dockerMem.toString(10) + 'MB',
-      '--cpus', this.dockerCPUs.toString(10),
-      '--name', this.id,
-      '--network', this.dockerNetwork,
-      '-p', `${this.rpcPort}:${this.rpcPort}`,
-      '-p', `${this.peerPort}:${this.peerPort}`,
-    ];
-    const tmpdir = os.tmpdir();
-    const dataDir = this.dataDir || path.join(tmpdir, uuid());
-    args = [...args, '-v', `${dataDir}:${containerDataDir}`];
-    await fs.ensureDir(dataDir);
 
-    const walletDir = this.walletDir || path.join(tmpdir, uuid());
-    args = [...args, '-v', `${walletDir}:${containerWalletDir}`];
-    await fs.ensureDir(walletDir);
+    const running = await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.id);
 
-    const configDir = this.configDir || path.join(tmpdir, uuid());
-    await fs.ensureDir(configDir);
-    const configPath = path.join(configDir, Bitcoin.configName(this));
-    const configExists = await fs.pathExists(configPath);
-    if(!configExists)
-      await fs.writeFile(configPath, this.generateConfig(), 'utf8');
-    args = [...args, '-v', `${configDir}:${containerConfigDir}`];
+    if(!running) {
+      const {
+        dataDir: containerDataDir,
+        walletDir: containerWalletDir,
+        configDir: containerConfigDir,
+      } = versionData;
+      let args = [
+        '-d',
+        `--restart=on-failure:${this.restartAttempts}`,
+        '--memory', this.dockerMem.toString(10) + 'MB',
+        '--cpus', this.dockerCPUs.toString(10),
+        '--name', this.id,
+        '--network', this.dockerNetwork,
+        '-p', `${this.rpcPort}:${this.rpcPort}`,
+        '-p', `${this.peerPort}:${this.peerPort}`,
+      ];
+      const tmpdir = os.tmpdir();
+      const dataDir = this.dataDir || path.join(tmpdir, uuid());
+      args = [...args, '-v', `${dataDir}:${containerDataDir}`];
+      await fs.ensureDir(dataDir);
 
-    await this._docker.pull(this.dockerImage, str => this._logOutput(str));
+      const walletDir = this.walletDir || path.join(tmpdir, uuid());
+      args = [...args, '-v', `${walletDir}:${containerWalletDir}`];
+      await fs.ensureDir(walletDir);
 
-    await this._docker.createNetwork(this.dockerNetwork);
-    const instance = this._docker.run(
-      this.dockerImage + versionData.generateRuntimeArgs(this),
-      args,
+      const configDir = this.configDir || path.join(tmpdir, uuid());
+      await fs.ensureDir(configDir);
+      const configPath = path.join(configDir, Bitcoin.configName(this));
+      const configExists = await fs.pathExists(configPath);
+      if (!configExists)
+        await fs.writeFile(configPath, this.generateConfig(), 'utf8');
+      args = [...args, '-v', `${configDir}:${containerConfigDir}`];
+
+      await this._docker.pull(this.dockerImage, str => this._logOutput(str));
+
+      await this._docker.createNetwork(this.dockerNetwork);
+      const exitCode = await new Promise<number>((resolve, reject) => {
+        this._docker.run(
+          this.dockerImage + versionData.generateRuntimeArgs(this),
+          args,
+          output => this._logOutput(output),
+          err => {
+            this._logError(err);
+            reject(err);
+          },
+          code => {
+            resolve(code);
+          },
+        );
+      });
+      if(exitCode !== 0)
+        throw new Error(`Docker run for ${this.id} with ${this.dockerImage} failed with exit code ${exitCode}`);
+    }
+
+    const instance = this._docker.attach(
+      this.id,
       output => this._logOutput(output),
-      err => this._logError(err),
-      code => this._logClose(code),
+      err => {
+        this._logError(err);
+      },
+      code => {
+        this._logClose(code);
+      },
     );
+
     this._instance = instance;
     this._instances = [
       instance,
@@ -349,37 +379,14 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
     return this.instances();
   }
 
-  stop():Promise<void> {
-    return new Promise<void>(resolve => {
-      if(this._instance) {
-        const { exitCode } = this._instance;
-        if(typeof exitCode === 'number') {
-          resolve();
-        } else {
-          this._instance.on('exit', () => {
-            clearTimeout(timeout);
-            setTimeout(() => {
-              resolve();
-            }, 1000);
-          });
-          this._instance.kill();
-          const timeout = setTimeout(() => {
-            this._docker.stop(this.id)
-              .then(() => {
-                setTimeout(() => {
-                  resolve();
-                }, 1000);
-              })
-              .catch(err => {
-                this._logError(err);
-                resolve();
-              });
-          }, 30000);
-        }
-      } else {
-        resolve();
-      }
-    });
+  async stop(): Promise<void> {
+    try {
+      await this._docker.stop(this.id);
+      await this._docker.rm(this.id);
+      await timeout(1000);
+    } catch(err) {
+      this._logError(err);
+    }
   }
 
   instances(): ChildProcess[] {
@@ -488,7 +495,7 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
     try {
       this._runCheck('getStartTime');
       const stats = await this._docker.containerInspect(this.id);
-      return stats.State.StartedAt;
+      return stats ? stats.State.StartedAt : '';
     } catch(err) {
       this._logError(err);
       return '';
@@ -502,7 +509,7 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
         return version ? Status.RUNNING : Status.STOPPED;
       } else {
         const stats = await this._docker.containerInspect(this.id);
-        return stats.State.Running ? Status.RUNNING : Status.STOPPED;
+        return stats && stats.State.Running ? Status.RUNNING : Status.STOPPED;
       }
     } catch(err) {
       return Status.STOPPED;

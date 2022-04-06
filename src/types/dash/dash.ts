@@ -163,48 +163,74 @@ export class Dash extends Bitcoin {
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
-    const {
-      dataDir: containerDataDir,
-      walletDir: containerWalletDir,
-      configDir: containerConfigDir,
-    } = versionData;
-    let args = [
-      '-i',
-      '--rm',
-      '--memory', this.dockerMem.toString(10) + 'MB',
-      '--cpus', this.dockerCPUs.toString(10),
-      '--name', this.id,
-      '--network', this.dockerNetwork,
-      '-p', `${this.rpcPort}:${this.rpcPort}`,
-      '-p', `${this.peerPort}:${this.peerPort}`,
-    ];
-    const tmpdir = os.tmpdir();
-    const dataDir = this.dataDir || path.join(tmpdir, uuid());
-    args = [...args, '-v', `${dataDir}:${containerDataDir}`];
-    await fs.ensureDir(dataDir);
 
-    const walletDir = this.walletDir || path.join(tmpdir, uuid());
-    args = [...args, '-v', `${walletDir}:${containerWalletDir}`];
-    await fs.ensureDir(walletDir);
+    const running = await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.id);
 
-    const configDir = this.configDir || path.join(tmpdir, uuid());
-    await fs.ensureDir(configDir);
-    const configPath = path.join(configDir, Dash.configName(this));
-    const configExists = await fs.pathExists(configPath);
-    if(!configExists)
-      await fs.writeFile(configPath, this.generateConfig(), 'utf8');
-    args = [...args, '-v', `${configDir}:${containerConfigDir}`];
+    if(!running) {
+      const {
+        dataDir: containerDataDir,
+        walletDir: containerWalletDir,
+        configDir: containerConfigDir,
+      } = versionData;
+      let args = [
+        '-d',
+        `--restart=on-failure:${this.restartAttempts}`,
+        '--memory', this.dockerMem.toString(10) + 'MB',
+        '--cpus', this.dockerCPUs.toString(10),
+        '--name', this.id,
+        '--network', this.dockerNetwork,
+        '-p', `${this.rpcPort}:${this.rpcPort}`,
+        '-p', `${this.peerPort}:${this.peerPort}`,
+      ];
+      const tmpdir = os.tmpdir();
+      const dataDir = this.dataDir || path.join(tmpdir, uuid());
+      args = [...args, '-v', `${dataDir}:${containerDataDir}`];
+      await fs.ensureDir(dataDir);
 
-    await this._docker.pull(this.dockerImage, str => this._logOutput(str));
+      const walletDir = this.walletDir || path.join(tmpdir, uuid());
+      args = [...args, '-v', `${walletDir}:${containerWalletDir}`];
+      await fs.ensureDir(walletDir);
 
-    await this._docker.createNetwork(this.dockerNetwork);
-    const instance = this._docker.run(
-      this.dockerImage + versionData.generateRuntimeArgs(this),
-      args,
+      const configDir = this.configDir || path.join(tmpdir, uuid());
+      await fs.ensureDir(configDir);
+      const configPath = path.join(configDir, Dash.configName(this));
+      const configExists = await fs.pathExists(configPath);
+      if (!configExists)
+        await fs.writeFile(configPath, this.generateConfig(), 'utf8');
+      args = [...args, '-v', `${configDir}:${containerConfigDir}`];
+
+      await this._docker.pull(this.dockerImage, str => this._logOutput(str));
+
+      await this._docker.createNetwork(this.dockerNetwork);
+      const exitCode = await new Promise<number>((resolve, reject) => {
+        this._docker.run(
+          this.dockerImage + versionData.generateRuntimeArgs(this),
+          args,
+          output => this._logOutput(output),
+          err => {
+            this._logError(err);
+            reject(err);
+          },
+          code => {
+            resolve(code);
+          },
+        );
+      });
+      if(exitCode !== 0)
+        throw new Error(`Docker run for ${this.id} with ${this.dockerImage} failed with exit code ${exitCode}`);
+    }
+
+    const instance = this._docker.attach(
+      this.id,
       output => this._logOutput(output),
-      err => this._logError(err),
-      code => this._logClose(code),
+      err => {
+        this._logError(err);
+      },
+      code => {
+        this._logClose(code);
+      },
     );
+
     this._instance = instance;
     this._instances = [
       instance,

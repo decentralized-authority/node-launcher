@@ -296,16 +296,21 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
             // node.on(NodeEvent.CLOSE, console.log);
             const instances = await node.start();
             instances.should.be.an.Array();
+            const containerNames: string[] = [];
             for (const instance of instances) {
               instance.should.be.an.instanceOf(ChildProcess);
+              const { spawnargs } = instance as ChildProcess;
+              containerNames.push(spawnargs[spawnargs.length - 1]);
               await new Promise(resolve => {
-                const timeout = setTimeout(resolve, 30000);
                 instance.on('close', code => {
-                  clearTimeout(timeout);
                   resolve(code);
                 });
                 instance.kill();
               });
+            }
+            for(const name of containerNames) {
+              await docker.kill(name);
+              await docker.rm(name);
             }
           });
         });

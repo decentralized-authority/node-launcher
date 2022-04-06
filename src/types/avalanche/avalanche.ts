@@ -271,53 +271,79 @@ export class Avalanche extends Bitcoin {
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
-    const {
-      dataDir: containerDataDir,
-      walletDir: containerWalletDir,
-      logDir: containerLogDir,
-      configDir: containerConfigDir,
-    } = versionData;
-    let args = [
-      '-i',
-      '--rm',
-      '--memory', this.dockerMem.toString(10) + 'MB',
-      '--cpus', this.dockerCPUs.toString(10),
-      '--name', this.id,
-      '--network', this.dockerNetwork,
-      '-p', `${this.rpcPort}:${this.rpcPort}`,
-      '-p', `${this.peerPort}:${this.peerPort}`,
-      '--entrypoint', '/avalanchego/build/avalanchego',
-    ];
-    const tmpdir = os.tmpdir();
-    const dataDir = this.dataDir || path.join(tmpdir, uuid());
-    const dbDir = path.join(dataDir, 'db');
-    const logDir = path.join(dataDir, 'logs');
-    args = [...args, '-v', `${dbDir}:${containerDataDir}`];
-    args = [...args, '-v', `${logDir}:${containerLogDir}`];
-    await fs.ensureDir(dataDir);
-    await fs.ensureDir(dbDir);
-    await fs.ensureDir(logDir);
 
-    const walletDir = this.walletDir || path.join(tmpdir, uuid());
-    args = [...args, '-v', `${walletDir}:${containerWalletDir}`];
-    await fs.ensureDir(walletDir);
+    const running = await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.id);
 
-    const configDir = this.configDir || path.join(tmpdir, uuid());
-    await fs.ensureDir(configDir);
-    const configPath = path.join(configDir, Avalanche.configName(this));
-    const configExists = await fs.pathExists(configPath);
-    if(!configExists)
-      await fs.writeFile(configPath, this.generateConfig(), 'utf8');
-    args = [...args, '-v', `${configDir}:${containerConfigDir}`];
+    if(!running) {
+      const {
+        dataDir: containerDataDir,
+        walletDir: containerWalletDir,
+        logDir: containerLogDir,
+        configDir: containerConfigDir,
+      } = versionData;
+      let args = [
+        '-d',
+        `--restart=on-failure:${this.restartAttempts}`,
+        '--memory', this.dockerMem.toString(10) + 'MB',
+        '--cpus', this.dockerCPUs.toString(10),
+        '--name', this.id,
+        '--network', this.dockerNetwork,
+        '-p', `${this.rpcPort}:${this.rpcPort}`,
+        '-p', `${this.peerPort}:${this.peerPort}`,
+        '--entrypoint', '/avalanchego/build/avalanchego',
+      ];
+      const tmpdir = os.tmpdir();
+      const dataDir = this.dataDir || path.join(tmpdir, uuid());
+      const dbDir = path.join(dataDir, 'db');
+      const logDir = path.join(dataDir, 'logs');
+      args = [...args, '-v', `${dbDir}:${containerDataDir}`];
+      args = [...args, '-v', `${logDir}:${containerLogDir}`];
+      await fs.ensureDir(dataDir);
+      await fs.ensureDir(dbDir);
+      await fs.ensureDir(logDir);
 
-    await this._docker.createNetwork(this.dockerNetwork);
-    const instance = this._docker.run(
-      this.dockerImage + versionData.generateRuntimeArgs(this),
-      args,
+      const walletDir = this.walletDir || path.join(tmpdir, uuid());
+      args = [...args, '-v', `${walletDir}:${containerWalletDir}`];
+      await fs.ensureDir(walletDir);
+
+      const configDir = this.configDir || path.join(tmpdir, uuid());
+      await fs.ensureDir(configDir);
+      const configPath = path.join(configDir, Avalanche.configName(this));
+      const configExists = await fs.pathExists(configPath);
+      if (!configExists)
+        await fs.writeFile(configPath, this.generateConfig(), 'utf8');
+      args = [...args, '-v', `${configDir}:${containerConfigDir}`];
+
+      await this._docker.createNetwork(this.dockerNetwork);
+      const exitCode = await new Promise<number>((resolve, reject) => {
+        this._docker.run(
+          this.dockerImage + versionData.generateRuntimeArgs(this),
+          args,
+          output => this._logOutput(output),
+          err => {
+            this._logError(err);
+            reject(err);
+          },
+          code => {
+            resolve(code);
+          },
+        );
+      });
+      if(exitCode !== 0)
+        throw new Error(`Docker run for ${this.id} with ${this.dockerImage} failed with exit code ${exitCode}`);
+    }
+
+    const instance = this._docker.attach(
+      this.id,
       output => this._logOutput(output),
-      err => this._logError(err),
-      code => this._logClose(code),
+      err => {
+        this._logError(err);
+      },
+      code => {
+        this._logClose(code);
+      },
     );
+
     this._instance = instance;
     this._instances = [
       instance,
@@ -486,7 +512,7 @@ export class Avalanche extends Bitcoin {
         status = version ? Status.RUNNING : Status.STOPPED;
       } else {
         const stats = await this._docker.containerInspect(this.id);
-        status = stats.State.Running ? Status.RUNNING : Status.STOPPED;
+        status = stats && stats.State.Running ? Status.RUNNING : Status.STOPPED;
       }
     } catch(err) {
       status = Status.STOPPED;

@@ -397,85 +397,111 @@ export class Pocket extends Bitcoin {
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
-    const {
-      dataDir: containerDataDir,
-      walletDir: containerWalletDir,
-    } = versionData;
 
-    await this._docker.pull(this.dockerImage, str => this._logOutput(str));
+    const running = await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.id);
 
-    const tmpdir = os.tmpdir();
-    const dataDir = this.dataDir || path.join(tmpdir, uuid());
-    await fs.ensureDir(dataDir);
+    if(!running) {
+      const {
+        dataDir: containerDataDir,
+        walletDir: containerWalletDir,
+      } = versionData;
 
-    const walletDir = this.walletDir || path.join(tmpdir, uuid());
-    await fs.ensureDir(walletDir);
+      await this._docker.pull(this.dockerImage, str => this._logOutput(str));
 
-    const configDir = this.configDir || path.join(tmpdir, uuid());
-    await fs.ensureDir(configDir);
-    const configPath = path.join(configDir, Pocket.configName(this));
-    const configExists = await fs.pathExists(configPath);
-    if(!configExists)
-      await fs.writeFile(configPath, this.generateConfig(), 'utf8');
+      const tmpdir = os.tmpdir();
+      const dataDir = this.dataDir || path.join(tmpdir, uuid());
+      await fs.ensureDir(dataDir);
 
-    const dataDirConfigDir = path.join(dataDir, 'config');
-    await fs.ensureDir(dataDirConfigDir);
+      const walletDir = this.walletDir || path.join(tmpdir, uuid());
+      await fs.ensureDir(walletDir);
 
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    await fs.copy(configPath, path.join(dataDirConfigDir, Pocket.configName(this)), {force: true});
+      const configDir = this.configDir || path.join(tmpdir, uuid());
+      await fs.ensureDir(configDir);
+      const configPath = path.join(configDir, Pocket.configName(this));
+      const configExists = await fs.pathExists(configPath);
+      if (!configExists)
+        await fs.writeFile(configPath, this.generateConfig(), 'utf8');
 
-    const genesisPath = path.join(dataDirConfigDir, 'genesis.json');
-    const genesisExists = await fs.pathExists(genesisPath);
-    if(!genesisExists)
-      await fs.writeFile(genesisPath, PocketGenesis[this.network].trim(), 'utf8');
+      const dataDirConfigDir = path.join(dataDir, 'config');
+      await fs.ensureDir(dataDirConfigDir);
 
-    const keybaseExists = await fs.pathExists(path.join(walletDir, 'pocket-keybase.db'));
-    if(!keybaseExists) {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      await fs.copy(configPath, path.join(dataDirConfigDir, Pocket.configName(this)), {force: true});
+
+      const genesisPath = path.join(dataDirConfigDir, 'genesis.json');
+      const genesisExists = await fs.pathExists(genesisPath);
+      if (!genesisExists)
+        await fs.writeFile(genesisPath, PocketGenesis[this.network].trim(), 'utf8');
+
+      const keybaseExists = await fs.pathExists(path.join(walletDir, 'pocket-keybase.db'));
+      if (!keybaseExists) {
+        const args = [
+          '-i',
+          '--rm',
+          '-v', `${dataDir}:${containerDataDir}`,
+          '-v', `${walletDir}:${containerWalletDir}`,
+          '--entrypoint', 'pocket',
+        ];
+        await new Promise<void>((resolve, reject) => {
+          this._docker.run(
+            this.dockerImage + ` accounts create --pwd ${this.privKeyPass}`,
+            args,
+            output => this._logOutput(output),
+            err => {
+              reject(err);
+            },
+            () => {
+              resolve();
+            }
+          );
+        });
+      }
+
+      await this._docker.createNetwork(this.dockerNetwork);
+
       const args = [
-        '-i',
-        '--rm',
+        '-d',
+        `--restart=on-failure:${this.restartAttempts}`,
+        '--memory', this.dockerMem.toString(10) + 'MB',
+        '--cpus', this.dockerCPUs.toString(10),
+        '--name', this.id,
+        '--network', this.dockerNetwork,
+        '-p', `${this.rpcPort}:${this.rpcPort}`,
+        '-p', `${this.peerPort}:${this.peerPort}`,
         '-v', `${dataDir}:${containerDataDir}`,
         '-v', `${walletDir}:${containerWalletDir}`,
         '--entrypoint', 'pocket',
       ];
-      await new Promise<void>((resolve, reject) => {
+      const exitCode = await new Promise<number>((resolve, reject) => {
         this._docker.run(
-          this.dockerImage + ` accounts create --pwd ${this.privKeyPass}`,
+          this.dockerImage + versionData.generateRuntimeArgs(this),
           args,
           output => this._logOutput(output),
           err => {
+            this._logError(err);
             reject(err);
           },
-          () => {
-            resolve();
-          }
+          code => {
+            resolve(code);
+          },
         );
       });
+      if(exitCode !== 0)
+        throw new Error(`Docker run for ${this.id} with ${this.dockerImage} failed with exit code ${exitCode}`);
     }
 
-    await this._docker.createNetwork(this.dockerNetwork);
-
-    const args = [
-      '-i',
-      '--rm',
-      '--memory', this.dockerMem.toString(10) + 'MB',
-      '--cpus', this.dockerCPUs.toString(10),
-      '--name', this.id,
-      '--network', this.dockerNetwork,
-      '-p', `${this.rpcPort}:${this.rpcPort}`,
-      '-p', `${this.peerPort}:${this.peerPort}`,
-      '-v', `${dataDir}:${containerDataDir}`,
-      '-v', `${walletDir}:${containerWalletDir}`,
-      '--entrypoint', 'pocket',
-    ];
-    const instance = this._docker.run(
-      this.dockerImage + versionData.generateRuntimeArgs(this),
-      args,
+    const instance = this._docker.attach(
+      this.id,
       output => this._logOutput(output),
-      err => this._logError(err),
-      code => this._logClose(code),
+      err => {
+        this._logError(err);
+      },
+      code => {
+        this._logClose(code);
+      },
     );
+
     this._instance = instance;
     this._instances = [
       instance,

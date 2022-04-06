@@ -47,6 +47,7 @@ export interface CryptoNodeData {
   remoteProtocol?: string;
   remotePort?: number;
   role?: string;
+  restartAttempts?: number
 }
 
 export interface CryptoNode {

@@ -2,6 +2,42 @@ import { ChildProcess, execFile, spawn } from 'child_process';
 import { EventEmitter } from 'events';
 import { DockerEvent } from '../constants';
 
+// interface DockerPSItem {
+//   Command: string
+//   CreatedAt: string
+//   ID: string
+//   Image: string
+//   Labels: string
+//   LocalVolumes: string
+//   Mounts: string
+//   Names: string
+//   Networks: string
+//   Ports: string
+//   RunningFor: string
+//   Size: string
+//   State: string
+//   Status: string
+// }
+
+interface DockerContainerInspectItem {
+  Id: string
+  Created: string
+  Name: string
+  RestartCount: number
+  State: {
+    Status: string
+    Running: boolean
+    Paused: boolean
+    Restrating: boolean
+    Dead: boolean
+    Pid: number
+    ExitCode: number
+    Error: string
+    StartedAt: string
+    FinishedAt: string
+  }
+}
+
 export class Docker extends EventEmitter {
 
   _execFile = execFile;
@@ -112,13 +148,13 @@ export class Docker extends EventEmitter {
   async containerExists(name: string): Promise<boolean> {
     try {
       const data = await this.containerInspect(name);
-      return Object.keys(data).length > 0;
+      return !!data;
     } catch(err) {
       return false;
     }
   }
 
-  public async containerInspect(name: string): Promise<any> {
+  public async containerInspect(name: string): Promise<DockerContainerInspectItem|null> {
     try {
       const output: string = await new Promise((resolve, reject) => {
         this._execFile('docker', ['container', 'inspect', '--format', '"{{json .}}"', name], {}, (err, output) => {
@@ -134,7 +170,7 @@ export class Docker extends EventEmitter {
       return JSON.parse(jsonStr);
     } catch (err) {
       this._logError(err);
-      return {};
+      return null;
     }
   }
 
@@ -157,6 +193,30 @@ export class Docker extends EventEmitter {
       return {};
     }
   }
+
+  // public ps(): Promise<DockerPSItem[]> {
+  //   return new Promise(resolve => {
+  //     execFile('docker', ['ps', '--format', '"{{json .}}"'], (err, output) => {
+  //       if(err) {
+  //         this._logError(err);
+  //         resolve([]);
+  //       }
+  //       try {
+  //         return output.toString()
+  //           .split(/\n|\r/g)
+  //           .map(s => s.trim())
+  //           .filter(s => s)
+  //           .map(s => s
+  //             .replace(/^"/, '')
+  //             .replace(/"$/, ''))
+  //           .map(s => JSON.parse(s));
+  //       } catch(err) {
+  //         this._logError(err);
+  //         resolve([]);
+  //       }
+  //     });
+  //   });
+  // }
 
   public run(image: string, args: string[], onOutput?: (output: string) => void, onErr?: (err: Error) => void, onClose?: (statusCode: number) => void): ChildProcess {
     const command = 'docker';
@@ -270,7 +330,7 @@ export class Docker extends EventEmitter {
   public stop(name: string): Promise<string> {
     return new Promise(resolve => {
       const command = 'docker';
-      const args = ['stop', name];
+      const args = ['stop', '-t', '30', name];
       this.emit(DockerEvent.INFO, `${command} ${args.join(' ')}`);
       execFile(command, args, {}, (err, output) => {
         if(err) {
@@ -319,6 +379,45 @@ export class Docker extends EventEmitter {
         }
       });
     });
+  }
+
+  public attach(name: string, onOutput?: (output: string) => void, onErr?: (err: Error) => void, onClose?: (statusCode: number) => void): ChildProcess {
+    const command = 'docker';
+    const spawnArgs = [
+      'attach',
+      '--no-stdin',
+      '--sig-proxy=false',
+      name,
+    ];
+    this.emit(DockerEvent.INFO, `${command} ${spawnArgs.join(' ')}`);
+    const instance = this._spawn(command, spawnArgs);
+    instance.on('error', err => {
+      this._logError(err);
+      if(onErr)
+        onErr(err);
+    });
+    instance.on('close', code => {
+      if(onClose)
+        onClose(code || 0);
+    });
+    instance.stdout.on('data', (data: Buffer) => {
+      if(onOutput)
+        onOutput(data.toString());
+    });
+    instance.stderr.on('data', (data: Buffer) => {
+      if(onOutput)
+        onOutput(data.toString());
+    });
+    return instance;
+  }
+
+  async checkIfRunningAndRemoveIfPresentButNotRunning(name: string): Promise<boolean> {
+    const containerData = await this.containerInspect(name);
+    const running = containerData ? containerData.State.Running : false;
+    if(containerData && !running) {
+      await this.rm(name);
+    }
+    return running;
   }
 
 }
