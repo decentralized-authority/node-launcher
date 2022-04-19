@@ -62,7 +62,7 @@ Version = "2.5.0"
 
 [Network]
   BootNodes = ["/dnsaddr/bootstrap.t.hmny.io"]
-  NetworkType = "mainnet"
+  NetworkType = "{{NETWORK}}"
 
 [P2P]
   IP = "0.0.0.0"
@@ -117,7 +117,7 @@ export class Harmony extends Ethereum {
             dataDir: '/root/data',
             walletDir: '/root/keystore',
             configDir: '/harmony/config',
-            networks: [NetworkType.MAINNET],
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               return ` -c ${path.join(this.configDir, Harmony.configName(data))}`;
@@ -130,7 +130,7 @@ export class Harmony extends Ethereum {
             dataDir: '/root/data',
             walletDir: '/root/keystore',
             configDir: '/harmony/config',
-            networks: [NetworkType.MAINNET],
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               return ` -c ${path.join(this.configDir, Harmony.configName(data))}`;
@@ -143,7 +143,7 @@ export class Harmony extends Ethereum {
             dataDir: '/root/data',
             walletDir: '/root/keystore',
             configDir: '/harmony/config',
-            networks: [NetworkType.MAINNET],
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               return ` -c ${path.join(this.configDir, Harmony.configName(data))}`;
@@ -156,7 +156,7 @@ export class Harmony extends Ethereum {
             dataDir: '/root/data',
             walletDir: '/root/keystore',
             configDir: '/harmony/config',
-            networks: [NetworkType.MAINNET],
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               return ` -c ${path.join(this.configDir, Harmony.configName(data))}`;
@@ -180,6 +180,7 @@ export class Harmony extends Ethereum {
 
   static networkTypes = [
     NetworkType.MAINNET,
+    NetworkType.TESTNET,
   ];
 
   static roles = [
@@ -188,10 +189,12 @@ export class Harmony extends Ethereum {
 
   static defaultRPCPort = {
     [NetworkType.MAINNET]: 9500,
+    [NetworkType.TESTNET]: 9500,
   };
 
   static defaultPeerPort = {
     [NetworkType.MAINNET]: 9000,
+    [NetworkType.TESTNET]: 9000,
   };
 
   static defaultCPUs = 8;
@@ -202,6 +205,7 @@ export class Harmony extends Ethereum {
     switch(client) {
       case NodeClient.CORE:
         return coreConfig
+          .replace('{{NETWORK}}', network === NetworkType.MAINNET ? 'mainnet' : 'testnet')
           .replace('{{PEER_PORT}}', peerPort.toString(10))
           .replace('{{RPC_PORT}}', rpcPort.toString(10))
           .replace('{{SHARD}}', shard.toString(10))
