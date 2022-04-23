@@ -144,7 +144,6 @@ const coreConfig = `
         "data_dir": "/root/.pocket",
         "genesis_file": "genesis.json",
         "chains_name": "chains.json",
-        "session_db_name": "session",
         "evidence_db_name": "pocket_evidence",
         "tendermint_uri": "tcp://localhost:26657",
         "keybase_name": "../pocket-keys/pocket-keybase",
@@ -155,9 +154,9 @@ const coreConfig = `
         "json_sort_relay_responses": true,
         "remote_cli_url": "http://localhost:8081",
         "user_agent": "",
-        "validator_cache_size": 100,
-        "application_cache_size": 100,
-        "rpc_timeout": 15000,
+        "validator_cache_size": 40000,
+        "application_cache_size": 10000,
+        "rpc_timeout": 30000,
         "pocket_prometheus_port": "8083",
         "prometheus_max_open_files": 3,
         "max_claim_age_for_proof_retry": 32,
@@ -165,7 +164,9 @@ const coreConfig = `
         "ctx_cache_size": 20,
         "abci_logging": false,
         "show_relay_errors": true,
-        "disable_tx_events": true
+        "disable_tx_events": true,
+        "iavl_cache_size": 5000000,
+        "chains_hot_reload": false
     }
 }
 `;
@@ -178,6 +179,20 @@ export class Pocket extends Bitcoin {
     switch(client) {
       case NodeClient.CORE:
         versions = [
+          {
+            version: 'RC-0.8.2',
+            clientVersion: 'RC-0.8.2',
+            image: 'rburgett/pocketcore:RC-0.8.2',
+            dataDir: '/root/.pocket',
+            walletDir: '/root/pocket-keys',
+            configDir: '',
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              const { network = '' } = data;
+              return ` start --${network.toLowerCase()}`;
+            },
+          },
           {
             version: 'RC-0.7.0.1',
             clientVersion: 'RC-0.7.0.1',
