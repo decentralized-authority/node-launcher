@@ -305,7 +305,7 @@ export class IOTEX extends Ethereum {
     ];
     for(const name of containers) {
       try {
-        const success = await this._docker.stop(name);
+        await this._docker.stop(name);
       } catch(err) {
         this._logError(err);
       }

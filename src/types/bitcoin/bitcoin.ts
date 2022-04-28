@@ -349,37 +349,16 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
     return this.instances();
   }
 
-  stop():Promise<void> {
-    return new Promise<void>(resolve => {
-      if(this._instance) {
-        const { exitCode } = this._instance;
-        if(typeof exitCode === 'number') {
-          resolve();
-        } else {
-          this._instance.on('exit', () => {
-            clearTimeout(timeout);
-            setTimeout(() => {
-              resolve();
-            }, 1000);
-          });
-          this._instance.kill();
-          const timeout = setTimeout(() => {
-            this._docker.stop(this.id)
-              .then(() => {
-                setTimeout(() => {
-                  resolve();
-                }, 1000);
-              })
-              .catch(err => {
-                this._logError(err);
-                resolve();
-              });
-          }, 30000);
-        }
-      } else {
-        resolve();
-      }
-    });
+  async _stop():Promise<void> {
+    try {
+      await this._docker.stop(this.id);
+    } catch(err) {
+      this._logError(err);
+    }
+  }
+
+  stop(): Promise<void> {
+    return this._stop();
   }
 
   instances(): ChildProcess[] {

@@ -270,7 +270,7 @@ export class Docker extends EventEmitter {
   public stop(name: string): Promise<string> {
     return new Promise(resolve => {
       const command = 'docker';
-      const args = ['stop', name];
+      const args = ['stop', '-t', '30', name];
       this.emit(DockerEvent.INFO, `${command} ${args.join(' ')}`);
       execFile(command, args, {}, (err, output) => {
         if(err) {

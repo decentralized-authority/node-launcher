@@ -293,20 +293,9 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
             }, docker);
             // node.on(NodeEvent.OUTPUT, console.log);
             // node.on(NodeEvent.ERROR, console.error);
-            // node.on(NodeEvent.CLOSE, console.log);
+            node.on(NodeEvent.CLOSE, (exitCode: number) => console.log(`Exited with code ${exitCode}`));
             const instances = await node.start();
             instances.should.be.an.Array();
-            for (const instance of instances) {
-              instance.should.be.an.instanceOf(ChildProcess);
-              await new Promise(resolve => {
-                const timeout = setTimeout(resolve, 30000);
-                instance.on('close', code => {
-                  clearTimeout(timeout);
-                  resolve(code);
-                });
-                instance.kill();
-              });
-            }
           });
         });
         describe(`${name}.stop() with ${client} client & ${network} network`, async function() {
@@ -314,19 +303,10 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
 
             this.timeout(60000);
 
-            node = new NodeConstructor({
-              network,
-              client,
-            }, docker);
-            // node.on(NodeEvent.OUTPUT, console.log);
-            // node.on(NodeEvent.ERROR, console.error);
-            // node.on(NodeEvent.CLOSE, console.log);
-            await node.start();
             await new Promise(resolve => setTimeout(resolve, 10000));
             await node.stop();
-            for(const instance of node.instances()) {
-              instance.exitCode.should.be.a.Number();
-            }
+            const res = await docker.containerInspect(node.id);
+            Object.keys(res).length.should.equal(0);
           });
         });
         describe(`${name} runtime methods with ${client} client & ${network} network`, function() {
@@ -361,7 +341,7 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
               .on(NodeEvent.CLOSE, (exitCode: number) => console.log(`Exited with code ${exitCode}`));
 
             // Give the node a little time to connect and get up and running
-            await timeout(60000 * 1);
+            await timeout(40000 * 1);
           });
 
           describe(`${name}.rpcGetVersion()`, function() {
