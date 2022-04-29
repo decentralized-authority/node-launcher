@@ -317,7 +317,7 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
         describe(`${name}.stop() with ${client} client & ${network} network`, async function() {
           it('should stop a node', async function() {
 
-            this.timeout(60000);
+            this.timeout(40000);
 
             node = new NodeConstructor({
               network,
