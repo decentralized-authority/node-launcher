@@ -415,4 +415,34 @@ export class IOTEX extends Ethereum {
     }
   }
 
+  async getMemUsage(): Promise<[usagePercent: string, used: string, allocated: string]> {
+    try {
+      this._runCheck('getMemUsage');
+      const containerStats = await this._docker.containerStats(this.iotexGenerateCoreDockerName());
+      const percent = containerStats.MemPerc;
+      const split = containerStats.MemUsage
+        .split('/')
+        .map((s: string): string => s.trim());
+      if(split.length > 1) {
+        return [percent, split[0], split[1]];
+      } else {
+        throw new Error('Split containerStats/MemUsage length less than two.');
+      }
+    } catch(err) {
+      this._logError(err);
+      return ['0', '0', '0'];
+    }
+  }
+
+  async getCPUUsage(): Promise<string> {
+    try {
+      this._runCheck('getCPUUsage');
+      const containerStats = await this._docker.containerStats(this.iotexGenerateCoreDockerName());
+      return containerStats.CPUPerc;
+    } catch(err) {
+      this._logError(err);
+      return '0';
+    }
+  }
+
 }
