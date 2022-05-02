@@ -218,7 +218,7 @@ export class Docker extends EventEmitter {
   //   });
   // }
 
-  public run(image: string, args: string[], onOutput?: (output: string) => void, onErr?: (err: Error) => void, onClose?: (statusCode: number) => void): ChildProcess {
+  public run(image: string, args: string[], onOutput?: (output: string) => void, onErr?: (err: Error) => void, onClose?: (statusCode: number) => void, silent = false): ChildProcess {
     const command = 'docker';
     if(this._logDriver) {
       args = [
@@ -255,7 +255,8 @@ export class Docker extends EventEmitter {
       ...splitRunArgs
         .filter(s => s),
     ];
-    this.emit(DockerEvent.INFO, `${command} ${spawnArgs.join(' ')}`);
+    if(!silent)
+      this.emit(DockerEvent.INFO, `${command} ${spawnArgs.join(' ')}`);
     const instance = this._spawn(command, spawnArgs);
     instance.on('error', err => {
       this._logError(err);
@@ -277,7 +278,7 @@ export class Docker extends EventEmitter {
     return instance;
   }
 
-  public exec(containerName: string, args: string[], command: string, onOutput: (output: string) => void, onErr: (err: Error) => void, onClose: (statusCode: number) => void): ChildProcess {
+  public exec(containerName: string, args: string[], command: string, onOutput: (output: string) => void, onErr: (err: Error) => void, onClose: (statusCode: number) => void, silent = false): ChildProcess {
     const spawnCommand = 'docker';
     const spawnArgs = [
       'exec',
@@ -288,7 +289,8 @@ export class Docker extends EventEmitter {
         .map(s => s.trim())
         .filter(s => s),
     ];
-    this.emit(DockerEvent.INFO, `${spawnCommand} ${spawnArgs.join(' ')}`);
+    if(!silent)
+      this.emit(DockerEvent.INFO, `${spawnCommand} ${spawnArgs.join(' ')}`);
     const instance = this._spawn(spawnCommand, spawnArgs);
     instance.on('error', err => {
       this._logError(err);
