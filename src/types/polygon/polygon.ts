@@ -43,7 +43,7 @@ export class Polygon extends Ethereum {
             dataDir: '/root/data',
             walletDir: '/root/keys',
             configDir: '/root/config',
-            heimdallImage: 'maticnetwork/heimdall:v0.2.8',
+            heimdallImage: 'maticnetwork/heimdall:v0.2.9',
             heimdallDataDir: '/root/.heimdalld/data',
             heimdallWalletDir: '/root/keys',
             heimdallConfigDir: '/root/.heimdalld/config',
