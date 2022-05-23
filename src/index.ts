@@ -2,6 +2,7 @@ import { Bitcoin as BTC } from './types/bitcoin/bitcoin';
 import { BitcoinCash as BCH } from './types/bitcoin-cash/bitcoin-cash';
 import { Dash as DASH } from './types/dash/dash';
 import { Ethereum as ETH } from './types/ethereum/ethereum';
+import { Fantom as FTM } from './types/fantom/fantom';
 import { LBRY as LBC } from './types/lbry/lbry';
 import { Litecoin as LTC } from './types/litecoin/litecoin';
 import { Xdai as XDAI } from './types/xdai/xdai';
@@ -25,6 +26,7 @@ export {
   BTC,
   DASH,
   ETH,
+  FTM,
   FUSE,
   LBC,
   LTC,
