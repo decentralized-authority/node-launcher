@@ -346,8 +346,11 @@ export class Pocket extends Bitcoin {
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
 
-    if(!this.privateKeyEncrypted)
-      throw new Error('You must first call generateKeyPair() for pocket nodes before you can call start()');
+    if(!this.privateKeyEncrypted) {
+      if(!password)
+        throw new Error('You must pass in a password the first time you run start(). This password will be used to generate the key pair.');
+      await this.generateKeyPair(password);
+    }
 
     const running = await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.id);
 
@@ -361,13 +364,25 @@ export class Pocket extends Bitcoin {
       await this._docker.pull(this.dockerImage, str => this._logOutput(str));
 
       const tmpdir = os.tmpdir();
-      const dataDir = this.dataDir || path.join(tmpdir, uuid());
+      let { dataDir } = this;
+      if(!dataDir) {
+        dataDir = path.join(tmpdir, uuid());
+        this.dataDir = dataDir;
+      }
       await fs.ensureDir(dataDir);
 
-      const walletDir = this.walletDir || path.join(tmpdir, uuid());
+      let { walletDir } = this;
+      if(!walletDir) {
+        walletDir = path.join(tmpdir, uuid());
+        this.walletDir = walletDir;
+      }
       await fs.ensureDir(walletDir);
 
-      const configDir = this.configDir || path.join(tmpdir, uuid());
+      let { configDir } = this;
+      if(!configDir) {
+        configDir = path.join(tmpdir, uuid());
+        this.configDir = configDir;
+      }
       await fs.ensureDir(configDir);
       const configPath = this.configFilePath();
       const configExists = await fs.pathExists(configPath);
