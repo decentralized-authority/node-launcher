@@ -11,7 +11,7 @@ import request from 'superagent';
 import { filterVersionsByNetworkType } from '../../util';
 import { FS } from '../../util/fs';
 import { Configuration, HttpRpcProvider, Pocket as PocketJS } from '@pokt-network/pocket-js';
-import isError from 'lodash/isError';
+import { isError } from 'lodash';
 
 interface PocketNodeData extends CryptoNodeData {
   publicKey: string
