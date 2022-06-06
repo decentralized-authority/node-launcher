@@ -36,9 +36,9 @@ export class Near extends Bitcoin {
       case NodeClient.CORE:
         versions = [
           {
-            version: '1.26.0',
-            clientVersion: '1.26.0',
-            image: 'nearprotocol/nearcore:1.26.0',
+            version: '1.26.1',
+            clientVersion: '1.26.1',
+            image: 'nearprotocol/nearcore:1.26.1',
             dataDir: '/srv/near/data',
             walletDir: '/srv/near/keystore',
             configDir: '/srv/near',
@@ -50,6 +50,20 @@ export class Near extends Bitcoin {
 
 
               //`;// --config=${path.join(this.configDir, Near.configName(data))}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
+            },
+          },
+          {
+            version: '1.26.0',
+            clientVersion: '1.26.0',
+            image: 'nearprotocol/nearcore:1.26.0',
+            dataDir: '/srv/near/data',
+            walletDir: '/srv/near/keystore',
+            configDir: '/srv/near',
+            networks: [NetworkType.MAINNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              const { network = '' } = data;
+              return ` /usr/local/bin/run.sh`;
             },
           },
         ];
@@ -122,11 +136,12 @@ export class Near extends Bitcoin {
   dockerNetwork = defaultDockerNetwork;
   dataDir = '';
   walletDir = '';
-  //configDir = '';
+  configDir = '';
   remote = false;
   remoteDomain = '';
   remoteProtocol = '';
   role = Near.roles[0];
+  dockerName = '';
 
   constructor(data: CryptoNodeData, docker?: Docker) {
     super(data, docker);
@@ -142,7 +157,7 @@ export class Near extends Bitcoin {
     this.dockerNetwork = data.dockerNetwork || this.dockerNetwork;
     this.dataDir = data.dataDir || this.dataDir;
     this.walletDir = data.walletDir || this.walletDir;
-    //this.configDir = data.configDir || this.configDir;
+    this.configDir = data.configDir || this.configDir;
     this.createdAt = data.createdAt || this.createdAt;
     this.updatedAt = data.updatedAt || this.updatedAt;
     this.remote = data.remote || this.remote;
@@ -186,24 +201,25 @@ export class Near extends Bitcoin {
         '--network', this.dockerNetwork,
         '-p', `${this.rpcPort}:${this.rpcPort}`,
         '-p', `${this.peerPort}:${this.peerPort}`,
-        '-e', 'INIT=1',
+
+
       ];
-      // const tmpdir = os.tmpdir();
-      // const dataDir = this.dataDir || path.join(tmpdir, uuid());
-      // args = [...args, '-v', `${dataDir}:${containerDataDir}`];
-      // await fs.ensureDir(dataDir);
+      const tmpdir = os.tmpdir();
+      const dataDir = this.dataDir || path.join(tmpdir, uuid());
+      args = [...args, '-v', `${dataDir}:${containerDataDir}`];
+      await fs.ensureDir(dataDir);
 
       // const walletDir = this.walletDir || path.join(tmpdir, uuid());
       // args = [...args, '-v', `${walletDir}:${containerWalletDir}`];
       // await fs.ensureDir(walletDir);
 
-      // const configDir = this.configDir || path.join(tmpdir, uuid());
-      // await fs.ensureDir(configDir);
-      // const configPath = path.join(configDir, Near.configName(this));
-      // const configExists = await fs.pathExists(configPath);
-      // if(!configExists)
-      //   await fs.writeFile(configPath, this.generateConfig(), 'utf8');
-      // args = [...args, '-v', `${configDir}:${containerConfigDir}`];
+      const configDir = this.configDir || path.join(tmpdir, uuid());
+      await fs.ensureDir(configDir);
+      const configPath = path.join(configDir, Near.configName(this));
+      const configExists = await fs.pathExists(configPath);
+      if(!configExists)
+        await fs.writeFile(configPath, this.generateConfig(), 'utf8');
+      args = [...args, '-v', `${configDir}:${containerConfigDir}`];
 
       await this._docker.pull(this.dockerImage, str => this._logOutput(str));
 
@@ -243,6 +259,7 @@ export class Near extends Bitcoin {
     ];
     return this.instances();
   }
+  
 
   generateConfig(): string {
     return Near.generateConfig(
@@ -251,128 +268,32 @@ export class Near extends Bitcoin {
       this.peerPort,
       this.rpcPort);
   }
+
+  async _rpcGetVersion(): Promise<string> {
+    try {
+      this._runCheck('rpcGetVersion');
+      const { body } = await request
+        .post(this.endpoint())
+        .set('Accept', 'application/json')
+        .auth(this.rpcUsername, this.rpcPassword)
+        .timeout(this._requestTimeout)
+        .send({
+          id: '',
+          jsonrpc: '2.0',
+          method: 'status',
+          params: [],
+        });
+      const { result = '' } = body;
+      return result.version.version;
+    } catch(err) {
+      this._logError(err);
+      return '';
+    }
+  }
+
+  async rpcGetVersion(): Promise<string> {
+    return this._rpcGetVersion();
+  }
+
 }
-//   async _rpcGetVersion(): Promise<string> {
-//     try {
-//       this._runCheck('rpcGetVersion');
-//       const { body } = await request
-//         .post(this.endpoint())
-//         .set('Accept', 'application/json')
-//         .auth(this.rpcUsername, this.rpcPassword)
-//         .timeout(this._requestTimeout)
-//         .send({
-//           id: '',
-//           jsonrpc: '2.0',
-//           method: 'web3_clientVersion',
-//           params: [],
-//         });
-//       const { result = '' } = body;
-//       // first, check for RC matches
-//       let matches = result.match(/v(\d+\.\d+\.\d+-rc.+?)-/i);
-//       if(!matches)
-//         // check for regular matches
-//         matches = result.match(/v(\d+\.\d+\.\d+)/);
-//       if(matches && matches.length > 1) {
-//         return matches[1];
-//       } else {
-//         return '';
-//       }
-//     } catch(err) {
-//       this._logError(err);
-//       return '';
-//     }
-//   }
 
-//   async rpcGetVersion(): Promise<string> {
-//     return this._rpcGetVersion();
-//   }
-
-//   async _rpcGetBlockCount(): Promise<string> {
-//     let blockHeight;
-//     try {
-//       this._runCheck('rpcGetBlockCount');
-//       const res = await request
-//         .post(this.endpoint())
-//         .set('Accept', 'application/json')
-//         .timeout(this._requestTimeout)
-//         .send({
-//           id: '',
-//           jsonrpc: '2.0',
-//           method: 'eth_syncing',
-//           params: [],
-//         });
-//       if(res.body.result === false) {
-//         const res = await request
-//           .post(this.endpoint())
-//           .set('Accept', 'application/json')
-//           .timeout(this._requestTimeout)
-//           .send({
-//             id: '',
-//             jsonrpc: '2.0',
-//             method: 'eth_blockNumber',
-//             params: [],
-//           });
-//         const currentBlock = res.body.result;
-//         const blockNum = parseInt(currentBlock, 16);
-//         blockHeight = blockNum > 0 ? blockNum.toString(10) : '';
-//       } else {
-//         const { currentBlock } = res.body.result;
-//         const blockNum = parseInt(currentBlock, 16);
-//         blockHeight = blockNum > 0 ? blockNum.toString(10) : '';
-//       }
-//     } catch(err) {
-//       this._logError(err);
-//       blockHeight = '';
-//     }
-//     return blockHeight || '';
-//   }
-
-//   async rpcGetBlockCount(): Promise<string> {
-//     return this._rpcGetBlockCount();
-//   }
-
-//   _makeSyncingCall(): Promise<any> {
-//     return request
-//       .post(this.endpoint())
-//       .set('Accept', 'application/json')
-//       .timeout(this._requestTimeout)
-//       .send({
-//         id: '',
-//         jsonrpc: '2.0',
-//         method: 'eth_syncing',
-//         params: [],
-//       });
-//   }
-
-//   async _getStatus(): Promise<string> {
-//     let status;
-//     try {
-//       if(this.remote) {
-//         const version = await this.rpcGetVersion();
-//         status = version ? Status.RUNNING : Status.STOPPED;
-//       } else {
-//         const stats = await this._docker.containerInspect(this.id);
-//         status = stats && stats.State.Running ? Status.RUNNING : Status.STOPPED;
-//       }
-//     } catch(err) {
-//       status = Status.STOPPED;
-//     }
-
-//     if(status !== Status.STOPPED) {
-//       try {
-//         const res = await this._makeSyncingCall();
-//         if(res.body.result !== false)
-//           status = Status.SYNCING;
-//       } catch(err) {
-//         // do nothing with the error
-//       }
-//     }
-
-//     return status;
-//   }
-
-//   async getStatus(): Promise<string> {
-//     return this._getStatus();
-//   }
-
-// }
