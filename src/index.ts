@@ -15,6 +15,7 @@ import { IOTEX } from './types/iotex/iotex';
 import { Polygon as MATIC } from './types/polygon/polygon';
 import * as constants from './constants';
 import { Docker } from './util/docker';
+import { Near as NEAR } from './types/near/near';
 
 export {
   constants,
@@ -34,4 +35,5 @@ export {
   OEC,
   IOTEX,
   MATIC,
+  NEAR,
 };
