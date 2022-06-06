@@ -1,5 +1,5 @@
 import { CryptoNodeData, VersionDockerImage } from '../../interfaces/crypto-node';
-import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role } from '../../constants';
+import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role, Status } from '../../constants';
 import { Bitcoin } from '../bitcoin/bitcoin';
 import { Docker } from '../../util/docker';
 import { v4 as uuid } from 'uuid';
@@ -679,6 +679,51 @@ export class Pocket extends Bitcoin {
       return BigInt('0');
     }
 
+  }
+
+  async getStatus(): Promise<string> {
+    let status;
+    try {
+      if(this.remote) {
+        const version = await this.rpcGetVersion();
+        status = version ? Status.RUNNING : Status.STOPPED;
+      } else {
+        const stats = await this._docker.containerInspect(this.id);
+        status = stats && stats.State.Running ? Status.RUNNING : Status.STOPPED;
+      }
+    } catch(err) {
+      status = Status.STOPPED;
+    }
+
+    if(!this.remote && status !== Status.STOPPED) {
+      try {
+        let output = '';
+        await new Promise<void>(resolve => {
+          this._docker.exec(
+            this.id,
+            [],
+            'curl -s http://localhost:26657/status',
+            str => {
+              output += str;
+            },
+            err => {
+              this._logError(err);
+            },
+            () => {
+              resolve();
+            },
+            false,
+          );
+        });
+        const statusData = JSON.parse(output.trim());
+        const { catching_up: catchingUp } = statusData.result.sync_info;
+        status = catchingUp ? Status.SYNCING : status;
+      } catch(err) {
+        // do nothing with the error
+      }
+    }
+    console.log('status', status);
+    return status;
   }
 
 }
