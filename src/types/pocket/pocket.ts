@@ -1,5 +1,5 @@
 import { CryptoNodeData, VersionDockerImage } from '../../interfaces/crypto-node';
-import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role } from '../../constants';
+import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role, Status } from '../../constants';
 import { Bitcoin } from '../bitcoin/bitcoin';
 import { Docker } from '../../util/docker';
 import { v4 as uuid } from 'uuid';
@@ -11,7 +11,7 @@ import request from 'superagent';
 import { filterVersionsByNetworkType } from '../../util';
 import { FS } from '../../util/fs';
 import { Configuration, HttpRpcProvider, Pocket as PocketJS } from '@pokt-network/pocket-js';
-import isError from 'lodash/isError';
+import { isError } from 'lodash';
 
 interface PocketNodeData extends CryptoNodeData {
   publicKey: string
@@ -346,8 +346,11 @@ export class Pocket extends Bitcoin {
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
 
-    if(!this.privateKeyEncrypted)
-      throw new Error('You must first call generateKeyPair() for pocket nodes before you can call start()');
+    if(!this.privateKeyEncrypted) {
+      if(!password)
+        throw new Error('You must pass in a password the first time you run start(). This password will be used to generate the key pair.');
+      await this.generateKeyPair(password);
+    }
 
     const running = await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.id);
 
@@ -361,13 +364,25 @@ export class Pocket extends Bitcoin {
       await this._docker.pull(this.dockerImage, str => this._logOutput(str));
 
       const tmpdir = os.tmpdir();
-      const dataDir = this.dataDir || path.join(tmpdir, uuid());
+      let { dataDir } = this;
+      if(!dataDir) {
+        dataDir = path.join(tmpdir, uuid());
+        this.dataDir = dataDir;
+      }
       await fs.ensureDir(dataDir);
 
-      const walletDir = this.walletDir || path.join(tmpdir, uuid());
+      let { walletDir } = this;
+      if(!walletDir) {
+        walletDir = path.join(tmpdir, uuid());
+        this.walletDir = walletDir;
+      }
       await fs.ensureDir(walletDir);
 
-      const configDir = this.configDir || path.join(tmpdir, uuid());
+      let { configDir } = this;
+      if(!configDir) {
+        configDir = path.join(tmpdir, uuid());
+        this.configDir = configDir;
+      }
       await fs.ensureDir(configDir);
       const configPath = this.configFilePath();
       const configExists = await fs.pathExists(configPath);
@@ -664,6 +679,51 @@ export class Pocket extends Bitcoin {
       return BigInt('0');
     }
 
+  }
+
+  async getStatus(): Promise<string> {
+    let status;
+    try {
+      if(this.remote) {
+        const version = await this.rpcGetVersion();
+        status = version ? Status.RUNNING : Status.STOPPED;
+      } else {
+        const stats = await this._docker.containerInspect(this.id);
+        status = stats && stats.State.Running ? Status.RUNNING : Status.STOPPED;
+      }
+    } catch(err) {
+      status = Status.STOPPED;
+    }
+
+    if(!this.remote && status !== Status.STOPPED) {
+      try {
+        let output = '';
+        await new Promise<void>(resolve => {
+          this._docker.exec(
+            this.id,
+            [],
+            'curl -s http://localhost:26657/status',
+            str => {
+              output += str;
+            },
+            err => {
+              this._logError(err);
+            },
+            () => {
+              resolve();
+            },
+            false,
+          );
+        });
+        const statusData = JSON.parse(output.trim());
+        const { catching_up: catchingUp } = statusData.result.sync_info;
+        status = catchingUp ? Status.SYNCING : status;
+      } catch(err) {
+        // do nothing with the error
+      }
+    }
+    console.log('status', status);
+    return status;
   }
 
 }

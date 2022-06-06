@@ -281,6 +281,9 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
     });
 
     NodeConstructor.clients.forEach(client => {
+
+      const keyPassword = uuid();
+
       NodeConstructor.networkTypes.forEach(network => {
         describe(`${name}.start() with ${client} client & ${network} network`, function() {
           it('should start a node', async function() {
@@ -296,7 +299,7 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
             // node.on(NodeEvent.OUTPUT, console.log);
             // node.on(NodeEvent.ERROR, console.error);
             // node.on(NodeEvent.CLOSE, console.log);
-            const instances = await node.start();
+            const instances = await node.start(keyPassword);
             instances.should.be.an.Array();
             const containerNames: string[] = [];
             for (const instance of instances) {
@@ -328,7 +331,7 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
             // node.on(NodeEvent.OUTPUT, console.log);
             // node.on(NodeEvent.ERROR, console.error);
             // node.on(NodeEvent.CLOSE, console.log);
-            await node.start();
+            await node.start(keyPassword);
             await new Promise(resolve => setTimeout(resolve, 10000));
             await node.stop();
             for(const instance of node.instances()) {
@@ -348,10 +351,7 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
               client,
             }, docker);
 
-            // Log output
-            // node.on(NodeEvent.OUTPUT, console.log);
-
-            await node.start();
+            await node.start(keyPassword);
             remoteNode = new NodeConstructor({
               network,
               client,
