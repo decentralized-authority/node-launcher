@@ -22,7 +22,7 @@ export class Fantom extends Ethereum {
           {
             version: '1.1.0-rc.5',
             clientVersion: '1.1.0-rc.5',
-            image: 'chainstack/fantom-opera:1.1.0-rc.5',
+            image: 'rburgett/fantom-opera:1.1.0-rc.5',
             dataDir: '/root/.opera',
             walletDir: '/root/keystore',
             configDir: '/root/config',
@@ -30,7 +30,7 @@ export class Fantom extends Ethereum {
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               const { network = '' } = data;
-              return ` --genesis=/opt/genesis/mainnet.g --config=${path.join(this.configDir, Fantom.configName(data))}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
+              return ` --genesis=/opt/genesis/${network.toLowerCase()}.g --config=${path.join(this.configDir, Fantom.configName(data))}`;
             },
           },
         ];
@@ -59,10 +59,12 @@ export class Fantom extends Ethereum {
 
   static defaultRPCPort = {
     [NetworkType.MAINNET]: 18545,
+    [NetworkType.TESTNET]: 18545,
   };
 
   static defaultPeerPort = {
     [NetworkType.MAINNET]: 5050,
+    [NetworkType.TESTNET]: 7946,
   };
 
   static defaultCPUs = 8;
