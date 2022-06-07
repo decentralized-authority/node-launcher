@@ -10,22 +10,8 @@ import { Bitcoin } from '../bitcoin/bitcoin';
 import { filterVersionsByNetworkType, timeout } from '../../util';
 import { FS } from '../../util/fs';
 import * as coreConfig from './config/core';
+import * as genesis from './config/genesis';
 
-// const coreConfig = `
-// [Eth]
-// NetworkId = 1
-
-// [Node]
-// DataDir = "/root/.near"
-// KeyStoreDir = "/root/keystore"
-// HTTPHost = "0.0.0.0"
-// HTTPPort = {{RPC_PORT}}
-// HTTPVirtualHosts = ["*"]
-// HTTPModules = ["net", "web3", "eth"]
-
-// [Node.P2P]
-// ListenAddr = ":{{PEER_PORT}}"
-// `;
 
 export class Near extends Bitcoin {
 
@@ -42,30 +28,27 @@ export class Near extends Bitcoin {
             dataDir: '/srv/near/data',
             walletDir: '/srv/near/keystore',
             configDir: '/srv/near',
-            networks: [NetworkType.MAINNET],
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               const { network = '' } = data;
-              return ` /usr/local/bin/run.sh`;//neard --home ~/.near init --chain-id testnet --download-genesis --download-config
-
-
-              //`;// --config=${path.join(this.configDir, Near.configName(data))}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
+              return ` neard --home ${this.configDir} run --network-addr 0.0.0.0:${data.peerPort} --rpc-addr 0.0.0.0:${data.rpcPort}  --boot-nodes ` + (data.network === NetworkType.MAINNET ? `${coreConfig.mainnetBootnodes}` : `${coreConfig.testnetBootnodes}`);
             },
           },
-          {
-            version: '1.26.0',
-            clientVersion: '1.26.0',
-            image: 'nearprotocol/nearcore:1.26.0',
-            dataDir: '/srv/near/data',
-            walletDir: '/srv/near/keystore',
-            configDir: '/srv/near',
-            networks: [NetworkType.MAINNET],
-            breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
-              const { network = '' } = data;
-              return ` /usr/local/bin/run.sh`;
-            },
-          },
+          // {
+          //   version: '1.26.0',
+          //   clientVersion: '1.26.0',
+          //   image:'nearprotocol/nearcore:1.26.0',
+          //   dataDir: '/srv/near/data',
+          //   walletDir: '/srv/near/keystore',
+          //   configDir: '/srv/near',
+          //   networks: [NetworkType.MAINNET],
+          //   breaking: false,
+          //   generateRuntimeArgs(data: CryptoNodeData): string {
+          //     const { network = '' } = data;
+          //     return ` /usr/local/bin/run.sh`;
+          //   },
+          // },
         ];
         break;
       default:
@@ -84,6 +67,7 @@ export class Near extends Bitcoin {
 
   static networkTypes = [
     NetworkType.MAINNET,
+    NetworkType.TESTNET,
   ];
 
   static roles = [
@@ -92,27 +76,18 @@ export class Near extends Bitcoin {
 
   static defaultRPCPort = {
     [NetworkType.MAINNET]: 3030,
+    [NetworkType.TESTNET]: 3030,
   };
 
   static defaultPeerPort = {
     [NetworkType.MAINNET]: 24567,
+    [NetworkType.TESTNET]: 24567,
   };
 
   static defaultCPUs = 8;
 
   static defaultMem = 16384;
 
-  static generateConfig(client = Near.clients[0], network = NetworkType.MAINNET, peerPort = Near.defaultPeerPort[NetworkType.MAINNET], rpcPort = Near.defaultRPCPort[NetworkType.MAINNET]): string {
-    switch(client) {
-      case NodeClient.CORE:
-        return coreConfig.mainnet
-          .replace('{{PEER_PORT}}', peerPort.toString(10))
-          .replace('{{RPC_PORT}}', rpcPort.toString(10))
-          .trim();
-      default:
-        return '';
-    }
-  }
 
   static configName(data: CryptoNodeData): string {
     return 'config.json';
@@ -201,28 +176,42 @@ export class Near extends Bitcoin {
         '--network', this.dockerNetwork,
         '-p', `${this.rpcPort}:${this.rpcPort}`,
         '-p', `${this.peerPort}:${this.peerPort}`,
-
-
+        '-e', 'RUST_BACKTRACE=1',
       ];
       const tmpdir = os.tmpdir();
-      const dataDir = this.dataDir || path.join(tmpdir, uuid());
-      args = [...args, '-v', `${dataDir}:${containerDataDir}`];
-      await fs.ensureDir(dataDir);
-
-      // const walletDir = this.walletDir || path.join(tmpdir, uuid());
-      // args = [...args, '-v', `${walletDir}:${containerWalletDir}`];
-      // await fs.ensureDir(walletDir);
-
+      
       const configDir = this.configDir || path.join(tmpdir, uuid());
       await fs.ensureDir(configDir);
-      const configPath = path.join(configDir, Near.configName(this));
-      const configExists = await fs.pathExists(configPath);
-      if(!configExists)
-        await fs.writeFile(configPath, this.generateConfig(), 'utf8');
       args = [...args, '-v', `${configDir}:${containerConfigDir}`];
 
-      await this._docker.pull(this.dockerImage, str => this._logOutput(str));
+      const dataDir = this.dataDir || path.join(tmpdir, uuid());
+      //args = [...args, '-v', `${dataDir}:${containerDataDir}`];
+      await fs.ensureDir(dataDir);
 
+      const walletDir = this.walletDir || path.join(tmpdir, uuid());
+      args = [...args, '-v', `${walletDir}:${containerWalletDir}`];
+      await fs.ensureDir(walletDir);
+
+      const newArgs = args.filter(item => item !== `--restart=on-failure:${this.restartAttempts}`);
+
+      const configPath = path.join(configDir, Near.configName(this));
+      const configExists = await fs.pathExists(configPath);
+      if(!configExists){
+        await new Promise<void>(resolve => {
+          this._docker.run(
+            this.dockerImage + ` neard --home ${containerConfigDir} init --chain-id ${this.network.toLowerCase()} --account-id=node --download-config --download-genesis --boot-nodes ` + (this.network === NetworkType.MAINNET ? `${coreConfig.mainnetBootnodes}` : `${coreConfig.testnetBootnodes}`),
+            [...newArgs, '-i', '--rm'],
+            output => this._logOutput(output),
+            err => this._logError(err),
+            () => resolve(),
+          );
+        });
+        if (this.network == NetworkType.TESTNET) {
+          console.log("Downloading genesis file.")
+          await timeout(1000 * 120); // testnet downloads a ~5GB genesis file, takes a couple of minutes
+        }
+      }
+      await this._docker.pull(this.dockerImage, str => this._logOutput(str));
       await this._docker.createNetwork(this.dockerNetwork);
       const exitCode = await new Promise<number>((resolve, reject) => {
         this._docker.run(
@@ -260,7 +249,6 @@ export class Near extends Bitcoin {
     return this.instances();
   }
   
-
   generateConfig(): string {
     return Near.generateConfig(
       this.client,
@@ -295,5 +283,5 @@ export class Near extends Bitcoin {
     return this._rpcGetVersion();
   }
 
-}
 
+}
