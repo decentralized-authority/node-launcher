@@ -51,7 +51,7 @@ Version = "2.5.0"
 
 [Log]
   FileName = "harmony.log"
-  Folder = "./latest"
+  Folder = "/root/data"
   RotateCount = 0
   RotateMaxAge = 0
   RotateSize = 100
