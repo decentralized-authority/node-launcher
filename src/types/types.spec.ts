@@ -288,7 +288,7 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
         describe(`${name}.start() with ${client} client & ${network} network`, function() {
           it('should start a node', async function() {
 
-            this.timeout(360000);
+            this.timeout(480000);
 
             const id = uuid();
             node = new NodeConstructor({
@@ -322,7 +322,11 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
         describe(`${name}.stop() with ${client} client & ${network} network`, async function() {
           it('should stop a node', async function() {
 
-            this.timeout(40000);
+            if (name == 'Near' && network == NetworkType.TESTNET){
+              this.timeout(10000 * 120); // Won't respond until init promise resolved, must wait for testnet init genesis download
+            } else {
+              this.timeout(40000);
+            }
 
             node = new NodeConstructor({
               network,
@@ -340,9 +344,12 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
           });
         });
         describe(`${name} runtime methods with ${client} client & ${network} network`, function() {
-
-          this.timeout(60000 * 30);
-
+          if (name == 'Near' && network == NetworkType.TESTNET){
+            this.timeout(60000 * 50);
+          } else {
+            console.log('30..')
+            this.timeout(60000 * 30);
+          }
           let remoteNode;
 
           before(async function() {
@@ -369,6 +376,9 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
 
             // Give the node a little time to connect and get up and running
             await timeout(60000 * 1);
+            if (name == 'Near' && network == NetworkType.TESTNET){
+              await timeout(60000 * 1); // Giving another minute for near testnet genesis download
+            }
           });
 
           describe(`${name}.rpcGetVersion()`, function() {
