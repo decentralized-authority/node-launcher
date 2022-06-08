@@ -22,11 +22,11 @@ export class Fantom extends Ethereum {
           {
             version: '1.1.0-rc.5',
             clientVersion: '1.1.0-rc.5',
-            image: 'rburgett/fantom-opera:1.1.0-rc.5',
+            image: 'rburgett/fantom-opera:v1.1.0-rc.5',
             dataDir: '/root/.opera',
             walletDir: '/root/keystore',
             configDir: '/root/config',
-            networks: [NetworkType.MAINNET],
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               const { network = '' } = data;
@@ -51,6 +51,7 @@ export class Fantom extends Ethereum {
 
   static networkTypes = [
     NetworkType.MAINNET,
+    NetworkType.TESTNET,
   ];
 
   static roles = [

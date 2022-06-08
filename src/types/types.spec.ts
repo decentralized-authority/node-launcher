@@ -390,14 +390,10 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
               version.includes(node.clientVersion).should.be.true();
             });
           });
-          describe(`${name}.isRunning() while running local`, function() {
-            it('should resolve with a boolean indicating that the node is running local', async function() {
+          describe(`${name}.isRunning() while running`, function() {
+            it('should resolve with a boolean indicating that the node is running', async function() {
               const localRunningRes = await node.isRunning();
               localRunningRes.should.be.True();
-            });
-          });
-          describe(`${name}.isRunning() while running remote`, function() {
-            it('should resolve with a boolean indicating that the node is running remote', async function() {
               const remoteRunningRes = await remoteNode.isRunning();
               remoteRunningRes.should.be.True();
             });
