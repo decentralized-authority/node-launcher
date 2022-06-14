@@ -21,6 +21,8 @@ import { Harmony } from './harmony/harmony';
 import { OKEX } from './oec/okex';
 import { IOTEX } from './iotex/iotex';
 import { Polygon } from './polygon/polygon';
+import { Moonbeam } from './moonbeam/moonbeam';
+
 
 const chains: [{name: string, constructor: any}] = [
   {name: 'Bitcoin', constructor: Bitcoin},
@@ -38,6 +40,7 @@ const chains: [{name: string, constructor: any}] = [
   {name: 'OEC', constructor: OKEX},
   {name: 'IoTeX', constructor: IOTEX},
   {name: 'Polygon', constructor: Polygon},
+  {name: 'Moonbeam', constructor: Moonbeam},
 ];
 
 chains.forEach(({ name, constructor: NodeConstructor }) => {
