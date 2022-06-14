@@ -10,7 +10,6 @@ import { Bitcoin } from '../bitcoin/bitcoin';
 import { filterVersionsByNetworkType, timeout } from '../../util';
 import { FS } from '../../util/fs';
 import * as coreConfig from './config/core';
-import * as genesis from './config/genesis';
 
 
 export class Near extends Bitcoin {
@@ -35,20 +34,20 @@ export class Near extends Bitcoin {
               return ` neard --home ${this.configDir} run --network-addr 0.0.0.0:${data.peerPort} --rpc-addr 0.0.0.0:${data.rpcPort}  --boot-nodes ` + (data.network === NetworkType.MAINNET ? `${coreConfig.mainnetBootnodes}` : `${coreConfig.testnetBootnodes}`);
             },
           },
-          // {
-          //   version: '1.26.0',
-          //   clientVersion: '1.26.0',
-          //   image:'nearprotocol/nearcore:1.26.0',
-          //   dataDir: '/srv/near/data',
-          //   walletDir: '/srv/near/keystore',
-          //   configDir: '/srv/near',
-          //   networks: [NetworkType.MAINNET],
-          //   breaking: false,
-          //   generateRuntimeArgs(data: CryptoNodeData): string {
-          //     const { network = '' } = data;
-          //     return ` /usr/local/bin/run.sh`;
-          //   },
-          // },
+          {
+            version: '1.26.0',
+            clientVersion: '1.26.0',
+            image:'nearprotocol/nearcore:1.26.0',
+            dataDir: '/srv/near/data',
+            walletDir: '/srv/near/keystore',
+            configDir: '/srv/near',
+            networks: [NetworkType.MAINNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              const { network = '' } = data;
+              return ` /usr/local/bin/run.sh`;
+            },
+          },
         ];
         break;
       default:
