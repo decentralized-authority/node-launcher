@@ -21,6 +21,7 @@ import { Harmony } from './harmony/harmony';
 import { OKEX } from './oec/okex';
 import { IOTEX } from './iotex/iotex';
 import { Polygon } from './polygon/polygon';
+import { Fantom } from './fantom/fantom';
 
 const chains: [{name: string, constructor: any}] = [
   {name: 'Bitcoin', constructor: Bitcoin},
@@ -38,6 +39,7 @@ const chains: [{name: string, constructor: any}] = [
   {name: 'OEC', constructor: OKEX},
   {name: 'IoTeX', constructor: IOTEX},
   {name: 'Polygon', constructor: Polygon},
+  {name: 'Fantom', constructor: Fantom},
 ];
 
 chains.forEach(({ name, constructor: NodeConstructor }) => {
@@ -367,6 +369,11 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
 
             // Give the node a little time to connect and get up and running
             await timeout(60000 * 1);
+            if (node.name == 'Fantom'){
+              // Fantom's opera applies genesis state for 6-8 minutes
+              // rpcGetValue and other api requests will timeout until it's finished
+              await timeout(60000 * 8);
+            }
           });
 
           describe(`${name}.rpcGetVersion()`, function() {
