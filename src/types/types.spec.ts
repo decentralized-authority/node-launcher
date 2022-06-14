@@ -287,9 +287,11 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
       NodeConstructor.networkTypes.forEach(network => {
         describe(`${name}.start() with ${client} client & ${network} network`, function() {
           it('should start a node', async function() {
-
-            this.timeout(480000);
-
+            if (name == 'Near' && network == NetworkType.TESTNET){
+              this.timeout(480000);
+            } else {
+              this.timeout(360000);
+            }
             const id = uuid();
             node = new NodeConstructor({
               id,
@@ -385,6 +387,7 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
             it('should resolve with the client version', async function() {
               const version = await node.rpcGetVersion();
               console.log(version);
+              console.log(node.clientVersion);
               version.should.be.a.String();
               version.includes(node.clientVersion).should.be.true();
             });
@@ -393,6 +396,7 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
             it('should resolve with the remote client version', async function() {
               const version = await remoteNode.rpcGetVersion();
               console.log(version);
+              console.log(node.clientVersion);
               version.should.be.a.String();
               version.includes(node.clientVersion).should.be.true();
             });
