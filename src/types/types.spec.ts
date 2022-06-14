@@ -24,21 +24,21 @@ import { Polygon } from './polygon/polygon';
 import { Near } from './near/near';
 
 const chains: [{name: string, constructor: any}] = [
-  // {name: 'Bitcoin', constructor: Bitcoin},
-  // {name: 'BitcoinCash', constructor: BitcoinCash},
-  // {name: 'Dash', constructor: Dash},
-  // {name: 'LBRY', constructor: LBRY},
-  // {name: 'Litecoin', constructor: Litecoin},
-  // {name: 'Ethereum', constructor: Ethereum},
-  // {name: 'BinanceSC', constructor: BinanceSC},
-  // {name: 'Xdai', constructor: Xdai},
-  // {name: 'Avalanche', constructor: Avalanche},
-  // {name: 'Pocket', constructor: Pocket},
-  // {name: 'Fuse', constructor: Fuse},
-  // {name: 'Harmony', constructor: Harmony},
-  // {name: 'OEC', constructor: OKEX},
-  // {name: 'IoTeX', constructor: IOTEX},
-  // {name: 'Polygon', constructor: Polygon},
+  {name: 'Bitcoin', constructor: Bitcoin},
+  {name: 'BitcoinCash', constructor: BitcoinCash},
+  {name: 'Dash', constructor: Dash},
+  {name: 'LBRY', constructor: LBRY},
+  {name: 'Litecoin', constructor: Litecoin},
+  {name: 'Ethereum', constructor: Ethereum},
+  {name: 'BinanceSC', constructor: BinanceSC},
+  {name: 'Xdai', constructor: Xdai},
+  {name: 'Avalanche', constructor: Avalanche},
+  {name: 'Pocket', constructor: Pocket},
+  {name: 'Fuse', constructor: Fuse},
+  {name: 'Harmony', constructor: Harmony},
+  {name: 'OEC', constructor: OKEX},
+  {name: 'IoTeX', constructor: IOTEX},
+  {name: 'Polygon', constructor: Polygon},
   {name: 'Near', constructor: Near},
 ];
 
@@ -349,7 +349,6 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
           if (name == 'Near' && network == NetworkType.TESTNET){
             this.timeout(60000 * 50);
           } else {
-            console.log('30..')
             this.timeout(60000 * 30);
           }
           let remoteNode;
@@ -386,8 +385,6 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
           describe(`${name}.rpcGetVersion()`, function() {
             it('should resolve with the client version', async function() {
               const version = await node.rpcGetVersion();
-              console.log(version);
-              console.log(node.clientVersion);
               version.should.be.a.String();
               version.includes(node.clientVersion).should.be.true();
             });
@@ -395,8 +392,6 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
           describe(`Remote ${name}.rpcGetVersion()`, function() {
             it('should resolve with the remote client version', async function() {
               const version = await remoteNode.rpcGetVersion();
-              console.log(version);
-              console.log(node.clientVersion);
               version.should.be.a.String();
               version.includes(node.clientVersion).should.be.true();
             });
