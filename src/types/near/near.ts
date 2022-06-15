@@ -1,0 +1,320 @@
+import { CryptoNodeData, VersionDockerImage } from '../../interfaces/crypto-node';
+import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role, Status } from '../../constants';
+import { Docker } from '../../util/docker';
+import { ChildProcess } from 'child_process';
+import { v4 as uuid} from 'uuid';
+import request from 'superagent';
+import path from 'path';
+import os from 'os';
+import { Bitcoin } from '../bitcoin/bitcoin';
+import { filterVersionsByNetworkType, timeout } from '../../util';
+import { FS } from '../../util/fs';
+import * as coreConfig from './config/core';
+
+
+export class Near extends Bitcoin {
+
+  static versions(client: string, networkType: string): VersionDockerImage[] {
+    client = client || Near.clients[0];
+    let versions: VersionDockerImage[];
+    switch(client) {
+      case NodeClient.CORE:
+        versions = [
+          {
+            version: '1.26.1',
+            clientVersion: '1.26.1',
+            image: 'nearprotocol/nearcore:1.26.1',
+            dataDir: '/root/near/home',
+            walletDir: '/root/near/keystore',
+            configDir: '/root/near/config',
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              const { network = '' } = data;
+              return ` neard --home ${this.dataDir} run --network-addr 0.0.0.0:${data.peerPort} --rpc-addr 0.0.0.0:${data.rpcPort}  --boot-nodes ` + (data.network === NetworkType.MAINNET ? `${coreConfig.mainnetBootnodes}` : `${coreConfig.testnetBootnodes}`);
+            },
+          },
+          {
+            version: '1.26.0',
+            clientVersion: '1.26.0',
+            image:'nearprotocol/nearcore:1.26.0',
+            dataDir: '/srv/near',
+            walletDir: '/srv/near/keystore',
+            configDir: '/srv/near',
+            networks: [NetworkType.MAINNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              const { network = '' } = data;
+              return ` /usr/local/bin/run.sh`;
+            },
+          },
+        ];
+        break;
+      default:
+        versions = [];
+    }
+    return filterVersionsByNetworkType(networkType, versions);
+  }
+
+  static clients = [
+    NodeClient.CORE,
+  ];
+
+  static nodeTypes = [
+    NodeType.FULL,
+  ];
+
+  static networkTypes = [
+    NetworkType.MAINNET,
+    NetworkType.TESTNET,
+  ];
+
+  static roles = [
+    Role.NODE,
+  ];
+
+  static defaultRPCPort = {
+    [NetworkType.MAINNET]: 3030,
+    [NetworkType.TESTNET]: 3030,
+  };
+
+  static defaultPeerPort = {
+    [NetworkType.MAINNET]: 24567,
+    [NetworkType.TESTNET]: 24567,
+  };
+
+  static defaultCPUs = 8;
+
+  static defaultMem = 16384;
+
+  static generateConfig(client: Near|string = Near.clients[0], network = NetworkType.MAINNET, peerPort = Near.defaultPeerPort[NetworkType.MAINNET], rpcPort = Near.defaultRPCPort[NetworkType.MAINNET], keystore: string, version: string): string {
+    let bootnodes: string;
+    let config: string;
+    if (typeof client !== 'string') {
+      network = client.network || network
+      peerPort = client.peerPort || peerPort;
+      rpcPort = client.rpcPort || rpcPort;
+      version = client.version || version
+      keystore = client.dataDir
+    }
+    switch(network) {
+      case NetworkType.MAINNET:
+        bootnodes = coreConfig.mainnetBootnodes;
+      case NetworkType.TESTNET:
+        bootnodes = coreConfig.testnetBootnodes;
+      default:
+        bootnodes = '';
+    }
+    switch(version) {
+      case '1.26.1':
+        config = coreConfig._1261;
+        break;
+      case '1.26.0':
+        config = coreConfig._1260;
+        break;
+      default:
+        config = coreConfig._1261;
+    }
+    return config
+          .replace('{{PEER_PORT}}', peerPort.toString(10))
+          .replace('{{RPC_PORT}}', rpcPort.toString(10))
+          .replace(/{{KEYSTORE}}/g, keystore)
+          .replace('{{BOOTNODES}}', bootnodes);
+  }
+
+  static configName(data: CryptoNodeData): string {
+    return 'config.json';
+  }
+
+  id: string;
+  ticker = 'near';
+  name = 'Near';
+  version: string;
+  clientVersion: string;
+  archival = false;
+  dockerImage: string;
+  network: string;
+  peerPort: number;
+  rpcPort: number;
+  rpcUsername: string;
+  rpcPassword: string;
+  client: string;
+  dockerCPUs = Near.defaultCPUs;
+  dockerMem = Near.defaultMem;
+  dockerNetwork = defaultDockerNetwork;
+  dataDir = '';
+  walletDir = '';
+  configDir = '';
+  remote = false;
+  remoteDomain = '';
+  remoteProtocol = '';
+  role = Near.roles[0];
+  dockerName = '';
+
+  constructor(data: CryptoNodeData, docker?: Docker) {
+    super(data, docker);
+    this.id = data.id || uuid();
+    this.network = data.network || NetworkType.MAINNET;
+    this.peerPort = data.peerPort || Near.defaultPeerPort[this.network];
+    this.rpcPort = data.rpcPort || Near.defaultRPCPort[this.network];
+    this.rpcUsername = data.rpcUsername || '';
+    this.rpcPassword = data.rpcPassword || '';
+    this.client = data.client || Near.clients[0];
+    this.dockerCPUs = data.dockerCPUs || this.dockerCPUs;
+    this.dockerMem = data.dockerMem || this.dockerMem;
+    this.dockerNetwork = data.dockerNetwork || this.dockerNetwork;
+    this.dataDir = data.dataDir || this.dataDir;
+    this.walletDir = data.walletDir || this.walletDir;
+    this.configDir = data.configDir || this.configDir;
+    this.createdAt = data.createdAt || this.createdAt;
+    this.updatedAt = data.updatedAt || this.updatedAt;
+    this.remote = data.remote || this.remote;
+    this.remoteDomain = data.remoteDomain || this.remoteDomain;
+    this.remoteProtocol = data.remoteProtocol || this.remoteProtocol;
+    const versions = Near.versions(this.client, this.network);
+    this.version = data.version || (versions && versions[0] ? versions[0].version : '');
+    const versionObj = versions.find(v => v.version === this.version) || versions[0] || {};
+    this.clientVersion = data.clientVersion || versionObj.clientVersion || '';
+    this.dockerImage = this.remote ? '' : data.dockerImage ? data.dockerImage : (versionObj.image || '');
+    this.archival = data.archival || this.archival;
+    this.role = data.role || this.role;
+    this.restartAttempts = data.restartAttempts || this.restartAttempts;
+    if(docker) {
+      this._docker = docker;
+      this._fs = new FS(docker);
+    }
+  }
+
+  async start(): Promise<ChildProcess[]> {
+    const fs = this._fs;
+    const versions = Near.versions(this.client, this.network);
+    const versionData = versions.find(({ version }) => version === this.version) || versions[0];
+    if(!versionData)
+      throw new Error(`Unknown version ${this.version}`);
+
+    const running = await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.id);
+
+    if(!running) {
+      const {
+        dataDir: containerDataDir,
+        walletDir: containerWalletDir,
+        configDir: containerConfigDir,
+      } = versionData;
+      let args = [
+        '-d',
+        `--restart=on-failure:${this.restartAttempts}`,
+        '--memory', this.dockerMem.toString(10) + 'MB',
+        '--cpus', this.dockerCPUs.toString(10),
+        '--name', this.id,
+        '--network', this.dockerNetwork,
+        '-p', `${this.rpcPort}:${this.rpcPort}`,
+        '-p', `${this.peerPort}:${this.peerPort}`,
+        '-e', 'RUST_BACKTRACE=1',
+      ];
+      const tmpdir = os.tmpdir();
+      
+      const configDir = this.configDir || path.join(tmpdir, uuid());
+      await fs.ensureDir(configDir);
+      //args = [...args, '-v', `${configDir}:${containerConfigDir}`];
+
+      const dataDir = this.dataDir || path.join(tmpdir, uuid());
+      args = [...args, '-v', `${dataDir}:${containerDataDir}`];
+      await fs.ensureDir(dataDir);
+
+      const walletDir = this.walletDir || path.join(tmpdir, uuid());
+      args = [...args, '-v', `${walletDir}:${containerWalletDir}`];
+      await fs.ensureDir(walletDir);
+
+      const newArgs = args.filter(item => item !== `--restart=on-failure:${this.restartAttempts}`);
+
+      const keyPath = path.join(configDir, 'node_key.json');
+      const keyExists = await fs.pathExists(keyPath);
+      if(!keyExists){
+        await new Promise<void>(resolve => {
+          this._docker.run(
+            this.dockerImage + ` neard --home ${containerDataDir} init --chain-id ${this.network.toLowerCase()} --account-id=node --download-config --download-genesis --boot-nodes ` + (this.network === NetworkType.MAINNET ? `${coreConfig.mainnetBootnodes}` : `${coreConfig.testnetBootnodes}`),
+            [...newArgs, '-i', '--rm'],
+            output => this._logOutput(output),
+            err => this._logError(err),
+            () => resolve(),
+          );
+        });
+        if (this.network == NetworkType.TESTNET) {
+          console.log("Downloading genesis file.")
+          await timeout(1000 * 120); // testnet downloads a ~5GB genesis file, takes a couple of minutes
+        }
+        await timeout(1000);
+        await fs.copy(path.join(dataDir, 'validator_key.json'), path.join(walletDir, 'validator_key.json'));
+        await fs.copy(path.join(dataDir, 'node_key.json'), path.join(walletDir, 'node_key.json'));
+        await fs.writeFile(path.join(configDir, 'config.json'), this.generateConfig(), 'utf8');
+      }
+      await this._docker.pull(this.dockerImage, str => this._logOutput(str));
+      await this._docker.createNetwork(this.dockerNetwork);
+      const exitCode = await new Promise<number>((resolve, reject) => {
+        this._docker.run(
+          this.dockerImage + versionData.generateRuntimeArgs(this),
+          args,
+          output => this._logOutput(output),
+          err => {
+            this._logError(err);
+            reject(err);
+          },
+          code => {
+            resolve(code);
+          },
+        );
+      });
+      if(exitCode !== 0)
+        throw new Error(`Docker run for ${this.id} with ${this.dockerImage} failed with exit code ${exitCode}`);
+    }
+
+    const instance = this._docker.attach(
+      this.id,
+      output => this._logOutput(output),
+      err => {
+        this._logError(err);
+      },
+      code => {
+        this._logClose(code);
+      },
+    );
+
+    this._instance = instance;
+    this._instances = [
+      instance,
+    ];
+    return this.instances();
+  }
+  
+  generateConfig(): string {
+    return Near.generateConfig(this, this.network, this.rpcPort, this.peerPort, this.dataDir, this.version);
+  }
+
+  async _rpcGetVersion(): Promise<string> {
+    try {
+      this._runCheck('rpcGetVersion');
+      const { body } = await request
+        .post(this.endpoint())
+        .set('Accept', 'application/json')
+        .auth(this.rpcUsername, this.rpcPassword)
+        .timeout(this._requestTimeout)
+        .send({
+          id: '',
+          jsonrpc: '2.0',
+          method: 'status',
+          params: [],
+        });
+      const { result = '' } = body;
+      return result.version.version;
+    } catch(err) {
+      this._logError(err);
+      return '';
+    }
+  }
+
+  async rpcGetVersion(): Promise<string> {
+    return this._rpcGetVersion();
+  }
+
+
+}
