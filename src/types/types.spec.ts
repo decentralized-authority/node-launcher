@@ -22,6 +22,8 @@ import { OKEX } from './oec/okex';
 import { IOTEX } from './iotex/iotex';
 import { Polygon } from './polygon/polygon';
 import { Moonbeam } from './moonbeam/moonbeam';
+import { Moonriver } from './moonriver/moonriver';
+
 
 
 const chains: [{name: string, constructor: any}] = [
@@ -41,6 +43,7 @@ const chains: [{name: string, constructor: any}] = [
   {name: 'IoTeX', constructor: IOTEX},
   {name: 'Polygon', constructor: Polygon},
   {name: 'Moonbeam', constructor: Moonbeam},
+  {name: 'Moonriver', constructor: Moonriver},
 ];
 
 chains.forEach(({ name, constructor: NodeConstructor }) => {

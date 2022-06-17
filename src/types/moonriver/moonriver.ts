@@ -6,15 +6,15 @@ import { v4 as uuid} from 'uuid';
 import request from 'superagent';
 import path from 'path';
 import os from 'os';
-import { Bitcoin } from '../bitcoin/bitcoin';
+import { Moonbeam } from '../moonbeam/moonbeam';
 import { filterVersionsByNetworkType, timeout } from '../../util';
 import { FS } from '../../util/fs';
 
 
-export class Moonbeam extends Bitcoin {
+export class Moonriver extends Moonbeam {
 
   static versions(client: string, networkType: string): VersionDockerImage[] {
-    client = client || Moonbeam.clients[0];
+    client = client || Moonriver.clients[0];
     let versions: VersionDockerImage[];
     switch(client) {
       case NodeClient.CORE:
@@ -26,7 +26,7 @@ export class Moonbeam extends Bitcoin {
             dataDir: '/moonbeam/data', 
             walletDir: '/moonbeam/keystore',
             configDir: '/moonbeam/config',
-            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            networks: [NetworkType.MAINNET],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               const { network = '' } = data;
@@ -41,7 +41,7 @@ export class Moonbeam extends Bitcoin {
               --db-cache 8192 \
               --base-path ${this.dataDir} \
               --keystore-path ${this.walletDir} \
-              --chain ` +(network === NetworkType.MAINNET ? 'moonbeam' : 'alphanet')  + ` \
+              --chain moonriver \
               --sync full \
               --name NodeLauncher \
               `;
@@ -65,7 +65,6 @@ export class Moonbeam extends Bitcoin {
 
   static networkTypes = [
     NetworkType.MAINNET,
-    NetworkType.TESTNET,
   ];
 
   static roles = [
@@ -74,12 +73,10 @@ export class Moonbeam extends Bitcoin {
 
   static defaultRPCPort = {
     [NetworkType.MAINNET]: 9933,
-    [NetworkType.TESTNET]: 9933,
   };
 
   static defaultPeerPort = {
     [NetworkType.MAINNET]: 30333,
-    [NetworkType.TESTNET]: 30333,
   };
 
   static defaultCPUs = 8;
@@ -87,8 +84,8 @@ export class Moonbeam extends Bitcoin {
   static defaultMem = 16384;
 
   id: string;
-  ticker = 'glmr';
-  name = 'Moonbeam';
+  ticker = 'movr';
+  name = 'Moonriver';
   version: string;
   clientVersion: string;
   archival = false;
@@ -99,8 +96,8 @@ export class Moonbeam extends Bitcoin {
   rpcUsername: string;
   rpcPassword: string;
   client: string;
-  dockerCPUs = Moonbeam.defaultCPUs;
-  dockerMem = Moonbeam.defaultMem;
+  dockerCPUs = Moonriver.defaultCPUs;
+  dockerMem = Moonriver.defaultMem;
   dockerNetwork = defaultDockerNetwork;
   dataDir = '';
   walletDir = '';
@@ -108,17 +105,17 @@ export class Moonbeam extends Bitcoin {
   remote = false;
   remoteDomain = '';
   remoteProtocol = '';
-  role = Moonbeam.roles[0];
+  role = Moonriver.roles[0];
 
   constructor(data: CryptoNodeData, docker?: Docker) {
     super(data, docker);
     this.id = data.id || uuid();
     this.network = data.network || NetworkType.MAINNET;
-    this.peerPort = data.peerPort || Moonbeam.defaultPeerPort[this.network];
-    this.rpcPort = data.rpcPort || Moonbeam.defaultRPCPort[this.network];
+    this.peerPort = data.peerPort || Moonriver.defaultPeerPort[this.network];
+    this.rpcPort = data.rpcPort || Moonriver.defaultRPCPort[this.network];
     this.rpcUsername = data.rpcUsername || '';
     this.rpcPassword = data.rpcPassword || '';
-    this.client = data.client || Moonbeam.clients[0];
+    this.client = data.client || Moonriver.clients[0];
     this.dockerCPUs = data.dockerCPUs || this.dockerCPUs;
     this.dockerMem = data.dockerMem || this.dockerMem;
     this.dockerNetwork = data.dockerNetwork || this.dockerNetwork;
@@ -130,7 +127,7 @@ export class Moonbeam extends Bitcoin {
     this.remote = data.remote || this.remote;
     this.remoteDomain = data.remoteDomain || this.remoteDomain;
     this.remoteProtocol = data.remoteProtocol || this.remoteProtocol;
-    const versions = Moonbeam.versions(this.client, this.network);
+    const versions = Moonriver.versions(this.client, this.network);
     this.version = data.version || (versions && versions[0] ? versions[0].version : '');
     const versionObj = versions.find(v => v.version === this.version) || versions[0] || {};
     this.clientVersion = data.clientVersion || versionObj.clientVersion || '';
@@ -146,7 +143,7 @@ export class Moonbeam extends Bitcoin {
 
   async start(): Promise<ChildProcess[]> {
     const fs = this._fs;
-    const versions = Moonbeam.versions(this.client, this.network);
+    const versions = Moonriver.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
@@ -181,7 +178,7 @@ export class Moonbeam extends Bitcoin {
 
       const configDir = this.configDir || path.join(tmpdir, uuid());
       await fs.ensureDir(configDir);
-      const configPath = path.join(configDir, Moonbeam.configName(this));
+      const configPath = path.join(configDir, Moonriver.configName(this));
       const configExists = await fs.pathExists(configPath);
 
       args = [...args, '-v', `${configDir}:${containerConfigDir}`];
@@ -224,37 +221,5 @@ export class Moonbeam extends Bitcoin {
     ];
     return this.instances();
   }
-
-  async _rpcGetVersion(): Promise<string> {
-    try {
-      this._runCheck('rpcGetVersion');
-      const { body } = await request
-        .post(this.endpoint())
-        .set('Accept', 'application/json')
-        .auth(this.rpcUsername, this.rpcPassword)
-        .timeout(this._requestTimeout)
-        .send({
-          id: '',
-          jsonrpc: '2.0',
-          method: 'system_version',
-          params: [],
-        });
-      const { result = '' } = body;
-      let matches = result.match(/(\d+\.\d+\.\d+)/);
-      if(matches && matches.length > 1) {
-        return matches[0];
-      } else {
-        return '';
-      }
-    } catch(err) {
-      this._logError(err);
-      return '';
-    }
-  }
-
-  async rpcGetVersion(): Promise<string> {
-    return this._rpcGetVersion();
-  }
-
 
 }
