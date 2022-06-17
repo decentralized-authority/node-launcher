@@ -26,7 +26,7 @@ export class Moonbeam extends Bitcoin {
             dataDir: '/moonbeam/data', 
             walletDir: '/moonbeam/keystore',
             configDir: '/moonbeam/config',
-            networks: [NetworkType.MAINNET],
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               const { network = '' } = data;
@@ -38,10 +38,10 @@ export class Moonbeam extends Bitcoin {
               --wasm-execution compiled \
               --pruning=archive \
               --state-cache-size 0 \
-              --db-cache 8192\
+              --db-cache 8192 \
               --base-path ${this.dataDir} \
               --keystore-path ${this.walletDir} \
-              --chain moonbeam \
+              --chain ` +(network === NetworkType.MAINNET ? 'moonbeam' : 'moonriver')  + ` \
               --sync full \
               --name NodeLauncher \
               `;
@@ -65,6 +65,7 @@ export class Moonbeam extends Bitcoin {
 
   static networkTypes = [
     NetworkType.MAINNET,
+    NetworkType.TESTNET,
   ];
 
   static roles = [
@@ -73,10 +74,12 @@ export class Moonbeam extends Bitcoin {
 
   static defaultRPCPort = {
     [NetworkType.MAINNET]: 9933,
+    [NetworkType.TESTNET]: 9933,
   };
 
   static defaultPeerPort = {
     [NetworkType.MAINNET]: 30333,
+    [NetworkType.TESTNET]: 30333,
   };
 
   static defaultCPUs = 8;
@@ -181,7 +184,7 @@ export class Moonbeam extends Bitcoin {
       const configPath = path.join(configDir, Moonbeam.configName(this));
       const configExists = await fs.pathExists(configPath);
 
-      //args = [...args, '-v', `${configDir}:${containerConfigDir}`];
+      args = [...args, '-v', `${configDir}:${containerConfigDir}`];
 
       await this._docker.pull(this.dockerImage, str => this._logOutput(str));
 
@@ -220,14 +223,6 @@ export class Moonbeam extends Bitcoin {
       instance,
     ];
     return this.instances();
-  }
-
-  generateConfig(): string {
-    return Moonbeam.generateConfig(
-      this.client,
-      this.network,
-      this.peerPort,
-      this.rpcPort);
   }
 
   async _rpcGetVersion(): Promise<string> {
