@@ -20,6 +20,20 @@ export class Fantom extends Ethereum {
       case NodeClient.CORE:
         versions = [
           {
+            version: '1.1.1-rc.1',
+            clientVersion: '1.1.1-rc.1',
+            image: 'icculp/fantom-opera:v1.1.1-rc.1',
+            dataDir: '/root/.opera',
+            walletDir: '/root/keystore',
+            configDir: '/root/config',
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              const { network = '' } = data;
+              return ` --genesis=/opt/genesis/${network.toLowerCase()}.g --config=${path.join(this.configDir, Fantom.configName(data))}`;
+            },
+          },
+          {
             version: '1.1.0-rc.5',
             clientVersion: '1.1.0-rc.5',
             image: 'rburgett/fantom-opera:v1.1.0-rc.5',
@@ -72,10 +86,21 @@ export class Fantom extends Ethereum {
 
   static defaultMem = 16384;
 
-  static generateConfig(client = Fantom.clients[0], network = NetworkType.MAINNET, peerPort = Fantom.defaultPeerPort[NetworkType.MAINNET], rpcPort = Fantom.defaultRPCPort[NetworkType.MAINNET]): string {
+  static generateConfig(client = Fantom.clients[0], version: string, peerPort = Fantom.defaultPeerPort[NetworkType.MAINNET], rpcPort = Fantom.defaultRPCPort[NetworkType.MAINNET]): string {
+    let config: string;
+    switch(version) {
+      case '1.1.1-rc.1':
+        config = coreConfig._111rc1;
+        break;
+      case '1.1.0-rc.5':
+        config = coreConfig._110rc5;
+        break;
+      default:
+        config = coreConfig._111rc1;
+    }
     switch(client) {
       case NodeClient.CORE:
-        return coreConfig.mainnet
+        return config
           .replace(/{{PEER_PORT}}/g, peerPort.toString(10))
           .replace(/{{RPC_PORT}}/g, rpcPort.toString(10))
           .trim();
@@ -231,8 +256,8 @@ export class Fantom extends Ethereum {
   generateConfig(): string {
     return Fantom.generateConfig(
       this.client,
-      this.network,
+      this.version,
       this.peerPort,
-      this.rpcPort);
+      this.rpcPort,);
   }
 }
