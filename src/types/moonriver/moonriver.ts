@@ -22,7 +22,7 @@ export class Moonriver extends Moonbeam {
           {
             version: '0.24.0',
             clientVersion: '0.24.0',
-            image: 'purestake/moonbeam:v0.24.0',
+            image: 'icculp/moonbeam:v0.24.0',
             dataDir: '/moonbeam/data', 
             walletDir: '/moonbeam/keystore',
             configDir: '/moonbeam/config',
@@ -165,7 +165,6 @@ export class Moonriver extends Moonbeam {
         '--network', this.dockerNetwork,
         '-p', `${this.rpcPort}:${this.rpcPort}`,
         '-p', `${this.peerPort}:${this.peerPort}`,
-        '--user', 'root:root'
       ];
       const tmpdir = os.tmpdir();
       const dataDir = this.dataDir || path.join(tmpdir, uuid());
