@@ -525,7 +525,7 @@ export class Pocket extends Bitcoin {
     return path.join(this.configDir, 'chains.json');
   }
 
-  async stakeValidator(amount: string, fee: string, password: string): Promise<string> {
+  async stakeValidator(amount: string, password: string): Promise<string> {
     const versions = Pocket.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
     if(!versionData)
@@ -539,6 +539,7 @@ export class Pocket extends Bitcoin {
     const chainsJson = await this._fs.readFile(this.pocketChainsPath(), 'utf8');
     const chainsData: {id: string}[] = JSON.parse(chainsJson);
     const chains = chainsData.map(c => c.id);
+    const fee = 10000;
     const command = `nodes stake custodial ${this.address} ${amount} ${chains.join(',')} https://${this.domain}:443 ${this.network.toLowerCase()} ${fee} ${this.network !== NetworkType.TESTNET} --pwd ${password}`;
     const txPatt = /[0-9a-f]{64}/i;
     let outputStr = '';

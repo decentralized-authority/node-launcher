@@ -590,4 +590,35 @@ export class Fuse extends Ethereum {
     }
   }
 
+  async stakeValidator(amount: string, password: string): Promise<string> {
+    try {
+      const web3 = new Web3(`http://localhost:${this.rpcPort}`);
+      const account = web3.eth.accounts.decrypt(JSON.parse(this.privateKeyEncrypted), password);
+      web3.eth.accounts.wallet.add(account);
+      let to: string;
+      switch(this.network) {
+        case NetworkType.MAINNET:
+          to = '0x3014ca10b91cb3D0AD85fEf7A3Cb95BCAc9c0f79';
+          break;
+        case NetworkType.TESTNET:
+          to = '0xC8c3a332f9e4CE6bfFFcf967026cB006Db2311c7';
+          break;
+        default:
+          throw new Error(`Unable to stake for network ${this.network}`);
+      }
+      const data = {
+        from: this.address,
+        to,
+        value: web3.utils.toWei(amount),
+        gasPrice:'1000000000',
+        gas:'1000000',
+      };
+      const { transactionHash } = await web3.eth.sendTransaction(data);
+      return transactionHash;
+    } catch(err) {
+      this._logError(err);
+      throw err;
+    }
+  }
+
 }
