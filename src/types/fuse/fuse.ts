@@ -1,3 +1,5 @@
+/* eslint @typescript-eslint/require-await: 1 */
+
 import { Ethereum } from '../ethereum/ethereum';
 import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role } from '../../constants';
 import { v4 as uuid } from 'uuid';
@@ -9,6 +11,14 @@ import path from 'path';
 import { filterVersionsByNetworkType, timeout } from '../../util';
 import Web3 from 'web3';
 import { FS } from '../../util/fs';
+
+interface FuseNodeData extends CryptoNodeData {
+  publicKey: string
+  privateKeyEncrypted: string
+  address: string
+  domain: string
+  passwordPath: string
+}
 
 const testnetBootnodes = [
   'enode://aaa92938fb3b4b073ea811894376d597a3feef30ce999a8bee617c24b7acd4021f16f94856e5c48f25b4fde999fc5df27de73d2c394e6c46cc5d44e012dd9e35@3.123.228.59:30303',
@@ -94,7 +104,7 @@ export class Fuse extends Ethereum {
             passwordPath: '/root/pass.pwd',
             networks: [NetworkType.TESTNET],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(data: FuseNodeData): string {
               return ` --no-warp --config=${path.join(this.configDir, Fuse.configName(data))}`;
             },
           },
@@ -110,7 +120,7 @@ export class Fuse extends Ethereum {
             passwordPath: '/root/pass.pwd',
             networks: [NetworkType.TESTNET],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(data: FuseNodeData): string {
               return ` --no-warp --config=${path.join(this.configDir, Fuse.configName(data))} --bootnodes ${testnetBootnodes}`;
             },
           },
@@ -126,7 +136,7 @@ export class Fuse extends Ethereum {
             passwordPath: '/root/pass.pwd',
             networks: [NetworkType.MAINNET],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(data: FuseNodeData): string {
               return ` --no-warp --config=${path.join(this.configDir, Fuse.configName(data))}`;
             },
           },
@@ -142,7 +152,7 @@ export class Fuse extends Ethereum {
             passwordPath: '/root/pass.pwd',
             networks: [NetworkType.MAINNET],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(data: FuseNodeData): string {
               return ` --config=${path.join(this.configDir, Fuse.configName(data))}`;
             },
           },
@@ -216,7 +226,7 @@ export class Fuse extends Ethereum {
     }
   }
 
-  static configName(data: CryptoNodeData): string {
+  static configName(data: FuseNodeData): string {
     return 'config.toml';
   }
 
@@ -240,12 +250,13 @@ export class Fuse extends Ethereum {
   walletDir = '';
   configDir = '';
   passwordPath = '';
-  key: any;
-  keyPass = '';
+  publicKey = '';
+  privateKeyEncrypted = '';
   address = '';
   role = Fuse.roles[0];
+  domain = '';
 
-  constructor(data: CryptoNodeData, docker?: Docker) {
+  constructor(data: FuseNodeData, docker?: Docker) {
     super(data, docker);
     this.id = data.id || uuid();
     this.network = data.network || NetworkType.MAINNET;
@@ -273,29 +284,28 @@ export class Fuse extends Ethereum {
     this.dockerImage = this.remote ? '' : data.dockerImage ? data.dockerImage : (versionObj.image || '');
     this.archival = data.archival || this.archival;
     this.role = data.role || this.role;
-    this.key = data.key || this.key;
-    this.keyPass = data.keyPass || this.keyPass;
     this.address = data.address || this.address;
-    if(this.role === Role.VALIDATOR && !this.key)
-      this.createAccount();
+    this.publicKey = data.publicKey || this.publicKey;
+    this.privateKeyEncrypted = data.privateKeyEncrypted || this.privateKeyEncrypted;
+    this.domain = data.domain || this.domain;
     if(docker) {
       this._docker = docker;
       this._fs = new FS(docker);
     }
   }
 
-  toObject(): CryptoNodeData {
-    let keys = Object
-      .keys(this)
-      .filter(key => !/^_/.test(key));
-    // @ts-ignore
-    keys = keys.filter(key => typeof this[key] !== 'function' && typeof this[key] !== 'undefined');
-    // @ts-ignore
-    const dataObj = keys.reduce((obj: any, key) => ({...obj, [key]: this[key]}), {});
-    return dataObj as CryptoNodeData;
+  toObject(): FuseNodeData {
+    return {
+      ...this._toObject(),
+      domain: this.domain,
+      address: this.address,
+      privateKeyEncrypted: this.privateKeyEncrypted,
+      publicKey: this.publicKey,
+      passwordPath: this.passwordPath,
+    };
   }
 
-  async start(): Promise<ChildProcess[]> {
+  async start(password?: string): Promise<ChildProcess[]> {
     const fs = this._fs;
     const versions = Fuse.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
@@ -304,51 +314,63 @@ export class Fuse extends Ethereum {
 
     const running = await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.id);
 
+    const {
+      dataDir: containerDataDir,
+      walletDir: containerWalletDir,
+      configDir: containerConfigDir,
+      passwordPath: containerPasswordPath,
+    } = versionData;
+
+    let args = [
+      '--memory', this.dockerMem.toString(10) + 'MB',
+      '--cpus', this.dockerCPUs.toString(10),
+      '--name', this.id,
+      '--network', this.dockerNetwork,
+      '-p', `${this.rpcPort}:${this.rpcPort}`,
+      '-p', `${this.peerPort}:${this.peerPort}/tcp`,
+      '-p', `${this.peerPort}:${this.peerPort}/udp`,
+      '--entrypoint', '/usr/local/bin/parity',
+    ];
+
+    const tmpdir = os.tmpdir();
+    const dataDir = this.dataDir || path.join(tmpdir, uuid());
+    args = [...args, '-v', `${dataDir}:${containerDataDir}`];
+    await fs.ensureDir(dataDir);
+
+    const walletDir = this.walletDir || path.join(tmpdir, uuid());
+    args = [...args, '-v', `${walletDir}:${containerWalletDir}`];
+    await fs.ensureDir(walletDir);
+
+    const configDir = this.configDir || path.join(tmpdir, uuid());
+    await fs.ensureDir(configDir);
+
     if(!running) {
-      const {
-        dataDir: containerDataDir,
-        walletDir: containerWalletDir,
-        configDir: containerConfigDir,
-        passwordPath: containerPasswordPath,
-      } = versionData;
-      let args = [
-        '--memory', this.dockerMem.toString(10) + 'MB',
-        '--cpus', this.dockerCPUs.toString(10),
-        '--name', this.id,
-        '--network', this.dockerNetwork,
-        '-p', `${this.rpcPort}:${this.rpcPort}`,
-        '-p', `${this.peerPort}:${this.peerPort}/tcp`,
-        '-p', `${this.peerPort}:${this.peerPort}/udp`,
-        '--entrypoint', '/usr/local/bin/parity',
-      ];
-      const tmpdir = os.tmpdir();
-      const dataDir = this.dataDir || path.join(tmpdir, uuid());
-      args = [...args, '-v', `${dataDir}:${containerDataDir}`];
-      await fs.ensureDir(dataDir);
-
-      const walletDir = this.walletDir || path.join(tmpdir, uuid());
-      args = [...args, '-v', `${walletDir}:${containerWalletDir}`];
-      await fs.ensureDir(walletDir);
-
-      const configDir = this.configDir || path.join(tmpdir, uuid());
-      await fs.ensureDir(configDir);
       const configPath = path.join(configDir, Fuse.configName(this));
       const configExists = await fs.pathExists(configPath);
+      if(this.role === Role.VALIDATOR && !password) {
+        throw new Error('You must pass in a password the first time you run start() on a validator. This password will be used to generate the key pair.');
+      } else if(this.role === Role.VALIDATOR && password && !this.privateKeyEncrypted) {
+        await this.generateKeyPair(password);
+      }
       if (!configExists)
         await fs.writeFile(configPath, this.generateConfig(), 'utf8');
       args = [...args, '-v', `${configDir}:${containerConfigDir}`];
 
-      await this._docker.pull(this.dockerImage, str => this._logOutput(str));
+      await Promise.all([
+        this._docker.pull(this.dockerImage, str => this._logOutput(str)),
+        this._docker.pull(versionData.imageValidatorApp, str => this._logOutput(str)),
+        this._docker.pull(versionData.imageNetstat, str => this._logOutput(str)),
+      ]);
 
-      if (this.key) {
+       if(this.role === Role.VALIDATOR && password) {
         const passwordPath = this.passwordPath || path.join(tmpdir, uuid());
         const passwordFileExists = await fs.pathExists(passwordPath);
-        if (!passwordFileExists)
-          await fs.writeFile(passwordPath, this.keyPass, 'utf8');
+        if(!passwordFileExists)
+          await fs.writeFile(passwordPath, password, 'utf8');
         args = [...args, '-v', `${passwordPath}:${containerPasswordPath}`];
-        if ((await fs.readdir(walletDir)).length === 0) {
+        if((await fs.readdir(walletDir)).length === 0) {
           const keyFilePath = path.join(os.tmpdir(), uuid());
-          await fs.writeJson(keyFilePath, this.key);
+          await fs.writeFile(keyFilePath, this.privateKeyEncrypted, 'utf8');
           const accountPath = `/UTC--${new Date().toISOString().replace(/:/g, '-')}--${this.address}.json`;
           const newArgs = [
             ...args,
@@ -393,36 +415,52 @@ export class Fuse extends Ethereum {
       if(exitCode !== 0)
         throw new Error(`Docker run for ${this.id} with ${this.dockerImage} failed with exit code ${exitCode}`);
 
-      if (this.role === Role.VALIDATOR) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        // start validator app
-        const validatorAppArgs = [
-          '--rm',
-          '-i',
-          '--memory', '250m',
-          '-v', `${path.resolve(walletDir, '..')}:/config`,
-          '-e', 'CONFIG_DIR=/config',
-          '-e', `RPC=http://${this.id}:${this.rpcPort}`,
-          '--network', this.dockerNetwork,
-          '--name', this.validatorAppContainerName(),
-        ];
+    }
+
+    const instance = this._docker.attach(
+      this.id,
+      output => this._logOutput(output),
+      err => {
+        this._logError(err);
+      },
+      code => {
+        this._logClose(code);
+      },
+    );
+
+    if (this.role === Role.VALIDATOR) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      // start validator app
+      const validatorAppName = this.validatorAppContainerName();
+      const validatorAppRunning = await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(validatorAppName);
+      if(!validatorAppRunning) {
         try {
-          const validatorAppExists = await this._docker.containerExists(this.validatorAppContainerName());
-          if (!validatorAppExists) {
+          if (!validatorAppRunning) {
+            const validatorAppArgs = [
+              '-d',
+              `--restart=on-failure:${this.restartAttempts}`,
+              '--memory', '250m',
+              '-v', `${path.resolve(walletDir, '..')}:/config`,
+              '-e', 'CONFIG_DIR=/config',
+              '-e', `RPC=http://${this.id}:${this.rpcPort}`,
+              '--network', this.dockerNetwork,
+              '--name', validatorAppName,
+            ];
             this._docker.run(
               versionData.imageValidatorApp,
               validatorAppArgs,
               () => {
               },
               err => this._logError(err),
-              () => this._logOutput(`${this.validatorAppContainerName()} closed`),
+              exitCode => this._logOutput(`${this.validatorAppContainerName()} exited with status code ${exitCode}`),
             );
           }
         } catch (err) {
           this._logError(err);
         }
-        // start netstats
-        const netstatConfig = `
+      }
+      // start netstats
+      const netstatConfig = `
           [
             {
               "name"              : "netstat_daemon",
@@ -449,48 +487,37 @@ export class Fuse extends Ethereum {
               }
             }
           ]`;
-        const netstatConfigPath = path.join(tmpdir, uuid());
-        await fs.writeJson(netstatConfigPath, JSON.parse(netstatConfig), {spaces: 2});
-        const netstatArgs = [
-          '--rm',
-          '-i',
-          '--memory', '250m',
-          '--name', this.netstatContainerName(),
-          '--network', this.dockerNetwork,
-          '--user', 'root',
-          '-e', `RPC_HOST=${this.id}`,
-          '-e', `RPC_PORT=${this.rpcPort}`,
-          '-e', `LISTENING_PORT=${this.peerPort}`,
-          '-v', `${netstatConfigPath}:/home/ethnetintel/eth-net-intelligence-api/app.json.example`,
-        ];
-        try {
-          const netstatExists = await this._docker.containerExists(this.netstatContainerName());
-          if (!netstatExists) {
-            this._docker.run(
-              `${versionData.imageNetstat} --instance-name ${this.address} --role validator --parity-version ${versionData.version} --fuseapp-version ${this.validatorAppContainerName().split(':')[1]} --netstats-version ${this.netstatContainerName().split(':')[1]}`,
-              netstatArgs,
-              () => {
-              },
-              err => this._logError(err),
-              () => this._logOutput(`${this.netstatContainerName()} closed`),
-            );
-          }
-        } catch (err) {
-          this._logError(err);
+      const netstatConfigPath = path.join(tmpdir, uuid());
+      await fs.writeJson(netstatConfigPath, JSON.parse(netstatConfig), {spaces: 2});
+      try {
+        const netstatName = this.netstatContainerName();
+        const netstatRunning = await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(netstatName);
+        if(!netstatRunning) {
+          const netstatArgs = [
+            '-d',
+            `--restart=on-failure:${this.restartAttempts}`,
+            '--memory', '250m',
+            '--name', netstatName,
+            '--network', this.dockerNetwork,
+            '--user', 'root',
+            '-e', `RPC_HOST=${this.id}`,
+            '-e', `RPC_PORT=${this.rpcPort}`,
+            '-e', `LISTENING_PORT=${this.peerPort}`,
+            '-v', `${netstatConfigPath}:/home/ethnetintel/eth-net-intelligence-api/app.json.example`,
+          ];
+          this._docker.run(
+            `${versionData.imageNetstat} --instance-name ${this.address} --role validator --parity-version ${versionData.version} --fuseapp-version ${versionData.imageValidatorApp.split(':')[1]} --netstats-version ${versionData.imageNetstat.split(':')[1]}`,
+            netstatArgs,
+            () => {
+            },
+            err => this._logError(err),
+            () => this._logOutput(`${this.netstatContainerName()} closed`),
+          );
         }
+      } catch (err) {
+        this._logError(err);
       }
     }
-
-    const instance = this._docker.attach(
-      this.id,
-      output => this._logOutput(output),
-      err => {
-        this._logError(err);
-      },
-      code => {
-        this._logClose(code);
-      },
-    );
 
     this._instance = instance;
     this._instances = [
@@ -509,15 +536,13 @@ export class Fuse extends Ethereum {
 
   async stop(): Promise<void> {
     if(this.role === Role.VALIDATOR) {
-      try {
-        await this._docker.kill(this.validatorAppContainerName());
-      } catch(err) {
-        this._logError(err);
-      }
-      try {
-        await this._docker.kill(this.netstatContainerName());
-      } catch(err) {
-        this._logError(err);
+      for(const name of [this.validatorAppContainerName(), this.netstatContainerName()]) {
+        try {
+          await this._docker.kill(name);
+          await this._docker.rm(name);
+        } catch(err) {
+          this._logError(err);
+        }
       }
     }
     try {
@@ -533,13 +558,17 @@ export class Fuse extends Ethereum {
     return Fuse.generateConfig(this);
   }
 
-  createAccount(): void {
-    const web3 = new Web3();
-    const keyPass = this.keyPass || uuid();
-    const { address, privateKey } = web3.eth.accounts.create();
-    this.keyPass = keyPass;
-    this.address = address;
-    this.key = web3.eth.accounts.encrypt(privateKey, keyPass);
+  async generateKeyPair(password: string): Promise<boolean> {
+    try {
+      const web3 = new Web3();
+      const { address, privateKey } = web3.eth.accounts.create();
+      this.address = address;
+      this.privateKeyEncrypted = JSON.stringify(web3.eth.accounts.encrypt(privateKey, password));
+      return true;
+    } catch(err) {
+      this._logError(err);
+      return false;
+    }
   }
 
   async rpcGetBalance(): Promise<string> {

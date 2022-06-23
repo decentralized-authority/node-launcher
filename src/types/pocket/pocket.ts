@@ -273,7 +273,6 @@ export class Pocket extends Bitcoin {
   dockerImage: string;
   network: string;
   peerPort: number;
-  privKeyPass = '';
   rpcPort: number;
   rpcUsername: string;
   rpcPassword: string;
@@ -348,7 +347,7 @@ export class Pocket extends Bitcoin {
 
     if(!this.privateKeyEncrypted) {
       if(!password)
-        throw new Error('You must pass in a password the first time you run start(). This password will be used to generate the key pair.');
+        throw new Error('You must pass in a password the first time you run start() on a validator. This password will be used to generate the key pair.');
       await this.generateKeyPair(password);
     }
 
