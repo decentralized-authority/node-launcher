@@ -661,21 +661,21 @@ export class Pocket extends Bitcoin {
     }
   }
 
-  async rpcGetBalance(): Promise<BigInt> {
+  async rpcGetBalance(): Promise<string> {
     try {
       const pocket = this.getPocketJsInstance();
       if(!pocket.rpc)
-        return BigInt('0');
+        return '0';
       const res = await pocket.rpc()?.query.getBalance(this.address, BigInt('0'), this._requestTimeout);
       if(isError(res))
         throw res;
       else if(!res)
-        return BigInt('0');
+        return '0';
       else
-        return res.balance;
+        return res.balance.toString(10);
     } catch(err) {
       this._logError(err);
-      return BigInt('0');
+      return '0';
     }
 
   }
