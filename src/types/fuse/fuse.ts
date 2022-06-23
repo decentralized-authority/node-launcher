@@ -580,4 +580,14 @@ export class Fuse extends Ethereum {
     }
   }
 
+  async getRawPrivateKey(password: string): Promise<string> {
+    try {
+      const web3 = new Web3(`http://localhost:${this.rpcPort}`);
+      const account = web3.eth.accounts.decrypt(JSON.parse(this.privateKeyEncrypted), password);
+      return account.privateKey;
+    } catch(err) {
+      return '';
+    }
+  }
+
 }
