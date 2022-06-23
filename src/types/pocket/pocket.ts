@@ -722,7 +722,6 @@ export class Pocket extends Bitcoin {
         // do nothing with the error
       }
     }
-    console.log('status', status);
     return status;
   }
 
