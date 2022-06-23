@@ -290,7 +290,7 @@ export class Pocket extends Bitcoin {
   address = '';
   role = Pocket.roles[0];
 
-  constructor(data: CryptoNodeData, docker?: Docker) {
+  constructor(data: PocketNodeData, docker?: Docker) {
     super(data, docker);
     this.id = data.id || uuid();
     this.network = data.network || NetworkType.MAINNET;
@@ -319,8 +319,8 @@ export class Pocket extends Bitcoin {
     this.archival = data.archival || this.archival;
     this.domain = data.domain || this.domain;
     this.address = data.address || this.address;
-
-    this.privKeyPass = data.privKeyPass || uuid();
+    this.publicKey = data.publicKey || this.publicKey;
+    this.privateKeyEncrypted = data.privateKeyEncrypted || this.privateKeyEncrypted;
     this.role = data.role || this.role;
 
     if(docker) {
