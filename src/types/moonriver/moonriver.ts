@@ -33,6 +33,7 @@ export class Moonriver extends Moonbeam {
               return ` --port ${data.peerPort} \
               --rpc-port ${data.rpcPort} \
               --unsafe-rpc-external \
+              --rpc-cors=all \
               --ws-port 9944 \
               --execution wasm \
               --wasm-execution compiled \
