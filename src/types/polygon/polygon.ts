@@ -37,6 +37,27 @@ export class Polygon extends Ethereum {
       case NodeClient.CORE:
         versions = [
           {
+            version: '0.2.16',
+            clientVersion: '0.2.16',
+            image: 'maticnetwork/bor:v0.2.16',
+            dataDir: '/root/data',
+            walletDir: '/root/keys',
+            configDir: '/root/config',
+            heimdallImage: 'maticnetwork/heimdall:v0.2.10',
+            heimdallDataDir: '/root/.heimdalld/data',
+            heimdallWalletDir: '/root/keys',
+            heimdallConfigDir: '/root/.heimdalld/config',
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              const { id = '' } = data;
+              return ` bor --config=${this.configDir}/${Polygon.fileName.config} --bor.heimdall http://${Polygon.generateHeimdallDockerName(id)}:1317 --pprof --pprof.port 7071 --pprof.addr 0.0.0.0`;
+            },
+            generateHeimdallRuntimeArgs(data: CryptoNodeData): string {
+              return ' /bin/bash /start.sh';
+            },
+          },
+          {
             version: '0.2.14',
             clientVersion: '0.2.14',
             image: 'maticnetwork/bor:v0.2.14',
