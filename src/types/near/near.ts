@@ -21,6 +21,20 @@ export class Near extends Bitcoin {
       case NodeClient.CORE:
         versions = [
           {
+            version: '1.27.0',
+            clientVersion: '1.27.0',
+            image: 'nearprotocol/nearcore:1.27.0',
+            dataDir: '/root/near/home',
+            walletDir: '/root/near/keystore',
+            configDir: '/root/near/config',
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              const { network = '' } = data;
+              return ` neard --home ${this.dataDir} run --network-addr 0.0.0.0:${data.peerPort} --rpc-addr 0.0.0.0:${data.rpcPort}  --boot-nodes ` + (data.network === NetworkType.MAINNET ? `${coreConfig.mainnetBootnodes}` : `${coreConfig.testnetBootnodes}`);
+            },
+          },
+          {
             version: '1.26.1',
             clientVersion: '1.26.1',
             image: 'nearprotocol/nearcore:1.26.1',
