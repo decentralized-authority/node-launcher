@@ -33,6 +33,19 @@ export class BitcoinCash extends Bitcoin {
       case NodeClient.CORE:
         versions = [
           {
+            version: '24.1.0',
+            clientVersion: '24.1.0',
+            image: 'zquestz/bitcoin-cash-node:24.1.0',
+            dataDir: '/opt/blockchain-data',
+            walletDir: '/opt/blockchain-wallets',
+            configDir: '/opt/blockchain-config',
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              return ` -conf=${path.join(this.configDir, BitcoinCash.configName(data))}` + (data.network === NetworkType.TESTNET ? ' -testnet' : '');
+            },
+          },
+          {
             version: '23.0.0',
             clientVersion: '23.0.0',
             image: 'zquestz/bitcoin-cash-node:23.0.0',
