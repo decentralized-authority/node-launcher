@@ -304,12 +304,6 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
               instance.should.be.an.instanceOf(ChildProcess);
               const { spawnargs } = instance as ChildProcess;
               containerNames.push(spawnargs[spawnargs.length - 1]);
-              await new Promise(resolve => {
-                instance.on('close', code => {
-                  resolve(code);
-                });
-                instance.kill();
-              });
             }
             for(const name of containerNames) {
               await docker.kill(name);
@@ -320,7 +314,7 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
         describe(`${name}.stop() with ${client} client & ${network} network`, async function() {
           it('should stop a node', async function() {
 
-            this.timeout(40000);
+            this.timeout(120000);
 
             node = new NodeConstructor({
               network,
