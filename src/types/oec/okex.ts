@@ -43,6 +43,19 @@ export class OKEX extends Ethereum {
       case NodeClient.CORE:
         versions = [
           {
+            version: '1.5.6',
+            clientVersion: '1.5.6',
+            image: 'okexchain/fullnode-mainnet:v1.5.6',
+            dataDir: '/root/.exchaind/data',
+            walletDir: '/root/keystore',
+            configDir: '/root/.exchaind/config',
+            networks: [NetworkType.MAINNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              return ' start --home /root/.exchaind';
+            },
+          },
+          {
             version: '1.1.4.3',
             clientVersion: '1.1.4.3',
             image: 'okexchain/fullnode-mainnet:v1.1.4.3',
