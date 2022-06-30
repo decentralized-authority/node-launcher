@@ -1,4 +1,4 @@
-import { CryptoNodeData, VersionDockerImage } from '../../interfaces/crypto-node';
+import { CryptoNodeData, ValidatorInfo, VersionDockerImage } from '../../interfaces/crypto-node';
 import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role, Status } from '../../constants';
 import { Bitcoin } from '../bitcoin/bitcoin';
 import { Docker } from '../../util/docker';
@@ -12,6 +12,10 @@ import { filterVersionsByNetworkType } from '../../util';
 import { FS } from '../../util/fs';
 import { Configuration, HttpRpcProvider, Pocket as PocketJS } from '@pokt-network/pocket-js';
 import { isError } from 'lodash';
+
+interface PocketValidatorInfo extends ValidatorInfo {
+  chains: string[];
+}
 
 interface PocketNodeData extends CryptoNodeData {
   publicKey: string
@@ -723,6 +727,34 @@ export class Pocket extends Bitcoin {
       }
     }
     return status;
+  }
+
+  async getValidatorInfo(): Promise<PocketValidatorInfo|null> {
+    try {
+      const pocket = this.getPocketJsInstance();
+      if(!pocket.rpc)
+        return null;
+      const res = await pocket.rpc()?.query.getNode(this.address, BigInt('0'), this._requestTimeout);
+      if(isError(res))
+        throw res;
+      else if(!res)
+        return null;
+      else {
+        const { node } = res;
+        return {
+          jailed: node.jailed,
+          stakedAmount: node.stakedTokens.toString(),
+          unstakeDate: node.unstakingCompletionTimestamp || '',
+          url: node.serviceURL.toString(),
+          address: node.address,
+          publicKey: node.publicKey,
+          chains: node.chains,
+        };
+      }
+    } catch(err) {
+      this._logError(err);
+      return null;
+    }
   }
 
 }

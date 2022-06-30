@@ -3,7 +3,7 @@
 import { Ethereum } from '../ethereum/ethereum';
 import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role } from '../../constants';
 import { v4 as uuid } from 'uuid';
-import { CryptoNodeData, VersionDockerImage } from '../../interfaces/crypto-node';
+import { CryptoNodeData, ValidatorInfo, VersionDockerImage } from '../../interfaces/crypto-node';
 import { Docker } from '../../util/docker';
 import { ChildProcess } from 'child_process';
 import os from 'os';
@@ -618,6 +618,17 @@ export class Fuse extends Ethereum {
     } catch(err) {
       this._logError(err);
       throw err;
+    }
+  }
+
+  async getValidatorInfo(): Promise<ValidatorInfo|null> {
+    try {
+      const web3 = new Web3(`http://localhost:${this.rpcPort}`);
+      // need to do full implementation
+      return null;
+    } catch(err) {
+      this._logError(err);
+      return null;
     }
   }
 
