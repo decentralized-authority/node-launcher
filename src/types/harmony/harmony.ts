@@ -1,5 +1,5 @@
 import { Ethereum } from '../ethereum/ethereum';
-import { CryptoNodeData, VersionDockerImage } from '../../interfaces/crypto-node';
+import { CryptoNodeData, ValidatorInfo, VersionDockerImage } from '../../interfaces/crypto-node';
 import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role } from '../../constants';
 import { Docker } from '../../util/docker';
 import { v4 as uuid } from 'uuid';
@@ -9,104 +9,29 @@ import os from 'os';
 import path from 'path';
 import request from 'superagent';
 import { FS } from '../../util/fs';
+import * as coreConfig from './config/core';
 
-const coreConfig = `
-Version = "2.5.0"
-
-[BLSKeys]
-  KMSConfigFile = ""
-  KMSConfigSrcType = "shared"
-  KMSEnabled = false
-  KeyDir = "./.hmy/blskeys"
-  KeyFiles = []
-  MaxKeys = 10
-  PassEnabled = true
-  PassFile = ""
-  PassSrcType = "auto"
-  SavePassphrase = false
-
-[DNSSync]
-  Client = true
-  LegacySyncing = false
-  Port = 6000
-  Server = true
-  ServerPort = 6000
-  Zone = "t.hmny.io"
-
-[General]
-  DataDir = "/root/data"
-  IsArchival = false
-  IsBeaconArchival = false
-  IsOffline = false
-  NoStaking = true
-  NodeType = "explorer"
-  ShardID = {{SHARD}}
-
-[HTTP]
-  Enabled = true
-  IP = "0.0.0.0"
-  Port = {{RPC_PORT}}
-  RosettaEnabled = false
-  RosettaPort = 9700
-
-[Log]
-  FileName = "harmony.log"
-  Folder = "/root/data"
-  RotateCount = 0
-  RotateMaxAge = 0
-  RotateSize = 100
-  Verbosity = 3
-
-  [Log.VerbosePrints]
-    Config = false
-
-[Network]
-  BootNodes = ["/dnsaddr/bootstrap.t.hmny.io"]
-  NetworkType = "{{NETWORK}}"
-
-[P2P]
-  IP = "0.0.0.0"
-  KeyFile = "./.hmykey"
-  Port = {{PEER_PORT}}
-
-[Pprof]
-  Enabled = false
-  ListenAddr = "127.0.0.1:6060"
-
-[RPCOpt]
-  DebugEnabled = false
-  RateLimterEnabled = true
-  RequestsPerSecond = 1000
-
-[Sync]
-  Concurrency = 6
-  DiscBatch = 8
-  DiscHardLowCap = 6
-  DiscHighCap = 128
-  DiscSoftLowCap = 8
-  Downloader = false
-  Enabled = false
-  InitStreams = 8
-  MinPeers = 6
-
-[TxPool]
-  BlacklistFile = "./.hmy/blacklist.txt"
-
-[WS]
-  Enabled = true
-  IP = "127.0.0.1"
-  Port = 9800
-`;
 
 interface HarmonyNodeData extends CryptoNodeData {
   shard: number
-}
+  publicKey: string
+  privateKeyEncrypted: string
+  accountName: string
+  address: string
+  domain: string
+  passwordPath: string
+};
+
+interface HarmonyVersionDockerImage extends VersionDockerImage {
+  mylocalaccountname: string
+  passwordPath: string
+};
 
 export class Harmony extends Ethereum {
 
-  static versions(client: string, networkType: string): VersionDockerImage[] {
+  static versions(client: string, networkType: string): HarmonyVersionDockerImage[] {
     client = client || Harmony.clients[0];
-    let versions: VersionDockerImage[];
+    let versions: HarmonyVersionDockerImage[];
     switch(client) {
       case NodeClient.CORE:
         versions = [
@@ -130,9 +55,10 @@ export class Harmony extends Ethereum {
             dataDir: '/root/data',
             walletDir: '/root/keystore',
             configDir: '/harmony/config',
-            networks: [NetworkType.MAINNET],
+            passwordPath: '/root/pass.pwd',
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(data: HarmonyNodeData): string {
               return ` -c ${path.join(this.configDir, Harmony.configName(data))}`;
             },
           },
@@ -143,9 +69,10 @@ export class Harmony extends Ethereum {
             dataDir: '/root/data',
             walletDir: '/root/keystore',
             configDir: '/harmony/config',
+            passwordPath: '/root/pass.pwd',
             networks: [NetworkType.MAINNET, NetworkType.TESTNET],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(data: HarmonyNodeData): string {
               return ` -c ${path.join(this.configDir, Harmony.configName(data))}`;
             },
           },
@@ -156,9 +83,10 @@ export class Harmony extends Ethereum {
             dataDir: '/root/data',
             walletDir: '/root/keystore',
             configDir: '/harmony/config',
+            passwordPath: '/root/pass.pwd',
             networks: [NetworkType.MAINNET, NetworkType.TESTNET],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(data: HarmonyNodeData): string {
               return ` -c ${path.join(this.configDir, Harmony.configName(data))}`;
             },
           },
@@ -169,9 +97,10 @@ export class Harmony extends Ethereum {
             dataDir: '/root/data',
             walletDir: '/root/keystore',
             configDir: '/harmony/config',
+            passwordPath: '/root/pass.pwd',
             networks: [NetworkType.MAINNET, NetworkType.TESTNET],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(data: HarmonyNodeData): string {
               return ` -c ${path.join(this.configDir, Harmony.configName(data))}`;
             },
           },
@@ -182,9 +111,10 @@ export class Harmony extends Ethereum {
             dataDir: '/root/data',
             walletDir: '/root/keystore',
             configDir: '/harmony/config',
+            passwordPath: '/root/pass.pwd',
             networks: [NetworkType.MAINNET, NetworkType.TESTNET],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(data: HarmonyNodeData): string {
               return ` -c ${path.join(this.configDir, Harmony.configName(data))}`;
             },
           },
@@ -193,7 +123,7 @@ export class Harmony extends Ethereum {
       default:
         versions = [];
     }
-    return filterVersionsByNetworkType(networkType, versions);
+    return filterVersionsByNetworkType(networkType, versions) as HarmonyVersionDockerImage[];
   }
 
   static clients = [
@@ -227,11 +157,13 @@ export class Harmony extends Ethereum {
 
   static defaultMem = 32768;
 
-  static generateConfig(client = Harmony.clients[0], network = NetworkType.MAINNET, peerPort = Harmony.defaultPeerPort[NetworkType.MAINNET], rpcPort = Harmony.defaultRPCPort[NetworkType.MAINNET], shard = 0): string {
+  static generateConfig(client: string|Harmony = Harmony.clients[0], network = NetworkType.MAINNET, peerPort = Harmony.defaultPeerPort[NetworkType.MAINNET], rpcPort = Harmony.defaultRPCPort[NetworkType.MAINNET], shard = 0): string {
+    
     switch(client) {
       case NodeClient.CORE:
-        return coreConfig
+        return coreConfig._252
           .replace('{{NETWORK}}', network === NetworkType.MAINNET ? 'mainnet' : 'testnet')
+          .replace(/{{NETWORK_TYPE}}/g, network === NetworkType.MAINNET ? 't' : 'p')
           .replace('{{PEER_PORT}}', peerPort.toString(10))
           .replace('{{RPC_PORT}}', rpcPort.toString(10))
           .replace('{{SHARD}}', shard.toString(10))
@@ -241,7 +173,7 @@ export class Harmony extends Ethereum {
     }
   }
 
-  static configName(data: CryptoNodeData): string {
+  static configName(data: HarmonyNodeData): string {
     return 'harmony.conf';
   }
 
@@ -264,11 +196,16 @@ export class Harmony extends Ethereum {
   dataDir = '';
   walletDir = '';
   configDir = '';
+  passwordPath = '';
   remote = false;
   remoteDomain = '';
   remoteProtocol = '';
   shard = 0;
   role = Harmony.roles[0];
+  publicKey = '';
+  privateKeyEncrypted = '';
+  address = '';
+  domain = '';
 
   constructor(data: HarmonyNodeData, docker?: Docker) {
     super(data, docker);
@@ -285,6 +222,7 @@ export class Harmony extends Ethereum {
     this.dataDir = data.dataDir || this.dataDir;
     this.walletDir = data.walletDir || this.walletDir;
     this.configDir = data.configDir || this.configDir;
+    this.passwordPath = data.passwordPath || this.passwordPath;
     this.createdAt = data.createdAt || this.createdAt;
     this.updatedAt = data.updatedAt || this.updatedAt;
     this.remote = data.remote || this.remote;
@@ -298,56 +236,96 @@ export class Harmony extends Ethereum {
     this.archival = data.archival || this.archival;
     this.shard = data.shard || this.shard;
     this.role = data.role || this.role;
+  
+    toObject(): HarmonyNodeData {
+      return {
+        ...this._toObject(),
+        shard: this.shard,
+        domain: this.domain,
+        address: this.address,
+        passwordPath: this.passwordPath,
+        privateKeyEncrypted: this.privateKeyEncrypted,
+        publicKey: this.publicKey,
+      };
+    }
+
     if(docker) {
       this._docker = docker;
       this._fs = new FS(docker);
     }
   }
 
-  async start(): Promise<ChildProcess[]> {
+  async start(password?: string): Promise<ChildProcess[]> {
     const fs = this._fs;
     // const versionData = Harmony.versions(this.client, this.network).find(({ version }) => version === this.version);
     const versions = Harmony.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
     if(!versionData)
-      throw new Error(`Unknown version ${this.version}`);
+      throw new Error(`Unknown ${this.ticker} version ${this.version}`);
 
     const running = await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.id);
 
+    const {
+      dataDir: containerDataDir,
+      walletDir: containerWalletDir,
+      configDir: containerConfigDir,
+      passwordPath: containerPasswordPath,
+    } = versionData;
+    
+    let args = [
+      '-d',
+      `--restart=on-failure:${this.restartAttempts}`,
+      '--memory', this.dockerMem.toString(10) + 'MB',
+      '--cpus', this.dockerCPUs.toString(10),
+      '--name', this.id,
+      '--network', this.dockerNetwork,
+      '-p', `${this.rpcPort}:${this.rpcPort}`,
+      '-p', `${this.peerPort}:${this.peerPort}`,
+    ];
+
+    const tmpdir = os.tmpdir();
+    const dataDir = this.dataDir || path.join(tmpdir, uuid());
+    args = [...args, '-v', `${dataDir}:${containerDataDir}`];
+    await fs.ensureDir(dataDir);
+
+    const walletDir = this.walletDir || path.join(tmpdir, uuid());
+    args = [...args, '-v', `${walletDir}:${containerWalletDir}`];
+    await fs.ensureDir(walletDir);
+
+    const configDir = this.configDir || path.join(tmpdir, uuid());
+    await fs.ensureDir(configDir);
+
     if(!running) {
-      const {
-        dataDir: containerDataDir,
-        walletDir: containerWalletDir,
-        configDir: containerConfigDir,
-      } = versionData;
-      let args = [
-        '-d',
-        `--restart=on-failure:${this.restartAttempts}`,
-        '--memory', this.dockerMem.toString(10) + 'MB',
-        '--cpus', this.dockerCPUs.toString(10),
-        '--name', this.id,
-        '--network', this.dockerNetwork,
-        '-p', `${this.rpcPort}:${this.rpcPort}`,
-        '-p', `${this.peerPort}:${this.peerPort}`,
-      ];
-      const tmpdir = os.tmpdir();
-      const dataDir = this.dataDir || path.join(tmpdir, uuid());
-      args = [...args, '-v', `${dataDir}:${containerDataDir}`];
-      await fs.ensureDir(dataDir);
-
-      const walletDir = this.walletDir || path.join(tmpdir, uuid());
-      args = [...args, '-v', `${walletDir}:${containerWalletDir}`];
-      await fs.ensureDir(walletDir);
-
-      const configDir = this.configDir || path.join(tmpdir, uuid());
-      await fs.ensureDir(configDir);
-      const configPath = path.join(configDir, Harmony.configName(this));
+      const configPath = path.join(configDir, Fuse.configName(this));
       const configExists = await fs.pathExists(configPath);
+      if(this.role === Role.VALIDATOR && !password) {
+        throw new Error('You must pass in a password the first time you run start() on a validator. This password will be used to generate the key pair.');
+      } else if(this.role === Role.VALIDATOR && password && !this.privateKeyEncrypted) {
+        await this.generateKeyPair(password);
+      }
       if (!configExists)
         await fs.writeFile(configPath, this.generateConfig(), 'utf8');
       args = [...args, '-v', `${configDir}:${containerConfigDir}`];
 
       await this._docker.pull(this.dockerImage, str => this._logOutput(str));
+
+      if(this.role === Role.VALIDATOR && password) {
+        const passwordPath = this.passwordPath || path.join(tmpdir, uuid());
+        const passwordFileExists = await fs.pathExists(passwordPath);
+        if(!passwordFileExists)
+          await fs.writeFile(passwordPath, password, 'utf8');
+        args = [...args, '-v', `${passwordPath}:${containerPasswordPath}`];
+        if((await fs.readdir(walletDir)).length === 0) {
+          const keyFilePath = path.join(os.tmpdir(), uuid());
+          await fs.writeFile(keyFilePath, this.privateKeyEncrypted, 'utf8');
+          const accountPath = `/UTC--${new Date().toISOString().replace(/:/g, '-')}--${this.address}.json`;
+          const newArgs = [
+            ...args,
+            '-i',
+            '--rm',
+            '-v', `${keyFilePath}:${accountPath}`,
+          ];
+
 
       await this._docker.createNetwork(this.dockerNetwork);
       const exitCode = await new Promise<number>((resolve, reject) => {
@@ -386,12 +364,7 @@ export class Harmony extends Ethereum {
     return this.instances();
   }
 
-  toObject(): HarmonyNodeData {
-    return {
-      ...this._toObject(),
-      shard: this.shard,
-    };
-  }
+
 
   generateConfig(): string {
     return Harmony.generateConfig(
