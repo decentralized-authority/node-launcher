@@ -609,7 +609,8 @@ export class Fuse extends Ethereum {
       const data = {
         from: this.address,
         to,
-        value: web3.utils.toWei(amount),
+        value: amount,
+        // value: web3.utils.toWei(amount),
         gasPrice:'1000000000',
         gas:'1000000',
       };
