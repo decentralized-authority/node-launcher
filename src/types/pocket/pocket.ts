@@ -180,7 +180,7 @@ const coreConfig = `
         "show_relay_errors": true,
         "disable_tx_events": true,
         "iavl_cache_size": 5000000,
-        "chains_hot_reload": false
+        "chains_hot_reload": true
     }
 }
 `;
