@@ -249,7 +249,7 @@ export class Pocket extends Bitcoin {
 
   static defaultCPUs = 16;
 
-  static defaultMem = 8192;
+  static defaultMem = 24576;
 
   static generateConfig(client = Pocket.clients[0], network = NetworkType.MAINNET, peerPort = Pocket.defaultPeerPort[NetworkType.MAINNET], rpcPort = Pocket.defaultRPCPort[NetworkType.MAINNET], domain = ''): string {
     switch(client) {
