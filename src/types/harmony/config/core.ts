@@ -5,13 +5,13 @@ Version = "2.5.2"
   KMSConfigFile = ""
   KMSConfigSrcType = "shared"
   KMSEnabled = false
-  KeyDir = "./.hmy/blskeys"
+  KeyDir = "/root/keystore/blskeys"
   KeyFiles = []
   MaxKeys = 10
   PassEnabled = true
-  PassFile = ""
+  PassFile = "/root/pass.pwd"
   PassSrcType = "auto"
-  SavePassphrase = false
+  SavePassphrase = true
 
 [DNSSync]
   Client = false
@@ -29,7 +29,7 @@ Version = "2.5.2"
   IsBeaconArchival = false
   IsOffline = false
   NoStaking = true
-  NodeType = "explorer"
+  NodeType = "{{NODE_TYPE}}"
   ShardID = {{SHARD}}
   TraceEnable = false
 
@@ -60,7 +60,7 @@ Version = "2.5.2"
   DisablePrivateIPScan = false
   DiscConcurrency = 0
   IP = "0.0.0.0"
-  KeyFile = "./.hmykey"
+  KeyFile = "/root/keystore/hmykey"
   MaxConnsPerIP = 10
   Port = {{PEER_PORT}}
 
@@ -97,7 +97,7 @@ Version = "2.5.2"
 
 [TxPool]
   AccountSlots = 16
-  BlacklistFile = "./.hmy/blacklist.txt"
+  BlacklistFile = "/root/config/blacklist.txt"
   RosettaFixFile = ""
 
 [WS]
