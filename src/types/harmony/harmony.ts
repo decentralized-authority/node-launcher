@@ -3,7 +3,7 @@ import { CryptoNodeData, ValidatorInfo, VersionDockerImage } from '../../interfa
 import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role } from '../../constants';
 import { Docker } from '../../util/docker';
 import { v4 as uuid } from 'uuid';
-import { filterVersionsByNetworkType } from '../../util';
+import { filterVersionsByNetworkType, timeout } from '../../util';
 import { ChildProcess } from 'child_process';
 import os from 'os';
 import path from 'path';
@@ -11,6 +11,8 @@ import request from 'superagent';
 import { FS } from '../../util/fs';
 import Web3 from 'web3';
 import * as coreConfig from './config/core';
+//import Account from '@harmony-js/account';
+const { Account } = require('@harmony-js/account');
 
 
 interface HarmonyNodeData extends CryptoNodeData {
@@ -21,6 +23,7 @@ interface HarmonyNodeData extends CryptoNodeData {
   address: string
   domain: string
   passwordPath: string
+  bech32Address: string
 };
 
 interface HarmonyVersionDockerImage extends VersionDockerImage {
@@ -44,7 +47,7 @@ export class Harmony extends Ethereum {
             walletDir: '/root/keystore',
             configDir: '/root/config',
             passwordPath: '/root/pass.pwd',
-            networks: [NetworkType.MAINNET],
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
             breaking: false,
             generateRuntimeArgs(data: HarmonyNodeData): string {
               console.log(path.join(this.configDir, Harmony.configName(data)));
@@ -169,9 +172,9 @@ export class Harmony extends Ethereum {
     switch(client) {
       case NodeClient.CORE:
         return coreConfig._252
-          .replace('{{NETWORK}}', network === NetworkType.MAINNET ? 'mainnet' : 'testnet')
-          .replace(/{{NETWORK_TYPE}}/g, network === NetworkType.MAINNET ? 't' : 'p')
-          .replace('{{NODE_TYPE}}', role === Role.NODE ? 'explorer' : 'validator')
+          .replace('{{NETWORK}}', network === NetworkType.MAINNET ? 'mainnet' : 'devnet')
+          .replace(/{{NETWORK_TYPE}}/g, network === NetworkType.MAINNET ? 't' : 'ps')
+          //.replace('{{NODE_TYPE}}', role === Role.NODE ? 'explorer' : 'validator')
           .replace('{{PEER_PORT}}', peerPort.toString(10))
           .replace('{{RPC_PORT}}', rpcPort.toString(10))
           .replace('{{SHARD}}', shard.toString(10))
@@ -213,7 +216,9 @@ export class Harmony extends Ethereum {
   publicKey = '';
   privateKeyEncrypted = '';
   address = '';
+  bech32Address = '';
   domain = '';
+  blskeys: string[] = [];
 
   constructor(data: HarmonyNodeData, docker?: Docker) {
     super(data, docker);
@@ -244,6 +249,11 @@ export class Harmony extends Ethereum {
     this.archival = data.archival || this.archival;
     this.shard = data.shard || this.shard;
     this.role = data.role || this.role;
+    this.blskeys = [];
+    this.address = data.address || this.address;
+    this.publicKey = data.publicKey || this.publicKey;
+    this.privateKeyEncrypted = data.privateKeyEncrypted || this.privateKeyEncrypted;
+    this.domain = data.domain || this.domain;
     
     if(docker) {
       this._docker = docker;
@@ -260,6 +270,7 @@ export class Harmony extends Ethereum {
       passwordPath: this.passwordPath,
       privateKeyEncrypted: this.privateKeyEncrypted,
       publicKey: this.publicKey,
+      bech32Address: this.bech32Address,
     };
   }
 
@@ -308,13 +319,7 @@ export class Harmony extends Ethereum {
     if(!running) {
       const configPath = path.join(configDir, Harmony.configName(this));
       const configExists = await fs.pathExists(configPath);
-      if(this.role === Role.VALIDATOR && !password) {
-        throw new Error('You must pass in a password the first time you run start() on a validator. This password will be used to generate the key pair.');
-      } else if(this.role === Role.VALIDATOR && password && !this.privateKeyEncrypted) {
-        console.log('GENERATING THE PASSWORD BITCH 314');
-        await this.generateKeyPair(password);
-      }
-      
+
       args = [...args, '-v', `${configDir}:${containerConfigDir}`];
 
       if (!configExists){
@@ -325,10 +330,19 @@ export class Harmony extends Ethereum {
 
       await this._docker.pull(this.dockerImage, str => this._logOutput(str));
 
-      if(this.role === Role.VALIDATOR && password) {
+      if(this.role === Role.VALIDATOR && !password) {
+        throw new Error('You must pass in a password the first time you run start() on a validator. This password will be used to generate the key pair.');
+      } else if(this.role === Role.VALIDATOR && password) {
+        const fsa = require('fs');
+        const blspath = this.walletDir + '/blskeys/'
+        console.log('GENERATING THE KEYS BITCH 314');
+        await this.generateKeyPair(password);
         console.log('MADE IT TO VALIDATORRRR');
         const passwordPath = this.passwordPath || path.join(tmpdir, uuid());
+        console.log('342');
+        console.log(passwordPath);
         const passwordFileExists = await fs.pathExists(passwordPath);
+        console.log('343');
         if(!passwordFileExists)
           console.log(password);
           console.log(passwordPath);
@@ -356,7 +370,7 @@ export class Harmony extends Ethereum {
           console.log(newArgs);
           await new Promise<void>(resolve => {
             this._docker.run(
-              this.dockerImage + ` /bin/hmy keys generate-bls-keys --count 1 -v --passphrase-file ${containerPasswordPath} `,//` ./hmy keys import-ks /root/keystore${accountPath}  --passphrase-file ${containerPasswordPath}`,
+              this.dockerImage + ` /bin/hmy keys generate-bls-keys --count 2 -v --passphrase-file ${containerPasswordPath} `,//` ./hmy keys import-ks /root/keystore${accountPath}  --passphrase-file ${containerPasswordPath}`,
               newArgs,
               output => this._logOutput(output),
               err => this._logError(err),
@@ -364,13 +378,60 @@ export class Harmony extends Ethereum {
             );
           });
 
+          // add blskey.pass file for each blskey.key
+          const blspath = this.walletDir + '/blskeys/'
+          fsa.readdir(this.walletDir + '/blskeys', function (err: any, files: any) {
+            //handling error
+            if (err) {
+                return console.log('Unable to scan directory: ' + err);
+            } 
+            //blskeys.push(file);
+            //listing all files using forEach
+            let keyname = '';
+            let blskeys = [];
+            files.forEach(function (file: any) {
+                // Do whatever you want to do with the file
+                //console.log('PRINTING THE FILES BITCH1');
+                //console.log(file.split('.key', 1)[0]);
+                if (file.includes('.key')) {
+                  keyname = file.split('.key', 1)[0];
+                  fs.writeFile(blspath + keyname + '.pass', password, 'utf8');
+                  blskeys.push(keyname);
+                }
 
-          // create validator node here.
-          //
-          //
+            });
+          });
 
 
-          console.log("Import should be done");
+        }
+
+        console.log('3833333');
+        let blskeys: string[] = [];
+        // add bls pubkeys to array 
+        if (this.blskeys.length == 0) {
+          fsa.readdir(this.walletDir + '/blskeys', function (err: any, files: any) {
+            //handling error
+            if (err) {
+                return console.log('Unable to scan directory: ' + err);
+            } 
+            //blskeys.push(file);
+            //listing all files using forEach
+            let keyname = '';
+            files.forEach(function (file: any) {
+                // Do whatever you want to do with the file
+                if (file.includes('.key')) {
+                  keyname = file.split('.key', 1)[0];
+                  blskeys.push(keyname);
+                }
+            });
+            
+          });
+          this.blskeys = blskeys;
+      }
+
+        console.log('PRINTING THE BLS KEYS BITCH2');
+        console.log(`${blskeys.join(',')}`);
+        console.log("Import should be done");
           //await fs.remove(keyFilePath + '/hmy');
           //await fs.remove(keyFilePath + '/harmony');
           //await fs._fs.copySync(keyFilePath, walletDir + '/blskeys');
@@ -380,7 +441,6 @@ export class Harmony extends Ethereum {
 
           
         // else 
-        }
       }
 
       // --bls.pass                  enable BLS key decryption with passphrase (default true)
@@ -394,6 +454,13 @@ export class Harmony extends Ethereum {
       // ./hmy keys generate-bls-keys --count 1 --shard 1 --passphrase
       // move keys to .hmy/blskeys or change dir in config.json
       // echo '[replace_with_your_passphrase]' > .hmy/blskeys/[replace_with_BLS_without_.key].pass
+
+
+
+      // only change config toml from explorer to validator during staking call, not during start
+
+      console.log('4366');
+
       const keyPath = path.join(configDir, 'node_key.json');
       const keyExists = await fs.pathExists(keyPath);
       args = [
@@ -402,6 +469,8 @@ export class Harmony extends Ethereum {
       ];
       //if(!keyExists){
         console.log("Running this mufa");
+        console.log('PRINTING THE BLS KEYS BITCH3');
+          console.log(`${this.blskeys.join(',')}`);
     await this._docker.createNetwork(this.dockerNetwork);
     const exitCode = await new Promise<number>((resolve, reject) => {
       this._docker.run(
@@ -481,12 +550,164 @@ export class Harmony extends Ethereum {
     return Harmony.generateConfig(this);
   }
 
+  
+  async stakeValidator(amount: string, password: string, domain: string, ): Promise<string> {
+
+    const versions = Harmony.versions(this.client, this.network);
+    const versionData = versions.find(({ version }) => version === this.version) || versions[0];
+    if(!versionData)
+      throw new Error(`Unknown version ${this.version}`);
+    const {
+      passwordPath: containerPasswordPath,
+    } = versionData;
+    const running = await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.id);
+    const configPath = path.join(this.configDir, Harmony.configName(this));
+    let configfile = await this._fs.readFile(configPath, 'utf8');
+    //readFile(filePath: string, encoding = 'utf8'
+    await this._fs.writeFile(configPath, configfile.replace('explorer', 'validator'), 'utf8');
+    //const chainsJson = await this._fs.readFile(this.pocketChainsPath(), 'utf8');
+    //const chainsData: {id: string}[] = JSON.parse(chainsJson);
+    //const chains = chainsData.map(c => c.id);
+    //const fee = 10000;
+    console.log(containerPasswordPath);
+    console.log(this.privateKeyEncrypted);
+    const net = this.network === NetworkType.MAINNET ? 't' : 'ps';
+    const createValidator = ` --node=https://api.s0.${net}.hmny.io staking create-validator ` +
+    `--bls-pubkeys-dir /root/.hmy_cli/account-keys/nl/blskeys ` +
+    `--validator-addr ${this.bech32Address} --amount 10000 ` +
+    `--bls-pubkeys ${this.blskeys.join(',')} ` +
+    ` --name ${this.id}  --identity ${this.id} --details ${this.id} ` +
+    `--security-contact ian@onecandle.dev --website onecandle.dev ` + 
+    `--max-change-rate 0.1 --max-rate 0.1 --rate 0.1 ` + 
+    ` --max-total-delegation 100000000 --min-self-delegation 10000 --passphrase-file ${containerPasswordPath} `;
+    const txPatt = /[0-9a-f]{64}/i;
+    console.log(createValidator);
+//--bls-pubkeys [BLS PUBLIC KEY1],[BLS PUBLIC KEY2] \
+
+
+    // await new Promise<void>(resolve => {
+    //   this._docker.run(
+    //     this.dockerImage + ` /bin/hmy `
+    //     newArgs,
+    //     output => this._logOutput(output),
+    //     err => this._logError(err),
+    //     () => resolve(),
+    //   );
+    // });
+    let outputStr = '';
+    // if(running) {
+    //   console.log('563');
+
+      // await new Promise<void>((resolve, reject) => {
+      //   this._docker.exec(
+      //     this.id,
+      //     [],
+      //     " ls -la /root/keystore",//mv /root/keystore/blskeys /harmony/.hmy/blskeys ",
+      //     output => {
+      //       outputStr += `${output}\n`;
+      //       this._logOutput(output);
+      //     },
+      //     err => reject(err),
+      //     () => resolve(),
+      //     true,
+      //   );
+      // });
+      // await new Promise<void>((resolve, reject) => {
+      //   this._docker.exec(
+      //     this.id,
+      //     [],
+      //     ` /bin/hmy -v ${createValidator}`,
+      //     output => {
+      //       outputStr += `${output}\n`;
+      //       this._logOutput(output);
+      //     },
+      //     err => reject(err),
+      //     () => resolve(),
+      //     true,
+      //   );
+      // });
+
+    //} else {
+      console.log('599');
+      console.log(this.passwordPath);
+      const passwordPath = path.join(os.tmpdir(), uuid());
+      console.log(this.passwordPath);
+      //const passwordFileExists = await this._fs.pathExists(passwordPath);
+      // if(!passwordFileExists)
+      //   console.log(password);
+      //   console.log(passwordPath);
+      await this._fs.writeFile(passwordPath, password, 'utf8');
+      console.log('578');
+      console.log(containerPasswordPath);
+      console.log(passwordPath);
+      await this._docker.stop(this.id);
+      const args = [
+        '-i',
+        '--rm',
+        //'-v', `${this.configDir}:${containerConfigDir}`,
+        //'-v', `${this.dataDir}:${containerDataDir}`,
+        '-v', `${passwordPath}:${containerPasswordPath}`,
+        '-v', `${this.walletDir}:/root/.hmy_cli/account-keys/nl`,
+      ];
+
+      //./hmy keys import-ks
+
+
+      await new Promise<void>((resolve, reject) => {
+        this._docker.run(
+          this.dockerImage + ' /bin/hmy -v' + createValidator,
+          args,
+          output => {
+            outputStr += `${output}\n`;
+            this._logOutput(output);
+          },
+          err => reject(err),
+          () => resolve(),
+          true,
+        );
+      });
+
+
+
+      console.log('623');
+      console.log('WTFFFFFFF');
+    //}
+    //await timeout(5000);
+    //return coreConfig._252
+    //.replace('{{NETWORK}}', network === NetworkType.MAINNET ? 'mainnet' : 'testnet')
+    //.replace(/{{NETWORK_TYPE}}/g, network === NetworkType.MAINNET ? 't' : 'p')
+    //.replace('{{NODE_TYPE}}', role === Role.NODE ? 'explorer' : 'validator')
+    //await this._dockerstart(password);
+
+    const match = outputStr.match(txPatt);
+    return match ? match[0] : '';
+  }
+
+
+
   async generateKeyPair(password: string): Promise<boolean> {
     try {
       const web3 = new Web3();
-      const { address, privateKey } = web3.eth.accounts.create();
-      this.address = address;
-      this.privateKeyEncrypted = JSON.stringify(web3.eth.accounts.encrypt(privateKey, password));
+      // Need to convert hex address to one bech32 before creating validator
+      // do we want to display/keep both hex and bech32?
+      // this.address = address; this is hex address
+      //const keystore = '{"version":3,"id":"33363566-3564-4264-a638-363531666335","address":"7c41e0668b551f4f902cfaec05b5bdca68b124ce","crypto":{"ciphertext":"9b09380afb742838b32d9afc0ec1a3df35dbd7a41e3a160d08c07a4d0e79b855","cipherparams":{"iv":"1cd0e0522260eef055b9170f4825f4a0"},"cipher":"aes-128-ctr","kdf":"scrypt","kdfparams":{"salt":"bf35e36c45cccefcef73a4c900f41c682c94c28630d94d2d1f764760d245f30b","n":8192,"r":8,"p":1,"dklen":32},"mac":"25b4442972356bea02af57eba3b87803086d90b5e7657a57b528b89b1aa25f2f"}}';
+      if (!this.privateKeyEncrypted){
+        const { address, privateKey } = web3.eth.accounts.create();
+        this.privateKeyEncrypted = JSON.stringify(web3.eth.accounts.encrypt(privateKey, password));
+      } //else {
+        //account = web3.eth.accounts.decrypt(JSON.parse(this.privateKeyEncrypted), password)
+      //}
+      console.log('WE IN THI BIH');
+      const harmonyAccount = new Account();
+      harmonyAccount.fromFile(this.privateKeyEncrypted, password).then((account: any) => {
+          this.bech32Address = account.bech32Address;
+          this.address = account.checksumAddress;
+          this.publicKey = account.publicKey.toString('hex');
+          console.log("One Address: " + this.bech32Address);
+          console.log("Hex Address: " + this.address);
+      });
+      console.log('704');
       return true;
     } catch(err) {
       this._logError(err);
@@ -496,7 +717,7 @@ export class Harmony extends Ethereum {
 
   async getRawPrivateKey(password: string): Promise<string> {
     try {
-      const web3 = new Web3(`http://localhost:${this.rpcPort}`);
+      const web3 = new Web3();//`http://localhost:${this.rpcPort}`);
       const account = web3.eth.accounts.decrypt(JSON.parse(this.privateKeyEncrypted), password);
       return account.privateKey;
     } catch(err) {
