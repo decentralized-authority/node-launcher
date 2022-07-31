@@ -343,7 +343,7 @@ export class Pocket extends Bitcoin {
     };
   }
 
-  async start(password?: string): Promise<ChildProcess[]> {
+  async start(password?: string, simulateRelay = false): Promise<ChildProcess[]> {
     const fs = this._fs;
     const versions = Pocket.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
@@ -475,7 +475,7 @@ export class Pocket extends Bitcoin {
       ];
       const exitCode = await new Promise<number>((resolve, reject) => {
         this._docker.run(
-          this.dockerImage + versionData.generateRuntimeArgs(this),
+          this.dockerImage + versionData.generateRuntimeArgs(this) + (simulateRelay ? ' --simulateRelay' : ''),
           args,
           output => this._logOutput(output),
           err => {
