@@ -28,8 +28,8 @@ Version = "2.5.2"
   IsBackup = false
   IsBeaconArchival = false
   IsOffline = false
-  NoStaking = true
-  NodeType = "{{NODE_TYPE}}"
+  NoStaking = false
+  NodeType = "explorer"
   ShardID = {{SHARD}}
   TraceEnable = false
 
