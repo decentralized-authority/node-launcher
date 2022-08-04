@@ -763,9 +763,10 @@ export class Pocket extends Bitcoin {
    * @param {string} amount send amount in POKT
    * @param {string} toAddress
    * @param {string} memo
+   * @param {string} chainID
    * @returns {Promise<string>}
    */
-  async send(password: string, amount: string, toAddress: string, memo: string): Promise<string> {
+  async send(password: string, amount: string, toAddress: string, memo: string, chainID = 'mainnet'): Promise<string> {
     const privateKey = await this.getRawPrivateKey(password);
     const pocket = this.getPocketJsInstance();
     const transactionSender = pocket.withPrivateKey(privateKey);
@@ -773,7 +774,7 @@ export class Pocket extends Bitcoin {
       throw transactionSender;
     const rawTxResponse = await transactionSender
       .send(this.address, toAddress, math.multiply(math.bignumber(amount), math.bignumber('1000000')).toString())
-      .submit('testnet', '10000', CoinDenom.Upokt, memo, this._requestTimeout);
+      .submit(chainID, '10000', CoinDenom.Upokt, memo, this._requestTimeout);
     if(isError(rawTxResponse))
       throw rawTxResponse;
     return rawTxResponse.hash;
