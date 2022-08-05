@@ -204,6 +204,24 @@ export class Ethereum extends Bitcoin {
           },
         ];
         break;
+      case NodeClient.NETHERMIND:
+        versions = [
+          {
+            version: '1.13.6',
+            clientVersion: '1.13.6',
+            image: 'nethermind/nethermind:1.13.6',
+            dataDir: '/nethermind/nethermind_db',
+            walletDir: '/nethermind/keystore',
+            configDir: '/nethermind/configs',
+            networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              const { network = '' } = data;
+              return ` --config ` + (network === NetworkType.MAINNET ? '' : ` ${network.toLowerCase()}`);
+            }, //` --configsDirectory ${this.configDir}` + 
+          },
+        ]
+        break;
       default:
         versions = [];
     }
