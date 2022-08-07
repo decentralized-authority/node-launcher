@@ -3,7 +3,7 @@ import { CryptoNodeData, ValidatorInfo, VersionDockerImage } from '../../interfa
 import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role } from '../../constants';
 import { Docker } from '../../util/docker';
 import { v4 as uuid } from 'uuid';
-import { filterVersionsByNetworkType, timeout } from '../../util';
+import { filterVersionsByNetworkType } from '../../util';
 import { ChildProcess } from 'child_process';
 import os from 'os';
 import path from 'path';
@@ -40,14 +40,16 @@ export class Harmony extends Ethereum {
           {
             version: '4.3.12',
             clientVersion: '4.3.12',
-            image: 'rburgett/harmony:4.3.12',
+            image: 'icculp/harmony:4.3.12',
             dataDir: '/root/data',
             walletDir: '/root/keystore',
-            configDir: '/harmony/config',
-            networks: [NetworkType.MAINNET],
+            configDir: '/root/config',
+            passwordPath: '/root/pass.pwd',
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
-              return ` -c ${path.join(this.configDir, Harmony.configName(data))}`;
+            generateRuntimeArgs(data: HarmonyNodeData): string {
+              console.log(path.join(this.configDir, Harmony.configName(data)));
+              return ` /bin/harmony -c ${path.join(this.configDir, Harmony.configName(data))}`;
             },
           },
           {
@@ -163,17 +165,27 @@ export class Harmony extends Ethereum {
 
   static generateConfig(client: string|Harmony = Harmony.clients[0], network = NetworkType.MAINNET, peerPort = Harmony.defaultPeerPort[NetworkType.MAINNET], rpcPort = Harmony.defaultRPCPort[NetworkType.MAINNET]): string {
     let shard = 0;
+    let version = '';
+    let config = '';
     if(typeof client !== 'string') { // node was passed in rather than client string
       const node = client;
       client = node.client;
       network = node.network;
       peerPort = node.peerPort;
       rpcPort = node.rpcPort;
-      shard = node.shard
+      shard = node.shard;
+      version = node.version;
     }
     switch(client) {
       case NodeClient.CORE:
-        return coreConfig._252
+        if (version == '4.3.9'){
+          config = coreConfig._252;
+        } else if (version == '4.3.12') {
+          config = coreConfig._255;
+        } else {
+          config = coreConfig._250;
+        }
+        return config
           .replace('{{NETWORK}}', network === NetworkType.MAINNET ? 'mainnet' : 'devnet')
           .replace(/{{NETWORK_TYPE}}/g, network === NetworkType.MAINNET ? 't' : 'ps')
           .replace('{{PEER_PORT}}', peerPort.toString(10))
