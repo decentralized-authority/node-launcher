@@ -7,24 +7,11 @@ import request from 'superagent';
 import path from 'path';
 import os from 'os';
 import { Bitcoin } from '../bitcoin/bitcoin';
-import { filterVersionsByNetworkType, timeout } from '../../util';
+import { filterVersionsByNetworkType } from '../../util';
 import { FS } from '../../util/fs';
+import { base as coreConfig } from './config/core';
+import * as nethermindConfig from './config/nethermind';
 
-const coreConfig = `
-[Eth]
-NetworkId = 1
-
-[Node]
-DataDir = "/root/.ethereum"
-KeyStoreDir = "/root/keystore"
-HTTPHost = "0.0.0.0"
-HTTPPort = {{RPC_PORT}}
-HTTPVirtualHosts = ["*"]
-HTTPModules = ["net", "web3", "eth"]
-
-[Node.P2P]
-ListenAddr = ":{{PEER_PORT}}"
-`;
 
 export class Ethereum extends Bitcoin {
 
@@ -212,13 +199,13 @@ export class Ethereum extends Bitcoin {
             image: 'nethermind/nethermind:1.13.6',
             dataDir: '/nethermind/nethermind_db',
             walletDir: '/nethermind/keystore',
-            configDir: '/nethermind/configs',
+            configDir: '/nethermind/config',
             networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               const { network = '' } = data;
-              return ` --config ` + (network === NetworkType.MAINNET ? '' : ` ${network.toLowerCase()}`);
-            }, //` --configsDirectory ${this.configDir}` + 
+              return ` --configsDirectory ${this.configDir} --config ${network.toLowerCase()}`;
+            },
           },
         ]
         break;
@@ -230,6 +217,7 @@ export class Ethereum extends Bitcoin {
 
   static clients = [
     NodeClient.GETH,
+    NodeClient.NETHERMIND,
   ];
 
   static nodeTypes = [
@@ -261,19 +249,42 @@ export class Ethereum extends Bitcoin {
   static defaultMem = 16384;
 
   static generateConfig(client = Ethereum.clients[0], network = NetworkType.MAINNET, peerPort = Ethereum.defaultPeerPort[NetworkType.MAINNET], rpcPort = Ethereum.defaultRPCPort[NetworkType.MAINNET]): string {
+    let config = '';
     switch(client) {
       case NodeClient.GETH:
-        return coreConfig
-          .replace('{{PEER_PORT}}', peerPort.toString(10))
-          .replace('{{RPC_PORT}}', rpcPort.toString(10))
-          .trim();
+        config = coreConfig
+        break;
+      case NodeClient.NETHERMIND:
+        switch(network) {
+          case NetworkType.MAINNET:
+            config = nethermindConfig.mainnet
+            break;
+          case NetworkType.RINKEBY:
+            config = nethermindConfig.rinkeby
+            break;
+        }
+        break;
       default:
         return '';
     }
+    return config
+      .replace('{{PEER_PORT}}', peerPort.toString(10))
+      .replace('{{RPC_PORT}}', rpcPort.toString(10))
+      .trim();
   }
 
   static configName(data: CryptoNodeData): string {
-    return 'config.toml';
+    const { network, client } = data;
+    switch(client) {
+      case NodeClient.GETH:
+        return 'config.toml';
+      case NodeClient.NETHERMIND:
+          const { network = '' } = data;
+          return network.toLowerCase() + '.cfg';
+    default:
+      return 'config.toml';
+    }
+    
   }
 
   id: string;
