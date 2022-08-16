@@ -94,6 +94,22 @@ export class Fuse extends Ethereum {
         versions = [
           {
             version: '2.0.2',
+            clientVersion: '3.3.5',
+            image: 'fusenet/node:2.0.2',
+            imageValidatorApp: '',
+            imageNetstat: '',
+            dataDir: '/root/data',
+            walletDir: '/root/keystore',
+            configDir: '/root/config',
+            passwordPath: '/root/pass.pwd',
+            networks: [NetworkType.MAINNET],
+            breaking: false,
+            generateRuntimeArgs(data: FuseNodeData): string {
+              return ` --no-warp --config=${path.join(this.configDir, Fuse.configName(data))}`;
+            },
+          },
+          {
+            version: '2.0.2',
             clientVersion: '3.2.6',
             image: 'fusenet/spark-node:2.0.2',
             imageValidatorApp: 'fusenet/spark-validator-app:1.0.0',
