@@ -20,6 +20,19 @@ export class IOTEX extends Ethereum {
       case NodeClient.CORE:
         versions = [
           {
+            version: '1.8.2',
+            clientVersion: '1.8.2',
+            image: 'iotex/iotex-core:v1.8.2',
+            dataDir: '/var/data',
+            walletDir: '/var/keys',
+            configDir: '/etc/iotex',
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              return ' iotex-server -config-path=/etc/iotex/config.yaml -genesis-path=/etc/iotex/genesis.yaml -plugin=gateway';
+            },
+          },
+          {
             version: '1.8.0',
             clientVersion: '1.8.0',
             image: 'iotex/iotex-core:v1.8.0',
