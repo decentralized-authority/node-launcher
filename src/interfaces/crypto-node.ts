@@ -88,3 +88,12 @@ export abstract class CryptoNodeStatic {
     return '';
   }
 }
+
+export interface ValidatorInfo {
+  jailed: boolean;
+  stakedAmount: string;
+  unstakeDate: string;
+  url: string;
+  address: string;
+  publicKey: string;
+}

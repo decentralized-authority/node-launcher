@@ -1,4 +1,4 @@
-import { CryptoNodeData, VersionDockerImage } from '../../interfaces/crypto-node';
+import { CryptoNodeData, ValidatorInfo, VersionDockerImage } from '../../interfaces/crypto-node';
 import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role, Status } from '../../constants';
 import { Bitcoin } from '../bitcoin/bitcoin';
 import { Docker } from '../../util/docker';
@@ -10,8 +10,13 @@ import { PocketGenesis } from './genesis';
 import request from 'superagent';
 import { filterVersionsByNetworkType } from '../../util';
 import { FS } from '../../util/fs';
-import { Configuration, HttpRpcProvider, Pocket as PocketJS } from '@pokt-network/pocket-js';
+import { CoinDenom, Configuration, HttpRpcProvider, Pocket as PocketJS } from '@pokt-network/pocket-js';
 import { isError } from 'lodash';
+import * as math from 'mathjs';
+
+interface PocketValidatorInfo extends ValidatorInfo {
+  chains: string[];
+}
 
 interface PocketNodeData extends CryptoNodeData {
   publicKey: string
@@ -175,7 +180,7 @@ const coreConfig = `
         "show_relay_errors": true,
         "disable_tx_events": true,
         "iavl_cache_size": 5000000,
-        "chains_hot_reload": false
+        "chains_hot_reload": true
     }
 }
 `;
@@ -188,6 +193,34 @@ export class Pocket extends Bitcoin {
     switch(client) {
       case NodeClient.CORE:
         versions = [
+          {
+            version: 'RC-0.9.0',
+            clientVersion: 'RC-0.9.0',
+            image: 'rburgett/pocketcore:RC-0.9.0',
+            dataDir: '/root/pocket-data',
+            walletDir: '/root/pocket-keys',
+            configDir: '/root/.pocket/config',
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              const { network = '' } = data;
+              return ` start --${network.toLowerCase()}`;
+            },
+          },
+          {
+            version: 'RC-0.8.3',
+            clientVersion: 'RC-0.8.3',
+            image: 'rburgett/pocketcore:RC-0.8.3',
+            dataDir: '/root/pocket-data',
+            walletDir: '/root/pocket-keys',
+            configDir: '/root/.pocket/config',
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              const { network = '' } = data;
+              return ` start --${network.toLowerCase()}`;
+            },
+          },
           {
             version: 'RC-0.8.2',
             clientVersion: 'RC-0.8.2',
@@ -244,7 +277,7 @@ export class Pocket extends Bitcoin {
 
   static defaultCPUs = 16;
 
-  static defaultMem = 8192;
+  static defaultMem = 24576;
 
   static generateConfig(client = Pocket.clients[0], network = NetworkType.MAINNET, peerPort = Pocket.defaultPeerPort[NetworkType.MAINNET], rpcPort = Pocket.defaultRPCPort[NetworkType.MAINNET], domain = ''): string {
     switch(client) {
@@ -273,7 +306,6 @@ export class Pocket extends Bitcoin {
   dockerImage: string;
   network: string;
   peerPort: number;
-  privKeyPass = '';
   rpcPort: number;
   rpcUsername: string;
   rpcPassword: string;
@@ -339,7 +371,7 @@ export class Pocket extends Bitcoin {
     };
   }
 
-  async start(password?: string): Promise<ChildProcess[]> {
+  async start(password?: string, simulateRelay = false): Promise<ChildProcess[]> {
     const fs = this._fs;
     const versions = Pocket.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
@@ -348,7 +380,7 @@ export class Pocket extends Bitcoin {
 
     if(!this.privateKeyEncrypted) {
       if(!password)
-        throw new Error('You must pass in a password the first time you run start(). This password will be used to generate the key pair.');
+        throw new Error('You must pass in a password the first time you run start() on a validator. This password will be used to generate the key pair.');
       await this.generateKeyPair(password);
     }
 
@@ -471,7 +503,7 @@ export class Pocket extends Bitcoin {
       ];
       const exitCode = await new Promise<number>((resolve, reject) => {
         this._docker.run(
-          this.dockerImage + versionData.generateRuntimeArgs(this),
+          this.dockerImage + versionData.generateRuntimeArgs(this) + (simulateRelay ? ' --simulateRelay' : ''),
           args,
           output => this._logOutput(output),
           err => {
@@ -526,7 +558,7 @@ export class Pocket extends Bitcoin {
     return path.join(this.configDir, 'chains.json');
   }
 
-  async stakeValidator(amount: string, fee: string, password: string): Promise<string> {
+  async stakeValidator(amount: string, password: string): Promise<string> {
     const versions = Pocket.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
     if(!versionData)
@@ -540,6 +572,7 @@ export class Pocket extends Bitcoin {
     const chainsJson = await this._fs.readFile(this.pocketChainsPath(), 'utf8');
     const chainsData: {id: string}[] = JSON.parse(chainsJson);
     const chains = chainsData.map(c => c.id);
+    const fee = 10000;
     const command = `nodes stake custodial ${this.address} ${amount} ${chains.join(',')} https://${this.domain}:443 ${this.network.toLowerCase()} ${fee} ${this.network !== NetworkType.TESTNET} --pwd ${password}`;
     const txPatt = /[0-9a-f]{64}/i;
     let outputStr = '';
@@ -662,21 +695,21 @@ export class Pocket extends Bitcoin {
     }
   }
 
-  async rpcGetBalance(): Promise<BigInt> {
+  async rpcGetBalance(): Promise<string> {
     try {
       const pocket = this.getPocketJsInstance();
       if(!pocket.rpc)
-        return BigInt('0');
+        return '0';
       const res = await pocket.rpc()?.query.getBalance(this.address, BigInt('0'), this._requestTimeout);
       if(isError(res))
         throw res;
       else if(!res)
-        return BigInt('0');
+        return '0';
       else
-        return res.balance;
+        return res.balance.toString(10);
     } catch(err) {
       this._logError(err);
-      return BigInt('0');
+      return '0';
     }
 
   }
@@ -723,6 +756,55 @@ export class Pocket extends Bitcoin {
       }
     }
     return status;
+  }
+
+  async getValidatorInfo(): Promise<PocketValidatorInfo|null> {
+    try {
+      const pocket = this.getPocketJsInstance();
+      if(!pocket.rpc)
+        return null;
+      const res = await pocket.rpc()?.query.getNode(this.address, BigInt('0'), this._requestTimeout);
+      if(isError(res))
+        throw res;
+      else if(!res)
+        return null;
+      else {
+        const { node } = res;
+        return {
+          jailed: node.jailed,
+          stakedAmount: node.stakedTokens.toString(),
+          unstakeDate: node.unstakingCompletionTimestamp || '',
+          url: node.serviceURL.toString(),
+          address: node.address,
+          publicKey: node.publicKey,
+          chains: node.chains,
+        };
+      }
+    } catch(err) {
+      this._logError(err);
+      return null;
+    }
+  }
+
+  /**
+   * @param {string} password
+   * @param {string} amount send amount in POKT
+   * @param {string} toAddress
+   * @param {string} memo
+   * @returns {Promise<string>}
+   */
+  async send(password: string, amount: string, toAddress: string, memo: string): Promise<string> {
+    const privateKey = await this.getRawPrivateKey(password);
+    const pocket = this.getPocketJsInstance();
+    const transactionSender = pocket.withPrivateKey(privateKey);
+    if(isError(transactionSender))
+      throw transactionSender;
+    const rawTxResponse = await transactionSender
+      .send(this.address, toAddress, math.multiply(math.bignumber(amount), math.bignumber('1000000')).toString())
+      .submit(this.network === NetworkType.TESTNET ? 'testnet' : 'mainnet', '10000', CoinDenom.Upokt, memo, this._requestTimeout);
+    if(isError(rawTxResponse))
+      throw rawTxResponse;
+    return rawTxResponse.hash;
   }
 
 }

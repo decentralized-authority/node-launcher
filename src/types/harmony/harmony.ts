@@ -111,6 +111,19 @@ export class Harmony extends Ethereum {
       case NodeClient.CORE:
         versions = [
           {
+            version: '4.3.12',
+            clientVersion: '4.3.12',
+            image: 'rburgett/harmony:4.3.12',
+            dataDir: '/root/data',
+            walletDir: '/root/keystore',
+            configDir: '/harmony/config',
+            networks: [NetworkType.MAINNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              return ` -c ${path.join(this.configDir, Harmony.configName(data))}`;
+            },
+          },
+          {
             version: '4.3.9',
             clientVersion: '4.3.9',
             image: 'rburgett/harmony:4.3.9',
