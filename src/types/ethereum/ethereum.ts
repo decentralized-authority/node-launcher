@@ -11,6 +11,7 @@ import { filterVersionsByNetworkType } from '../../util';
 import { FS } from '../../util/fs';
 import { base as coreConfig } from './config/core';
 import * as nethermindConfig from './config/nethermind';
+import { base as erigonConfig } from './config/erigon';
 
 
 export class Ethereum extends Bitcoin {
@@ -209,6 +210,31 @@ export class Ethereum extends Bitcoin {
           },
         ]
         break;
+      case NodeClient.ERIGON:
+          versions = [
+            {
+              version: 'v2022.08.02',
+              clientVersion: 'v2022.08.02',
+              image: 'thorax/erigon:v2022.08.02',
+              dataDir: '/erigon/data',
+              walletDir: '/erigon/keystore',
+              configDir: '/erigon/config',
+              networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
+              breaking: false,
+              generateRuntimeArgs(data: CryptoNodeData): string {
+                const { network = '' } = data;
+                return ` erigon --config=${path.join(this.configDir, Ethereum.configName(data))}  `;//--datadir=/erigon/data --chain=mainnet 
+                //--port=30303 --http.port=8005 --authrpc.port=8551 --torrent.port=42069 
+                //--private.api.addr=127.0.0.1:9090 --http --ws --http.api=eth,debug,net,trace,web3,erigon`;
+                //--authrpc.jwtsecret=/home/erigon/.local/share/erigon/jwt.hex`;
+              },
+              // erigon ${ERIGON_FLAGS-} --private.api.addr=0.0.0.0:9090
+              // --sentry.api.addr=sentry:9091 --downloader.api.addr=downloader:9093 --txpool.disable
+              // --metrics --metrics.addr=0.0.0.0 --metrics.port=6060 --pprof --pprof.addr=0.0.0.0 --pprof.port=6061
+              // --authrpc.jwtsecret=/home/erigon/.local/share/erigon/jwt.hex
+            },
+          ]
+          break;
       default:
         versions = [];
     }
@@ -235,12 +261,12 @@ export class Ethereum extends Bitcoin {
   ];
 
   static defaultRPCPort = {
-    [NetworkType.MAINNET]: 8545,
+    [NetworkType.MAINNET]: 8535,
     [NetworkType.RINKEBY]: 18545,
   };
 
   static defaultPeerPort = {
-    [NetworkType.MAINNET]: 8546,
+    [NetworkType.MAINNET]: 8536,
     [NetworkType.RINKEBY]: 18546,
   };
 
@@ -262,7 +288,9 @@ export class Ethereum extends Bitcoin {
           case NetworkType.RINKEBY:
             config = nethermindConfig.rinkeby
             break;
-        }
+          }
+      case NodeClient.ERIGON:
+        config = erigonConfig
         break;
       default:
         return '';
@@ -313,7 +341,7 @@ export class Ethereum extends Bitcoin {
 
   constructor(data: CryptoNodeData, docker?: Docker) {
     super(data, docker);
-    this.id = data.id || uuid();
+    this.id = 'this.id' //data.id || uuid();
     this.network = data.network || NetworkType.MAINNET;
     this.peerPort = data.peerPort || Ethereum.defaultPeerPort[this.network];
     this.rpcPort = data.rpcPort || Ethereum.defaultRPCPort[this.network];
@@ -362,10 +390,11 @@ export class Ethereum extends Bitcoin {
       } = versionData;
       let args = [
         '-d',
-        `--restart=on-failure:${this.restartAttempts}`,
+        '-u', 'root',
+        `--rm`, //`--restart=on-failure:${this.restartAttempts}`,
         '--memory', this.dockerMem.toString(10) + 'MB',
         '--cpus', this.dockerCPUs.toString(10),
-        '--name', this.id,
+        '--name', 'this.id',
         '--network', this.dockerNetwork,
         '-p', `${this.rpcPort}:${this.rpcPort}`,
         '-p', `${this.peerPort}:${this.peerPort}`,
@@ -382,6 +411,7 @@ export class Ethereum extends Bitcoin {
       const configDir = this.configDir || path.join(tmpdir, uuid());
       await fs.ensureDir(configDir);
       const configPath = path.join(configDir, Ethereum.configName(this));
+      console.log(configPath);
       const configExists = await fs.pathExists(configPath);
       if(!configExists)
         await fs.writeFile(configPath, this.generateConfig(), 'utf8');
