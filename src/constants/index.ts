@@ -15,6 +15,7 @@ export const NodeClient = {
   OPEN_ETHEREUM: 'OPEN_ETHEREUM',
   PARITY: 'PARITY',
   NETHERMIND: 'NETHERMIND',
+  ERIGON: 'ERIGON',
 };
 
 export const Role = {
