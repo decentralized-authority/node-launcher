@@ -223,15 +223,8 @@ export class Ethereum extends Bitcoin {
               breaking: false,
               generateRuntimeArgs(data: CryptoNodeData): string {
                 const { network = '' } = data;
-                return ` erigon --config=${path.join(this.configDir, Ethereum.configName(data))}  `;//--datadir=/erigon/data --chain=mainnet 
-                //--port=30303 --http.port=8005 --authrpc.port=8551 --torrent.port=42069 
-                //--private.api.addr=127.0.0.1:9090 --http --ws --http.api=eth,debug,net,trace,web3,erigon`;
-                //--authrpc.jwtsecret=/home/erigon/.local/share/erigon/jwt.hex`;
+                return ` erigon --config=${path.join(this.configDir, Ethereum.configName(data))}  `;
               },
-              // erigon ${ERIGON_FLAGS-} --private.api.addr=0.0.0.0:9090
-              // --sentry.api.addr=sentry:9091 --downloader.api.addr=downloader:9093 --txpool.disable
-              // --metrics --metrics.addr=0.0.0.0 --metrics.port=6060 --pprof --pprof.addr=0.0.0.0 --pprof.port=6061
-              // --authrpc.jwtsecret=/home/erigon/.local/share/erigon/jwt.hex
             },
           ]
           break;
@@ -261,12 +254,12 @@ export class Ethereum extends Bitcoin {
   ];
 
   static defaultRPCPort = {
-    [NetworkType.MAINNET]: 8535,
+    [NetworkType.MAINNET]: 8545,
     [NetworkType.RINKEBY]: 18545,
   };
 
   static defaultPeerPort = {
-    [NetworkType.MAINNET]: 8536,
+    [NetworkType.MAINNET]: 8546,
     [NetworkType.RINKEBY]: 18546,
   };
 
@@ -304,8 +297,6 @@ export class Ethereum extends Bitcoin {
   static configName(data: CryptoNodeData): string {
     const { network, client } = data;
     switch(client) {
-      case NodeClient.GETH:
-        return 'config.toml';
       case NodeClient.NETHERMIND:
           const { network = '' } = data;
           return network.toLowerCase() + '.cfg';
