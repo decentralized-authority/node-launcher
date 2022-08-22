@@ -213,9 +213,9 @@ export class Ethereum extends Bitcoin {
       case NodeClient.ERIGON:
           versions = [
             {
-              version: 'v2022.08.02',
-              clientVersion: 'v2022.08.02',
-              image: 'thorax/erigon:v2022.08.02',
+              version: '2022.08.02',
+              clientVersion: '2022.08.2',
+              image: 'icculp/erigon:v2022.08.02',
               dataDir: '/erigon/data',
               walletDir: '/erigon/keystore',
               configDir: '/erigon/config',
@@ -237,6 +237,7 @@ export class Ethereum extends Bitcoin {
   static clients = [
     NodeClient.GETH,
     NodeClient.NETHERMIND,
+    NodeClient.ERIGON,
   ];
 
   static nodeTypes = [
@@ -271,19 +272,20 @@ export class Ethereum extends Bitcoin {
     let config = '';
     switch(client) {
       case NodeClient.GETH:
-        config = coreConfig
+        config = coreConfig;
         break;
       case NodeClient.NETHERMIND:
         switch(network) {
           case NetworkType.MAINNET:
-            config = nethermindConfig.mainnet
+            config = nethermindConfig.mainnet;
             break;
           case NetworkType.RINKEBY:
-            config = nethermindConfig.rinkeby
+            config = nethermindConfig.rinkeby;
             break;
           }
+        break;
       case NodeClient.ERIGON:
-        config = erigonConfig
+        config = erigonConfig.replace('{{NETWORK}}', network.toLowerCase());
         break;
       default:
         return '';
@@ -332,7 +334,7 @@ export class Ethereum extends Bitcoin {
 
   constructor(data: CryptoNodeData, docker?: Docker) {
     super(data, docker);
-    this.id = 'this.id' //data.id || uuid();
+    this.id = data.id || uuid();
     this.network = data.network || NetworkType.MAINNET;
     this.peerPort = data.peerPort || Ethereum.defaultPeerPort[this.network];
     this.rpcPort = data.rpcPort || Ethereum.defaultRPCPort[this.network];
@@ -381,11 +383,10 @@ export class Ethereum extends Bitcoin {
       } = versionData;
       let args = [
         '-d',
-        '-u', 'root',
-        `--rm`, //`--restart=on-failure:${this.restartAttempts}`,
+        `--restart=on-failure:${this.restartAttempts}`,
         '--memory', this.dockerMem.toString(10) + 'MB',
         '--cpus', this.dockerCPUs.toString(10),
-        '--name', 'this.id',
+        '--name', this.id,
         '--network', this.dockerNetwork,
         '-p', `${this.rpcPort}:${this.rpcPort}`,
         '-p', `${this.peerPort}:${this.peerPort}`,
@@ -402,7 +403,6 @@ export class Ethereum extends Bitcoin {
       const configDir = this.configDir || path.join(tmpdir, uuid());
       await fs.ensureDir(configDir);
       const configPath = path.join(configDir, Ethereum.configName(this));
-      console.log(configPath);
       const configExists = await fs.pathExists(configPath);
       if(!configExists)
         await fs.writeFile(configPath, this.generateConfig(), 'utf8');
@@ -475,6 +475,8 @@ export class Ethereum extends Bitcoin {
       if(!matches)
         // check for regular matches
         matches = result.match(/v(\d+\.\d+\.\d+)/);
+      if(this.client == 'ERIGON')
+        matches = result.match(/erigon\/(\d+.\d+.\d+)\//);
       if(matches && matches.length > 1) {
         return matches[1];
       } else {
