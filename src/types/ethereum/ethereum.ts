@@ -195,6 +195,20 @@ export class Ethereum extends Bitcoin {
       case NodeClient.NETHERMIND:
         versions = [
           {
+            version: '1.14.0',
+            clientVersion: '1.14.0',
+            image: 'nethermind/nethermind:1.14.0',
+            dataDir: '/nethermind/nethermind_db',
+            walletDir: '/nethermind/keystore',
+            configDir: '/nethermind/config',
+            networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              const { network = '' } = data;
+              return ` --configsDirectory ${this.configDir} --config ${network.toLowerCase()}`;
+            },
+          },
+          {
             version: '1.13.6',
             clientVersion: '1.13.6',
             image: 'nethermind/nethermind:1.13.6',
