@@ -234,6 +234,40 @@ export class Polygon extends Ethereum {
    }
   }
 
+  static async upgradeNode(node: PolygonCryptoNodeData, versionData: PolygonVersionDockerImage): Promise<boolean> {
+    const {
+      version: origVersion,
+      clientVersion: origClientVersion,
+      dockerImage: origDockerImage,
+      heimdallDockerImage: origHeimdallDockerImage,
+    } = node;
+    node.version = versionData.version;
+    node.clientVersion = versionData.clientVersion;
+    node.dockerImage = versionData.image;
+    if(versionData.heimdallImage)
+      node.heimdallDockerImage = versionData.heimdallImage;
+    if(versionData.upgrade) {
+      let success = false;
+      let upgradeErr: Error|null = null;
+      try {
+        success = await versionData.upgrade(node);
+      } catch(err) {
+        upgradeErr = err;
+      }
+      if(!success) {
+        node.version = origVersion;
+        node.clientVersion = origClientVersion;
+        node.dockerImage = origDockerImage;
+        node.heimdallDockerImage = origHeimdallDockerImage;
+        if(upgradeErr)
+          throw upgradeErr;
+        else
+          return false;
+      }
+    }
+    return true;
+  }
+
   static fileName = {
     config: 'config.toml',
     heimdallConfig: 'config.toml',
