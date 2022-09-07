@@ -225,23 +225,41 @@ export class Ethereum extends Bitcoin {
         ]
         break;
       case NodeClient.ERIGON:
-          versions = [
-            {
-              version: '2022.08.02',
-              clientVersion: '2022.08.2',
-              image: 'icculp/erigon:v2022.08.02',
-              dataDir: '/erigon/data',
-              walletDir: '/erigon/keystore',
-              configDir: '/erigon/config',
-              networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
-              breaking: false,
-              generateRuntimeArgs(data: CryptoNodeData): string {
-                const { network = '' } = data;
-                return ` erigon --config=${path.join(this.configDir, Ethereum.configName(data))}  `;
-              },
+        versions = [
+          {
+            version: '2022.08.02',
+            clientVersion: '2022.08.2',
+            image: 'icculp/erigon:v2022.08.02',
+            dataDir: '/erigon/data',
+            walletDir: '/erigon/keystore',
+            configDir: '/erigon/config',
+            networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              const { network = '' } = data;
+              return ` erigon --config=${path.join(this.configDir, Ethereum.configName(data))}  `;
             },
-          ]
-          break;
+          },
+        ]
+        break;
+      case NodeClient.PRYSM:
+        versions = [        
+          {
+            version: '2.1.4',
+            clientVersion: '2.1.4',
+            image: 'prysmaticlabs/prysm-beacon-chain:v2.1.4',
+            dataDir: '/root/data',
+            walletDir: '/root/keys',
+            configDir: '/root/config',
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              const { id = '' } = data;
+              return ` --config=${this.configDir}/${Prysm.fileName.config} `;
+            }
+          },
+        ]
+        break;
       default:
         versions = [];
     }

@@ -16,6 +16,7 @@ export const NodeClient = {
   PARITY: 'PARITY',
   NETHERMIND: 'NETHERMIND',
   ERIGON: 'ERIGON',
+  PRYSM: 'PRYSM',
 };
 
 export const Role = {
