@@ -12,6 +12,7 @@ import { FS } from '../../util/fs';
 import { base as coreConfig } from './config/core';
 import * as nethermindConfig from './config/nethermind';
 import { base as erigonConfig } from './config/erigon';
+import { base as prysmConfig } from './config/prysm';
 
 
 export class Ethereum extends Bitcoin {
@@ -245,17 +246,16 @@ export class Ethereum extends Bitcoin {
       case NodeClient.PRYSM:
         versions = [        
           {
-            version: '2.1.4',
-            clientVersion: '2.1.4',
-            image: 'prysmaticlabs/prysm-beacon-chain:v2.1.4',
+            version: '3.1.0',
+            clientVersion: '3.1.0',
+            image: 'prysmaticlabs/prysm-beacon-chain:v3.1.0',
             dataDir: '/root/data',
             walletDir: '/root/keys',
             configDir: '/root/config',
             networks: [NetworkType.MAINNET, NetworkType.TESTNET],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
-              const { id = '' } = data;
-              return ` --config=${this.configDir}/${Prysm.fileName.config} `;
+              return ` --config-file=${path.join(this.configDir, Ethereum.configName(data))} `;
             }
           },
         ]
@@ -319,11 +319,14 @@ export class Ethereum extends Bitcoin {
       case NodeClient.ERIGON:
         config = erigonConfig.replace('{{NETWORK}}', network.toLowerCase());
         break;
+      case NodeClient.PRYSM:
+        config = prysmConfig;
+        break;
       default:
         return '';
     }
     return config
-      .replace('{{PEER_PORT}}', peerPort.toString(10))
+      .replace(/{{PEER_PORT}}/g, peerPort.toString(10))
       .replace('{{RPC_PORT}}', rpcPort.toString(10))
       .trim();
   }
@@ -334,6 +337,8 @@ export class Ethereum extends Bitcoin {
       case NodeClient.NETHERMIND:
           const { network = '' } = data;
           return network.toLowerCase() + '.cfg';
+      case NodeClient.PRYSM:
+          return 'prysm.yaml';
     default:
       return 'config.toml';
     }
