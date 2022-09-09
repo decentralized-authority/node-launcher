@@ -37,7 +37,6 @@ export interface CryptoNodeData {
   dataDir?: string;
   walletDir?: string;
   configDir?: string;
-  passwordPath?: string;
   domain?: string;
   address?: string;
   createdAt?: string;
