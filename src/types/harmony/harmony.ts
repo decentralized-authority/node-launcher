@@ -20,14 +20,11 @@ interface HarmonyNodeData extends CryptoNodeData {
   privateKeyEncrypted: string
   address: string
   domain: string
-  passwordPath: string
   bech32Address: string
   blskeys: string[]
-};
+}
 
-interface HarmonyVersionDockerImage extends VersionDockerImage {
-  passwordPath: string
-};
+interface HarmonyVersionDockerImage extends VersionDockerImage {}
 
 export class Harmony extends Ethereum {
 
@@ -40,31 +37,27 @@ export class Harmony extends Ethereum {
           {
             version: '4.3.12',
             clientVersion: '4.3.12',
-            image: 'icculp/harmony:4.3.12',
+            image: 'rburgett/harmony:4.3.12',
             dataDir: '/root/data',
             walletDir: '/root/keystore',
             configDir: '/root/config',
-            passwordPath: '/root/pass.pwd',
             networks: [NetworkType.MAINNET, NetworkType.TESTNET],
             breaking: false,
             generateRuntimeArgs(data: HarmonyNodeData): string {
-              console.log(path.join(this.configDir, Harmony.configName(data)));
-              return ` /bin/harmony -c ${path.join(this.configDir, Harmony.configName(data))}`;
+              return ` -c ${path.join(this.configDir, Harmony.configName())}`;
             },
           },
           {
             version: '4.3.9',
             clientVersion: '4.3.9',
-            image: 'icculp/harmony:4.3.9',
+            image: 'harmony/harmony:4.3.9',
             dataDir: '/root/data',
             walletDir: '/root/keystore',
             configDir: '/root/config',
-            passwordPath: '/root/pass.pwd',
             networks: [NetworkType.MAINNET, NetworkType.TESTNET],
             breaking: false,
             generateRuntimeArgs(data: HarmonyNodeData): string {
-              console.log(path.join(this.configDir, Harmony.configName(data)));
-              return ` /bin/harmony -c ${path.join(this.configDir, Harmony.configName(data))}`;
+              return ` -c ${path.join(this.configDir, Harmony.configName())}`;
             },
           },
           {
@@ -73,12 +66,11 @@ export class Harmony extends Ethereum {
             image: 'rburgett/harmony:4.3.4',
             dataDir: '/root/data',
             walletDir: '/root/keystore',
-            configDir: '/harmony/config',
-            passwordPath: '/root/pass.pwd',
+            configDir: '/root/config',
             networks: [NetworkType.MAINNET, NetworkType.TESTNET],
             breaking: false,
             generateRuntimeArgs(data: HarmonyNodeData): string {
-              return `/harmony/harmony -c ${path.join(this.configDir, Harmony.configName(data))}`;
+              return ` -c ${path.join(this.configDir, Harmony.configName())}`;
             },
           },
           {
@@ -87,12 +79,11 @@ export class Harmony extends Ethereum {
             image: 'pocketfoundation/harmony:4.3.2-29-g1c450bbc',
             dataDir: '/root/data',
             walletDir: '/root/keystore',
-            configDir: '/harmony/config',
-            passwordPath: '/root/pass.pwd',
+            configDir: '/root/config',
             networks: [NetworkType.MAINNET, NetworkType.TESTNET],
             breaking: false,
             generateRuntimeArgs(data: HarmonyNodeData): string {
-              return ` -c ${path.join(this.configDir, Harmony.configName(data))}`;
+              return ` -c ${path.join(this.configDir, Harmony.configName())}`;
             },
           },
           {
@@ -102,11 +93,10 @@ export class Harmony extends Ethereum {
             dataDir: '/root/data',
             walletDir: '/root/.hmy_cli/account-keys',
             configDir: '/harmony/config',
-            passwordPath: '/root/pass.pwd',
             networks: [NetworkType.MAINNET, NetworkType.TESTNET],
             breaking: false,
             generateRuntimeArgs(data: HarmonyNodeData): string {
-              return ` -c ${path.join(this.configDir, Harmony.configName(data))}`;
+              return ` -c ${path.join(this.configDir, Harmony.configName())}`;
             },
           },
           {
@@ -116,11 +106,10 @@ export class Harmony extends Ethereum {
             dataDir: '/root/data',
             walletDir: '/root/keystore',
             configDir: '/harmony/config',
-            passwordPath: '/root/pass.pwd',
             networks: [NetworkType.MAINNET, NetworkType.TESTNET],
             breaking: false,
             generateRuntimeArgs(data: HarmonyNodeData): string {
-              return ` -c ${path.join(this.configDir, Harmony.configName(data))}`;
+              return ` -c ${path.join(this.configDir, Harmony.configName())}`;
             },
           },
         ];
@@ -167,6 +156,7 @@ export class Harmony extends Ethereum {
     let shard = 0;
     let version = '';
     let config = '';
+    let role = Role.NODE;
     if(typeof client !== 'string') { // node was passed in rather than client string
       const node = client;
       client = node.client;
@@ -175,10 +165,11 @@ export class Harmony extends Ethereum {
       rpcPort = node.rpcPort;
       shard = node.shard;
       version = node.version;
+      role = node.role;
     }
     switch(client) {
       case NodeClient.CORE:
-        if (version == '4.3.9'){
+        if (version == '4.3.9') {
           config = coreConfig._252;
         } else if (version == '4.3.12') {
           config = coreConfig._255;
@@ -191,14 +182,21 @@ export class Harmony extends Ethereum {
           .replace('{{PEER_PORT}}', peerPort.toString(10))
           .replace('{{RPC_PORT}}', rpcPort.toString(10))
           .replace('{{SHARD}}', shard.toString(10))
+          .replace('{{NO_STAKING}}', role === Role.VALIDATOR ? 'false' : 'true')
+          .replace('{{NODE_TYPE}}', role === Role.VALIDATOR ? 'validator' : 'explorer')
+          .replace('{{SAVE_PASSPHRASE}}', role === Role.VALIDATOR ? 'true' : 'false')
           .trim();
       default:
         return '';
     }
   }
 
-  static configName(data: HarmonyNodeData): string {
+  static configName(): string {
     return 'harmony.conf';
+  }
+
+  static passwordFileName(): string {
+    return 'pass.pwd';
   }
 
   id: string;
@@ -220,7 +218,6 @@ export class Harmony extends Ethereum {
   dataDir = '';
   walletDir = '';
   configDir = '';
-  passwordPath = '';
   remote = false;
   remoteDomain = '';
   remoteProtocol = '';
@@ -248,7 +245,6 @@ export class Harmony extends Ethereum {
     this.dataDir = data.dataDir || this.dataDir;
     this.walletDir = data.walletDir || this.walletDir;
     this.configDir = data.configDir || this.configDir;
-    this.passwordPath = data.passwordPath || this.passwordPath;
     this.createdAt = data.createdAt || this.createdAt;
     this.updatedAt = data.updatedAt || this.updatedAt;
     this.remote = data.remote || this.remote;
@@ -267,7 +263,7 @@ export class Harmony extends Ethereum {
     this.publicKey = data.publicKey || this.publicKey;
     this.privateKeyEncrypted = data.privateKeyEncrypted || this.privateKeyEncrypted;
     this.domain = data.domain || this.domain;
-    
+
     if(docker) {
       this._docker = docker;
       this._fs = new FS(docker);
@@ -280,14 +276,12 @@ export class Harmony extends Ethereum {
       shard: this.shard,
       domain: this.domain,
       address: this.address,
-      passwordPath: this.passwordPath,
       privateKeyEncrypted: this.privateKeyEncrypted,
       publicKey: this.publicKey,
       bech32Address: this.bech32Address,
       blskeys: this.blskeys,
     };
   }
-
 
   async start(password?: string): Promise<ChildProcess[]> {
     const fs = this._fs;
@@ -302,10 +296,10 @@ export class Harmony extends Ethereum {
       dataDir: containerDataDir,
       walletDir: containerWalletDir,
       configDir: containerConfigDir,
-      passwordPath: containerPasswordPath,
     } = versionData;
-    
+
     let args = [
+      '-d',
       `--restart=on-failure:${this.restartAttempts}`,
       '--memory', this.dockerMem.toString(10) + 'MB',
       '--cpus', this.dockerCPUs.toString(10),
@@ -313,7 +307,6 @@ export class Harmony extends Ethereum {
       '--network', this.dockerNetwork,
       '-p', `${this.rpcPort}:${this.rpcPort}`,
       '-p', `${this.peerPort}:${this.peerPort}`,
-      '-i',
     ];
 
     const tmpdir = os.tmpdir();
@@ -330,12 +323,13 @@ export class Harmony extends Ethereum {
     await fs.ensureDir(configDir);
 
     if(!running) {
-      const configPath = path.join(configDir, Harmony.configName(this));
+      const configPath = path.join(configDir, Harmony.configName());
       const configExists = await fs.pathExists(configPath);
 
-      if (!configExists){
-        await fs.writeFile(configPath, this.generateConfig(), 'utf8');
-        console.log(configPath);
+      if (!configExists) {
+        const config = this.generateConfig();
+        await fs.writeFile(configPath, config, 'utf8');
+        // console.log(config);
       }
 
       await this._docker.pull(this.dockerImage, str => this._logOutput(str));
@@ -343,36 +337,31 @@ export class Harmony extends Ethereum {
       if(this.role === Role.VALIDATOR && !password) {
         throw new Error('You must pass in a password the first time you run start() on a validator. This password will be used to generate the key pair.');
       } else if(this.role === Role.VALIDATOR && password) {
-        const blspath = this.walletDir + '/blskeys/'
+        const blsPath = path.join(this.walletDir, 'blskeys');
+        await fs.ensureDir(blsPath);
         await this.generateKeyPair(password); // will generate new or read from privatekey
-        const passwordPath = this.passwordPath || path.join(tmpdir, uuid());
+        const passwordPath = this.harmonyPasswordPath();
         const passwordFileExists = await fs.pathExists(passwordPath);
-        if(!passwordFileExists){
+        if(!passwordFileExists) {
           await fs.writeFile(passwordPath, password, 'utf8');
         }
-        args = [...args, '-v', `${passwordPath}:${containerPasswordPath}`];
         if((await fs.readdir(walletDir)).length === 0) {
-          const keyFilePath = path.join(os.tmpdir(), uuid());
-          await fs.ensureDir(keyFilePath);
-          const accountPath = `/UTC--${new Date().toISOString().replace(/:/g, '-')}--${this.address}.json`;
-          await fs.writeFile(this.walletDir + accountPath, this.privateKeyEncrypted, 'utf8');
+          // const keyFilePath = path.join(os.tmpdir(), uuid());
+          // await fs.ensureDir(keyFilePath);
+          const accountFile = `UTC--${new Date().toISOString().replace(/:/g, '-')}--${this.address}.json`;
+          await fs.writeFile(path.join(this.walletDir, accountFile), this.privateKeyEncrypted, 'utf8');
         }
-        let blskeys: string[] = [];
-        
+        const blskeys: string[] = [];
+
         if (this.blskeys.length == 0) {
-          const fs_ = require('fs');
-          fs_.readdir(this.walletDir + '/blskeys', function (err: any, files: any) {
-            if (err) {
-                return console.log('Unable to scan directory: ' + err);
-            } 
-            let keyname = '';
-            files.forEach(function (file: any) {
-                if (file.includes('.key')) {
-                  keyname = file.split('.key', 1)[0];
-                  blskeys.push(keyname);
-                }
-            });
-          });
+          const files = await fs.readdir(path.join(this.walletDir, 'blskeys'));
+          let keyname = '';
+          for(const file of files) {
+            if (file.includes('.key')) {
+              keyname = file.split('.key', 1)[0];
+              blskeys.push(keyname);
+            }
+          }
           this.blskeys = blskeys;
         }
       }
@@ -391,10 +380,9 @@ export class Harmony extends Ethereum {
           },
         );
       });
-      if (exitCode !== 0){
+      if (exitCode !== 0)
         throw new Error(`Docker run for ${this.id} with ${this.dockerImage} failed with exit code ${exitCode}`);
-      }
-    };
+    }
     const instance = this._docker.attach(
       this.id,
       output => this._logOutput(output),
@@ -412,31 +400,33 @@ export class Harmony extends Ethereum {
     return this.instances();
   }
 
+  harmonyPasswordPath(): string {
+    return path.join(this.configDir, Harmony.passwordFileName());
+  }
+
   generateConfig(): string {
     return Harmony.generateConfig(this);
   }
 
   async stakeValidator(amount: string, password: string, domain: string,
                       contact: string, name: string = this.id, identity: string = this.id,
-                      details: string = this.id, blsCount: number = 1,
+                      details: string = this.id, blsCount = 1,
                       ): Promise<string> {
     const fs = this._fs;
     const versions = Harmony.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
-    const {
-      passwordPath: containerPasswordPath,
-    } = versionData;
-    const passwordPath = path.join(os.tmpdir(), uuid());
+    const containerPasswordPath = path.join(versionData.configDir, Harmony.passwordFileName());
+    const passwordPath = this.harmonyPasswordPath();
     await this._fs.writeFile(passwordPath, password, 'utf8');
     await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.id);
 
-    let blsArgs = [
+    const blsArgs = [
       '-i',
       '--rm',
       '-v', `${passwordPath}:${containerPasswordPath}`,
-      '-v', `${this.walletDir}/blskeys:/harmony`,  
+      '-v', `${this.walletDir}/blskeys:/harmony`,
     ];
     await new Promise<void>(resolve => {
       this._docker.run(
@@ -447,25 +437,20 @@ export class Harmony extends Ethereum {
         () => resolve(),
       );
     });
-    const blspath = this.walletDir + '/blskeys/'
-    const fs_ = require('fs');
-    let blskeys: string[] = [];
-    fs_.readdir(blspath, function (err: any, files: any) {
-      if (err) {
-          return console.log('Unable to scan directory: ' + err);
-      } 
-      let keyname = '';
-      files.forEach(function (file: any) {
-          if (file.includes('.key')) {
-            keyname = file.split('.key', 1)[0];
-            fs.writeFile(blspath + keyname + '.pass', password, 'utf8');
-            blskeys.push(keyname);
-          }
-      });
-    });//
+    const blsPath = path.join(this.walletDir, 'blskeys');
+    const blskeys: string[] = [];
+    const files = await fs.readdir(blsPath);
+    let keyname = '';
+    for(const file of files) {
+      if (file.includes('.key')) {
+        keyname = file.split('.key', 1)[0];
+        await fs.writeFile(path.join(blsPath, keyname + '.pass'), password, 'utf8');
+        blskeys.push(keyname);
+      }
+    }
     this.blskeys = blskeys;
-    const configPath = path.join(this.configDir, Harmony.configName(this));
-    let configfile = await this._fs.readFile(configPath, 'utf8');
+    const configPath = path.join(this.configDir, Harmony.configName());
+    const configfile = await this._fs.readFile(configPath, 'utf8');
     await this._fs.writeFile(configPath, configfile.replace('explorer', 'validator'), 'utf8');
     const net = this.network === NetworkType.MAINNET ? 't' : 'ps';
     const createValidator = ` --node=https://api.s0.${net}.hmny.io staking create-validator ` +
@@ -473,8 +458,8 @@ export class Harmony extends Ethereum {
         `--validator-addr ${this.bech32Address} --amount ${amount} ` +
         `--bls-pubkeys ${this.blskeys.join(',')} ` +
         `--name "${name}"  --identity "${identity}" --details "${details}" ` +
-        `--security-contact "${contact}" --website "${domain}" ` + 
-        `--max-change-rate 0.1 --max-rate 0.1 --rate 0.1 --gas-price 100 ` + 
+        `--security-contact "${contact}" --website "${domain}" ` +
+        `--max-change-rate 0.1 --max-rate 0.1 --rate 0.1 --gas-price 100 ` +
         `--max-total-delegation 100000000 --min-self-delegation 10000 --passphrase-file ${containerPasswordPath} `;
     //const txPatt = /[0-9a-f]{64}/i; // look into
     let outputStr = '';
@@ -510,13 +495,12 @@ export class Harmony extends Ethereum {
         this.privateKeyEncrypted = JSON.stringify(web3.eth.accounts.encrypt(privateKey, password));
       }
       const harmonyAccount = new Account();
-      harmonyAccount.fromFile(this.privateKeyEncrypted, password).then((account: any) => {
-          this.bech32Address = account.bech32Address;
-          this.address = account.checksumAddress;
-          this.publicKey = account.publicKey.toString('hex');
-          console.log("One Address: " + this.bech32Address);
-          console.log("Hex Address: " + this.address);
-      });
+      const account = await harmonyAccount.fromFile(this.privateKeyEncrypted, password);
+      this.bech32Address = account.bech32Address;
+      this.address = account.checksumAddress;
+      this.publicKey = account.publicKey || '';
+      console.log("One Address: " + this.bech32Address);
+      console.log("Hex Address: " + this.address);
       return true;
     } catch(err) {
       this._logError(err);
@@ -533,7 +517,6 @@ export class Harmony extends Ethereum {
       return '';
     }
   }
-
 
   _makeSyncingCall(): Promise<any> {
     return request

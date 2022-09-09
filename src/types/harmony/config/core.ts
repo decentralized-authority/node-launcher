@@ -9,12 +9,12 @@ Version = "2.5.5"
   KeyFiles = []
   MaxKeys = 10
   PassEnabled = true
-  PassFile = "/root/pass.pwd"
+  PassFile = "/root/config/pass.pwd"
   PassSrcType = "auto"
-  SavePassphrase = true
+  SavePassphrase = {{SAVE_PASSPHRASE}}
 
 [DNSSync]
-  Client = false
+  Client = true
   LegacySyncing = false
   Port = 6000
   Server = true
@@ -28,13 +28,13 @@ Version = "2.5.5"
   IsBackup = false
   IsBeaconArchival = false
   IsOffline = false
-  NoStaking = false
-  NodeType = "explorer"
+  NoStaking = {{NO_STAKING}}
+  NodeType = "{{NODE_TYPE}}"
   ShardID = {{SHARD}}
   TraceEnable = false
 
 [HTTP]
-  AuthPort = 9501
+  AuthPort = 0
   Enabled = true
   IP = "0.0.0.0"
   Port = {{RPC_PORT}}
@@ -50,7 +50,7 @@ Version = "2.5.5"
   Verbosity = 3
 
   [Log.VerbosePrints]
-    Config = true
+    Config = false
 
 [Network]
   BootNodes = ["/dnsaddr/bootstrap.{{NETWORK_TYPE}}.hmny.io"]
@@ -66,10 +66,10 @@ Version = "2.5.5"
 
 [Pprof]
   Enabled = false
-  Folder = "./profiles"
+  Folder = ""
   ListenAddr = "127.0.0.1:6060"
-  ProfileDebugValues = [0]
-  ProfileIntervals = [600]
+  ProfileDebugValues = []
+  ProfileIntervals = []
   ProfileNames = []
 
 [RPCOpt]
@@ -78,7 +78,7 @@ Version = "2.5.5"
   LegacyRPCsEnabled = true
   RateLimterEnabled = true
   RequestsPerSecond = 1000
-  RpcFilterFile = "./.hmy/rpc_filter.txt"
+  RpcFilterFile = "/root/config/rpc_filter.txt"
   StakingRPCsEnabled = true
 
 [ShardData]
@@ -89,30 +89,30 @@ Version = "2.5.5"
   ShardCount = 4
 
 [Sync]
-  Concurrency = 4
+  Concurrency = 6
   DiscBatch = 8
-  DiscHardLowCap = 4
-  DiscHighCap = 1024
-  DiscSoftLowCap = 4
-  Downloader = true
-  Enabled = true
-  InitStreams = 4
-  MinPeers = 4
+  DiscHardLowCap = 6
+  DiscHighCap = 128
+  DiscSoftLowCap = 8
+  Downloader = false
+  Enabled = false
+  InitStreams = 8
+  MinPeers = 6
 
 [TxPool]
   AccountSlots = 16
-  AllowedTxsFile = "./.hmy/allowedtxs.txt"
+  AllowedTxsFile = "/root/config/allowedtxs.txt"
   BlacklistFile = "/root/config/blacklist.txt"
   GlobalSlots = 5120
   LocalAccountsFile = ""
   RosettaFixFile = ""
 
 [WS]
-  AuthPort = 9801
+  AuthPort = 0
   Enabled = true
   IP = "127.0.0.1"
   Port = 9800
-  `
+`;
 
 export const _252 = `
 Version = "2.5.2"
@@ -221,7 +221,7 @@ Version = "2.5.2"
   Enabled = true
   IP = "127.0.0.1"
   Port = 9800
-`
+`;
 
 export const _250 = `
 Version = "2.5.0"
@@ -309,4 +309,4 @@ Version = "2.5.0"
   Enabled = true
   IP = "127.0.0.1"
   Port = 9800
-`
+`;
