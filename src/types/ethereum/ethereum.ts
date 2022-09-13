@@ -12,7 +12,7 @@ import { FS } from '../../util/fs';
 import { base as coreConfig } from './config/core';
 import * as nethermindConfig from './config/nethermind';
 import { base as erigonConfig } from './config/erigon';
-import { base as prysmConfig } from './config/prysm';
+import * as prysmConfig from './config/prysm';
 
 
 export class Ethereum extends Bitcoin {
@@ -244,7 +244,20 @@ export class Ethereum extends Bitcoin {
         ]
         break;
       case NodeClient.PRYSM:
-        versions = [        
+        versions = [
+          {
+            version: '3.1.1',
+            clientVersion: '3.1.1',
+            image: 'prysmaticlabs/prysm-beacon-chain:v3.1.1',
+            dataDir: '/root/data',
+            walletDir: '/root/keys',
+            configDir: '/root/config',
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              return ` --config-file=${path.join(this.configDir, Ethereum.configName(data))} `;
+            }
+          },
           {
             version: '3.1.0',
             clientVersion: '3.1.0',
@@ -320,7 +333,7 @@ export class Ethereum extends Bitcoin {
         config = erigonConfig.replace('{{NETWORK}}', network.toLowerCase());
         break;
       case NodeClient.PRYSM:
-        config = prysmConfig;
+        config = prysmConfig.beacon;
         break;
       default:
         return '';
@@ -420,7 +433,7 @@ export class Ethereum extends Bitcoin {
       } = versionData;
       let args = [
         '-d',
-        `--restart=on-failure:${this.restartAttempts}`,
+        `--rm`,//restart=on-failure:${this.restartAttempts}`,
         '--memory', this.dockerMem.toString(10) + 'MB',
         '--cpus', this.dockerCPUs.toString(10),
         '--name', this.id,
