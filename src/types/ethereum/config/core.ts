@@ -2,7 +2,7 @@ export const base = `
 [Eth]
 NetworkId = 1
 [Node]
-DataDir = "/root/.ethereum"
+DataDir = "/root/data"
 KeyStoreDir = "/root/keystore"
 HTTPHost = "0.0.0.0"
 HTTPPort = {{RPC_PORT}}
@@ -11,8 +11,8 @@ HTTPModules = ["net", "web3", "eth"]
 
 
 IPCPath = "/root/config/geth.ipc"
-AuthAddr = "localhost"
-AuthPort = 8551
+AuthAddr = "0.0.0.0"
+AuthPort = 8559
 AuthVirtualHosts = ["*"]
 JWTSecret = "/root/keystore/jwt.hex"
 
