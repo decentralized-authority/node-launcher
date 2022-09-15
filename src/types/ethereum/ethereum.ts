@@ -7,24 +7,30 @@ import request from 'superagent';
 import path from 'path';
 import os from 'os';
 import { Bitcoin } from '../bitcoin/bitcoin';
-import { filterVersionsByNetworkType, timeout } from '../../util';
+import { filterVersionsByNetworkType } from '../../util';
 import { FS } from '../../util/fs';
+import { base as coreConfig } from './config/core';
+import * as nethermindConfig from './config/nethermind';
+import { base as erigonConfig } from './config/erigon';
+import * as prysmConfig from './config/prysm';
 
-const coreConfig = `
-[Eth]
-NetworkId = 1
 
-[Node]
-DataDir = "/root/.ethereum"
-KeyStoreDir = "/root/keystore"
-HTTPHost = "0.0.0.0"
-HTTPPort = {{RPC_PORT}}
-HTTPVirtualHosts = ["*"]
-HTTPModules = ["net", "web3", "eth"]
+interface EthereumNodeData extends CryptoNodeData {
+  shard: number
+  publicKey: string
+  privateKeyEncrypted: string
+  address: string
+  domain: string
+  passwordPath: string
+  bech32Address: string
+  blskeys: string[]
+};
 
-[Node.P2P]
-ListenAddr = ":{{PEER_PORT}}"
-`;
+interface EthereumVersionDockerImage extends VersionDockerImage {
+  passwordPath: string
+};
+
+
 
 export class Ethereum extends Bitcoin {
 
@@ -34,6 +40,20 @@ export class Ethereum extends Bitcoin {
     switch(client) {
       case NodeClient.GETH:
         versions = [
+          {
+            version: '1.10.24',
+            clientVersion: '1.10.24',
+            image: 'ethereum/client-go:v1.10.24',
+            dataDir: '/root/.ethereum',
+            walletDir: '/root/keystore',
+            configDir: '/root/config',
+            networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              const { network = '' } = data;
+              return ` --config=${path.join(this.configDir, Ethereum.configName(data))}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
+            },
+          },
           {
             version: '1.10.21',
             clientVersion: '1.10.21',
@@ -204,6 +224,86 @@ export class Ethereum extends Bitcoin {
           },
         ];
         break;
+      case NodeClient.NETHERMIND:
+        versions = [
+          {
+            version: '1.14.0',
+            clientVersion: '1.14.0',
+            image: 'nethermind/nethermind:1.14.0',
+            dataDir: '/nethermind/nethermind_db',
+            walletDir: '/nethermind/keystore',
+            configDir: '/nethermind/config',
+            networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              const { network = '' } = data;
+              return ` --configsDirectory ${this.configDir} --config ${network.toLowerCase()}`;
+            },
+          },
+          {
+            version: '1.13.6',
+            clientVersion: '1.13.6',
+            image: 'nethermind/nethermind:1.13.6',
+            dataDir: '/nethermind/nethermind_db',
+            walletDir: '/nethermind/keystore',
+            configDir: '/nethermind/config',
+            networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              const { network = '' } = data;
+              return ` --configsDirectory ${this.configDir} --config ${network.toLowerCase()}`;
+            },
+          },
+        ]
+        break;
+      case NodeClient.ERIGON:
+        versions = [
+          {
+            version: '2022.08.02',
+            clientVersion: '2022.08.2',
+            image: 'icculp/erigon:v2022.08.02',
+            dataDir: '/erigon/data',
+            walletDir: '/erigon/keystore',
+            configDir: '/erigon/config',
+            networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              const { network = '' } = data;
+              return ` erigon --config=${path.join(this.configDir, Ethereum.configName(data))}  `;
+            },
+          },
+        ]
+        break;
+      case NodeClient.PRYSM:
+        versions = [
+          {
+            version: '3.1.1',
+            clientVersion: '3.1.1',
+            image: 'prysmaticlabs/prysm-beacon-chain:v3.1.1',
+            dataDir: '/root/data',
+            walletDir: '/root/keys',
+            configDir: '/root/config',
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              return ` --config-file=${path.join(this.configDir, Ethereum.configName(data))} `;
+            }
+          },
+          {
+            version: '3.1.0',
+            clientVersion: '3.1.0',
+            image: 'prysmaticlabs/prysm-beacon-chain:v3.1.0',
+            dataDir: '/root/data',
+            walletDir: '/root/keys',
+            configDir: '/root/config',
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              return ` --config-file=${path.join(this.configDir, Ethereum.configName(data))} `;
+            }
+          },
+        ]
+        break;
       default:
         versions = [];
     }
@@ -212,6 +312,9 @@ export class Ethereum extends Bitcoin {
 
   static clients = [
     NodeClient.GETH,
+    NodeClient.NETHERMIND,
+    NodeClient.ERIGON,
+    NodeClient.PRYSM,
   ];
 
   static nodeTypes = [
@@ -226,6 +329,7 @@ export class Ethereum extends Bitcoin {
 
   static roles = [
     Role.NODE,
+    Role.VALIDATOR,
   ];
 
   static defaultRPCPort = {
@@ -243,19 +347,49 @@ export class Ethereum extends Bitcoin {
   static defaultMem = 16384;
 
   static generateConfig(client = Ethereum.clients[0], network = NetworkType.MAINNET, peerPort = Ethereum.defaultPeerPort[NetworkType.MAINNET], rpcPort = Ethereum.defaultRPCPort[NetworkType.MAINNET]): string {
+    let config = '';
     switch(client) {
       case NodeClient.GETH:
-        return coreConfig
-          .replace('{{PEER_PORT}}', peerPort.toString(10))
-          .replace('{{RPC_PORT}}', rpcPort.toString(10))
-          .trim();
+        config = coreConfig;
+        break;
+      case NodeClient.NETHERMIND:
+        switch(network) {
+          case NetworkType.MAINNET:
+            config = nethermindConfig.mainnet;
+            break;
+          case NetworkType.RINKEBY:
+            config = nethermindConfig.rinkeby;
+            break;
+          }
+        break;
+      case NodeClient.ERIGON:
+        config = erigonConfig.replace('{{NETWORK}}', network.toLowerCase());
+        break;
+      case NodeClient.PRYSM:
+        //if node.role == 
+        config = prysmConfig.beacon;
+        break;
       default:
         return '';
     }
+    return config
+      .replace(/{{PEER_PORT}}/g, peerPort.toString(10))
+      .replace('{{RPC_PORT}}', rpcPort.toString(10))
+      .trim();
   }
 
   static configName(data: CryptoNodeData): string {
-    return 'config.toml';
+    const { network, client } = data;
+    switch(client) {
+      case NodeClient.NETHERMIND:
+          const { network = '' } = data;
+          return network.toLowerCase() + '.cfg';
+      case NodeClient.PRYSM:
+          return 'prysm.yaml';
+    default:
+      return 'config.toml';
+    }
+    
   }
 
   id: string;
@@ -333,7 +467,7 @@ export class Ethereum extends Bitcoin {
       } = versionData;
       let args = [
         '-d',
-        `--restart=on-failure:${this.restartAttempts}`,
+        `--rm`,//restart=on-failure:${this.restartAttempts}`,
         '--memory', this.dockerMem.toString(10) + 'MB',
         '--cpus', this.dockerCPUs.toString(10),
         '--name', this.id,
@@ -425,6 +559,8 @@ export class Ethereum extends Bitcoin {
       if(!matches)
         // check for regular matches
         matches = result.match(/v(\d+\.\d+\.\d+)/);
+      if(this.client == 'ERIGON')
+        matches = result.match(/erigon\/(\d+.\d+.\d+)\//);
       if(matches && matches.length > 1) {
         return matches[1];
       } else {

@@ -37,6 +37,27 @@ export class Polygon extends Ethereum {
       case NodeClient.CORE:
         versions = [
           {
+            version: '0.2.17',
+            clientVersion: '0.2.17',
+            image: 'maticnetwork/bor:v0.2.17',
+            dataDir: '/root/data',
+            walletDir: '/root/keys',
+            configDir: '/root/config',
+            heimdallImage: 'maticnetwork/heimdall:v0.2.10',
+            heimdallDataDir: '/root/.heimdalld/data',
+            heimdallWalletDir: '/root/keys',
+            heimdallConfigDir: '/root/.heimdalld/config',
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              const { id = '' } = data;
+              return ` bor --config=${this.configDir}/${Polygon.fileName.config} --bor.heimdall http://${Polygon.generateHeimdallDockerName(id)}:1317 --pprof --pprof.port 7071 --pprof.addr 0.0.0.0`;
+            },
+            generateHeimdallRuntimeArgs(data: CryptoNodeData): string {
+              return ' /bin/bash /start.sh';
+            },
+          },
+          {
             version: '0.2.16',
             clientVersion: '0.2.16',
             image: 'maticnetwork/bor:v0.2.16',
@@ -211,6 +232,40 @@ export class Polygon extends Ethereum {
        return '80001';
      default: return '';
    }
+  }
+
+  static async upgradeNode(node: PolygonCryptoNodeData, versionData: PolygonVersionDockerImage): Promise<boolean> {
+    const {
+      version: origVersion,
+      clientVersion: origClientVersion,
+      dockerImage: origDockerImage,
+      heimdallDockerImage: origHeimdallDockerImage,
+    } = node;
+    node.version = versionData.version;
+    node.clientVersion = versionData.clientVersion;
+    node.dockerImage = versionData.image;
+    if(versionData.heimdallImage)
+      node.heimdallDockerImage = versionData.heimdallImage;
+    if(versionData.upgrade) {
+      let success = false;
+      let upgradeErr: Error|null = null;
+      try {
+        success = await versionData.upgrade(node);
+      } catch(err) {
+        upgradeErr = err;
+      }
+      if(!success) {
+        node.version = origVersion;
+        node.clientVersion = origClientVersion;
+        node.dockerImage = origDockerImage;
+        node.heimdallDockerImage = origHeimdallDockerImage;
+        if(upgradeErr)
+          throw upgradeErr;
+        else
+          return false;
+      }
+    }
+    return true;
   }
 
   static fileName = {
