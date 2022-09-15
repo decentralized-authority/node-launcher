@@ -15,6 +15,23 @@ import { base as erigonConfig } from './config/erigon';
 import * as prysmConfig from './config/prysm';
 
 
+interface EthereumNodeData extends CryptoNodeData {
+  shard: number
+  publicKey: string
+  privateKeyEncrypted: string
+  address: string
+  domain: string
+  passwordPath: string
+  bech32Address: string
+  blskeys: string[]
+};
+
+interface EthereumVersionDockerImage extends VersionDockerImage {
+  passwordPath: string
+};
+
+
+
 export class Ethereum extends Bitcoin {
 
   static versions(client: string, networkType: string): VersionDockerImage[] {
@@ -23,6 +40,20 @@ export class Ethereum extends Bitcoin {
     switch(client) {
       case NodeClient.GETH:
         versions = [
+          {
+            version: '1.10.24',
+            clientVersion: '1.10.24',
+            image: 'ethereum/client-go:v1.10.24',
+            dataDir: '/root/.ethereum',
+            walletDir: '/root/keystore',
+            configDir: '/root/config',
+            networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              const { network = '' } = data;
+              return ` --config=${path.join(this.configDir, Ethereum.configName(data))}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
+            },
+          },
           {
             version: '1.10.21',
             clientVersion: '1.10.21',
@@ -283,6 +314,7 @@ export class Ethereum extends Bitcoin {
     NodeClient.GETH,
     NodeClient.NETHERMIND,
     NodeClient.ERIGON,
+    NodeClient.PRYSM,
   ];
 
   static nodeTypes = [
@@ -297,6 +329,7 @@ export class Ethereum extends Bitcoin {
 
   static roles = [
     Role.NODE,
+    Role.VALIDATOR,
   ];
 
   static defaultRPCPort = {
@@ -333,6 +366,7 @@ export class Ethereum extends Bitcoin {
         config = erigonConfig.replace('{{NETWORK}}', network.toLowerCase());
         break;
       case NodeClient.PRYSM:
+        //if node.role == 
         config = prysmConfig.beacon;
         break;
       default:

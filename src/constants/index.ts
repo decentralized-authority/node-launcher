@@ -2,6 +2,8 @@ export const NetworkType = {
   MAINNET: 'MAINNET',
   TESTNET: 'TESTNET',
   RINKEBY: 'RINKEBY',
+  GOERLI: 'GOERLI',
+  ROPSTEN: 'ROPSTEN',
 };
 
 export const NodeType = {
