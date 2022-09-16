@@ -42,8 +42,13 @@ export class Ethereum extends EthereumPreMerge {
             dataDir: '/root/data',
             walletDir: '/root/keystore',
             configDir: '/root/config',
+<<<<<<< HEAD
             networks: [NetworkType.MAINNET, NetworkType.GOERLI],
             breaking: true,
+=======
+            networks: [NetworkType.MAINNET, NetworkType.RINKEBY, NetworkType.GOERLI],
+            breaking: false,
+>>>>>>> 3556542 (Added goerli testnet)
             generateRuntimeArgs(data: CryptoNodeData): string {
               const { network = '' } = data;
               return ` --config=${path.join(this.configDir, Ethereum.configName(data))}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
@@ -429,7 +434,11 @@ export class Ethereum extends EthereumPreMerge {
 
   static networkTypes = [
     NetworkType.MAINNET,
+<<<<<<< HEAD
     // NetworkType.RINKEBY,
+=======
+    NetworkType.RINKEBY,
+>>>>>>> 3556542 (Added goerli testnet)
     NetworkType.GOERLI,
   ];
 
@@ -451,6 +460,7 @@ export class Ethereum extends EthereumPreMerge {
   };
 
   static defaultAuthPort = {
+<<<<<<< HEAD
     [NetworkType.MAINNET]: 8551,
     [NetworkType.GOERLI]: 8551,
   };
@@ -463,6 +473,10 @@ export class Ethereum extends EthereumPreMerge {
   static defaultConsensusPeerPort = {
     [NetworkType.MAINNET]: 8758,
     [NetworkType.GOERLI]: 18758,
+=======
+    [NetworkType.MAINNET]: 8559,
+    [NetworkType.GOERLI]: 8559,
+>>>>>>> 3556542 (Added goerli testnet)
   };
 
   static defaultCPUs = 8;
@@ -667,7 +681,7 @@ export class Ethereum extends EthereumPreMerge {
       const consensusConfigPath = path.join(configDir, 'prysm.yaml');
       const consensusConfigExists = await fs.pathExists(consensusConfigPath);
       if(!consensusConfigExists) {
-        const consensusConfig = Ethereum.generateConfig(NodeClient.PRYSM, NetworkType.MAINNET, this.rpcPort, this.peerPort).replace('{{EXEC}}', this.id + '-execution:' + authPort.toString(10));
+        const consensusConfig = Ethereum.generateConfig(NodeClient.PRYSM, this.network, this.rpcPort, this.peerPort).replace('{{EXEC}}', this.id + '-execution:' + authPort.toString(10));
         await fs.writeFile(consensusConfigPath, consensusConfig, 'utf8');
       }
 
@@ -718,7 +732,7 @@ export class Ethereum extends EthereumPreMerge {
 
       const consensusExitCode = await new Promise<number>((resolve, reject) => {
         this._docker.run(
-          consensusImage + ' --config-file=/root/config/prysm.yaml',
+          consensusImage + ` --config-file=/root/config/prysm.yaml --${this.network.toLowerCase()}`,
           consensusArgs,
           output => this._logOutput(output),
           err => {
