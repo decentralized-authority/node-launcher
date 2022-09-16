@@ -662,19 +662,16 @@ export class Ethereum extends EthereumPreMerge {
       const configExists = await fs.pathExists(configPath);
       const { authPort } = this;
       if(!configExists)
-        await fs.writeFile(configPath, this.generateConfig(), 'utf8');
+        await fs.writeFile(configPath, this.generateConfig().replace('{{AUTH_PORT}}', authPort.toString(10)), 'utf8');
 
-      if(!preMerge) {
-        const consensusConfigPath = path.join(configDir, 'prysm.yaml');
-        const consensusConfigExists = await fs.pathExists(consensusConfigPath);
-        if(!consensusConfigExists) {
-          const consensusConfig = Ethereum.generateConfig(NodeClient.PRYSM, this.network, this.consensusRPCPort, this.consensusPeerPort)
-            .replace('{{EXEC}}', `http://${this.id}:${authPort.toString(10)}`);
-          await fs.writeFile(consensusConfigPath, consensusConfig, 'utf8');
-        }
+      const consensusConfigPath = path.join(configDir, 'prysm.yaml');
+      const consensusConfigExists = await fs.pathExists(consensusConfigPath);
+      if(!consensusConfigExists) {
+        const consensusConfig = Ethereum.generateConfig(NodeClient.PRYSM, NetworkType.MAINNET, this.rpcPort, this.peerPort).replace('{{EXEC}}', this.id + '-execution:' + authPort.toString(10));
+        await fs.writeFile(consensusConfigPath, consensusConfig, 'utf8');
       }
 
-      const jwtPath = path.join(configDir, 'jwt.hex');
+      const jwtPath = path.join(walletDir, 'jwt.hex');
       const jwtExists = await fs.pathExists(jwtPath);
       if(!jwtExists) {
         const jwt = Web3.utils.randomHex(32);
@@ -687,15 +684,16 @@ export class Ethereum extends EthereumPreMerge {
       '--name', this.id,
       '-p', `${this.rpcPort}:${this.rpcPort}`,
       '-p', `${this.peerPort}:${this.peerPort}`,
-      // '-p', `${authPort}:${authPort}`,
+      '-p', `${authPort}:${authPort}`,
       ];
       const consensusArgs = [
         ...args,
-      '--name', this.consensusDockerName(),
-      '-p', `${this.consensusRPCPort}:${this.consensusRPCPort}`,
-      '-p', `${this.consensusPeerPort}:${this.consensusPeerPort}`,
+      '--name', this.id + '-consensus',
+      '-p', `8656:${this.rpcPort}`,
+      '-p', `8657:${this.peerPort}`,
       ];
 
+      const consensusImage = 'prysmaticlabs/prysm-beacon-chain:v3.1.1';
       await this._docker.pull(this.dockerImage, str => this._logOutput(str));
       if(consensusDockerImage)
         await this._docker.pull(consensusDockerImage, str => this._logOutput(str));
@@ -716,26 +714,24 @@ export class Ethereum extends EthereumPreMerge {
         );
       });
       if(exitCode !== 0)
-        throw new Error(`Docker run for ${this.id} execution with ${this.dockerImage} failed with exit code ${exitCode}`);
+        throw new Error(`Docker run for ${this.id}-execution with ${this.dockerImage} failed with exit code ${exitCode}`);
 
-      if(!preMerge && !consensusRunning && consensusDockerImage) {
-        const consensusExitCode = await new Promise<number>((resolve, reject) => {
-          this._docker.run(
-            consensusDockerImage + ` --config-file=/root/config/prysm.yaml --${this.network.toLowerCase()}`,
-            consensusArgs,
-            output => this._logOutput(output),
-            err => {
-              this._logError(err);
-              reject(err);
-            },
-            code => {
-              resolve(code);
-            },
-          );
-        });
-        if(consensusExitCode !== 0)
-          throw new Error(`Docker run for ${this.consensusDockerName()} with prysm failed with exit code ${consensusExitCode}`);
-      }
+      const consensusExitCode = await new Promise<number>((resolve, reject) => {
+        this._docker.run(
+          consensusImage + ' --config-file=/root/config/prysm.yaml',
+          consensusArgs,
+          output => this._logOutput(output),
+          err => {
+            this._logError(err);
+            reject(err);
+          },
+          code => {
+            resolve(code);
+          },
+        );
+      });
+      if(consensusExitCode !== 0)
+        throw new Error(`Docker run for ${this.id}-consensus with prysm failed with exit code ${consensusExitCode}`);
     }
 
     const instance = this._docker.attach(
@@ -753,16 +749,25 @@ export class Ethereum extends EthereumPreMerge {
       instance,
     ];
 
-    if(!preMerge) {
-      const consensusInstance = this._docker.attach(
-        this.consensusDockerName(),
-        output => this._logOutput('consensus - ' + output),
-        err => {
-          this._logError(err);
-        },
-        code => {
-          this._logClose(code);
-        },
+  async stop(): Promise<void> {
+    try {
+      await this._docker.stop(this.id + '-execution');
+      await this._docker.rm(this.id + '-execution');
+      await timeout(1000);
+      await this._docker.stop(this.id + '-consensus');
+      await this._docker.rm(this.id + '-consensus');
+      await timeout(1000);
+    } catch(err) {
+      this._logError(err);
+    }
+  }
+
+  generateConfig(): string {
+    return Ethereum.generateConfig(
+      this.client,
+      this.network,
+      this.peerPort,
+      this.rpcPort,
       );
       instances.push(consensusInstance);
     }
