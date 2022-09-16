@@ -9,10 +9,9 @@ HTTPPort = {{RPC_PORT}}
 HTTPVirtualHosts = ["*"]
 HTTPModules = ["net", "web3", "eth"]
 
-
 IPCPath = "/root/config/geth.ipc"
 AuthAddr = "0.0.0.0"
-AuthPort = 8559
+AuthPort = {{AUTH_PORT}}
 AuthVirtualHosts = ["*"]
 JWTSecret = "/root/keystore/jwt.hex"
 

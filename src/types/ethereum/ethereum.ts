@@ -13,32 +13,7 @@ import { base as coreConfig } from './config/core';
 import * as nethermindConfig from './config/nethermind';
 import { base as erigonConfig } from './config/erigon';
 import * as prysmConfig from './config/prysm';
-
-
-// interface CryptoNodeData extends CryptoNodeData {
-//   authPort: number
-// };
-//   shard: number
-//   publicKey: string
-//   privateKeyEncrypted: string
-//   address: string
-//   domain: string
-//   passwordPath: string
-//   bech32Address: string
-//   blskeys: string[]
-// };
-
-// interface EthereumVersionDockerImage extends VersionDockerImage {
-//   passwordPath: string
-// };
-// interface PolygonVersionDockerImage extends VersionDockerImage {
-//   heimdallImage: string
-//   heimdallDataDir: string
-//   heimdallWalletDir: string
-//   heimdallConfigDir: string
-//   generateHeimdallRuntimeArgs: (data: CryptoNodeData) => string
-// }
-
+import Web3 from 'web3';
 
 export class Ethereum extends Bitcoin {
 
@@ -355,17 +330,17 @@ export class Ethereum extends Bitcoin {
   ];
 
   static defaultRPCPort = {
-    [NetworkType.MAINNET]: 8555,
+    [NetworkType.MAINNET]: 8755,
     [NetworkType.RINKEBY]: 18545,
   };
 
   static defaultPeerPort = {
-    [NetworkType.MAINNET]: 8556,
+    [NetworkType.MAINNET]: 8756,
     [NetworkType.RINKEBY]: 18546,
   };
 
   static defaultAuthPort = {
-    [NetworkType.MAINNET]: 8551,
+    [NetworkType.MAINNET]: 8559,
   };
 
   static defaultCPUs = 8;
@@ -392,8 +367,7 @@ export class Ethereum extends Bitcoin {
         config = erigonConfig.replace('{{NETWORK}}', network.toLowerCase());
         break;
       case NodeClient.PRYSM:
-        //if node.role == 
-        config = prysmConfig.beacon;//.replace('{{AUTH_PORT}}', data.id + '-execution:8559');
+        config = prysmConfig.beacon; //.replace('{{AUTH_PORT}}', authPort);
         break;
       default:
         return '';
@@ -427,7 +401,6 @@ export class Ethereum extends Bitcoin {
   network: string;
   peerPort: number;
   rpcPort: number;
-  authPort: number;
   rpcUsername: string;
   rpcPassword: string;
   client: string;
@@ -448,7 +421,6 @@ export class Ethereum extends Bitcoin {
     this.network = data.network || NetworkType.MAINNET;
     this.peerPort = data.peerPort || Ethereum.defaultPeerPort[this.network];
     this.rpcPort = data.rpcPort || Ethereum.defaultRPCPort[this.network];
-    this.authPort = 8559 || Ethereum.defaultAuthPort[this.network];
     this.rpcUsername = data.rpcUsername || '';
     this.rpcPassword = data.rpcPassword || '';
     this.client = data.client || Ethereum.clients[0];
@@ -484,11 +456,8 @@ export class Ethereum extends Bitcoin {
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
 
-    const running = await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.id);
+    const running = await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.id + '-execution');
     const runningConsensus = await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.id + '-consensus');
-
-
-    //Ethereum.generateConfig(client=NodeClient.PRYSM)
     if(!running) {
       const {
         dataDir: containerDataDir,
@@ -497,7 +466,7 @@ export class Ethereum extends Bitcoin {
       } = versionData;
       let args = [
         '-d',
-        `--rm`,//restart=on-failure:${this.restartAttempts}`,
+        `--restart=on-failure:${this.restartAttempts}`,
         '--memory', this.dockerMem.toString(10) + 'MB',
         '--cpus', this.dockerCPUs.toString(10),
         '--network', this.dockerNetwork,
@@ -513,16 +482,28 @@ export class Ethereum extends Bitcoin {
 
       const configDir = this.configDir || path.join(tmpdir, uuid());
       await fs.ensureDir(configDir);
+      
       const configPath = path.join(configDir, Ethereum.configName(this));
-      const consensensusConfigPath = path.join(configDir, 'prysm.yaml');
       const configExists = await fs.pathExists(configPath);
-      if(!configExists){
-        await fs.writeFile(configPath, this.generateConfig(), 'utf8');
-        await fs.writeFile(consensensusConfigPath, Ethereum.generateConfig(NodeClient.PRYSM, NetworkType.MAINNET, this.rpcPort, this.peerPort), 'utf8');
+      const authPort = Ethereum.defaultAuthPort[this.network];;
+      if(!configExists)
+        await fs.writeFile(configPath, this.generateConfig().replace('{{AUTH_PORT}}', authPort.toString(10)), 'utf8');
+      
+      const consensusConfigPath = path.join(configDir, 'prysm.yaml');
+      const consensusConfigExists = await fs.pathExists(consensusConfigPath);
+      if(!consensusConfigExists){
+        const consensusConfig = Ethereum.generateConfig(NodeClient.PRYSM, NetworkType.MAINNET, this.rpcPort, this.peerPort).replace('{{EXEC}}', this.id + '-execution:' + authPort);
+        await fs.writeFile(consensusConfigPath, consensusConfig, 'utf8');
       }
+      
+      const jwtPath = path.join(walletDir, 'jwt.hex');
+      const jwtExists = await fs.pathExists(jwtPath);
+      if(!jwtExists){
+        const jwt = Web3.utils.randomHex(32);
+        await fs.writeFile(jwtPath, jwt, 'utf8');
+      }
+      
       args = [...args, '-v', `${configDir}:${containerConfigDir}`];
-
-      const authPort = 8559;
       let executionArgs = [
         ...args,
       '--name', this.id + '-execution',
@@ -536,11 +517,12 @@ export class Ethereum extends Bitcoin {
       '-p', `8656:${this.rpcPort}`,
       '-p', `8657:${this.peerPort}`,
       ]
-      await this._docker.pull(this.dockerImage, str => this._logOutput(str));
+      
       const consensusImage = 'prysmaticlabs/prysm-beacon-chain:v3.1.1';
+      await this._docker.pull(this.dockerImage, str => this._logOutput(str));
       await this._docker.pull(consensusImage, str => this._logOutput(str));
-
       await this._docker.createNetwork(this.dockerNetwork);
+      
       const exitCode = await new Promise<number>((resolve, reject) => {
         this._docker.run(
           this.dockerImage + versionData.generateRuntimeArgs(this),
@@ -557,8 +539,8 @@ export class Ethereum extends Bitcoin {
       });
       if(exitCode !== 0)
         throw new Error(`Docker run for ${this.id}-execution with ${this.dockerImage} failed with exit code ${exitCode}`);
-      
-      const exitCode2 = await new Promise<number>((resolve, reject) => {
+  
+      const consensusExitCode = await new Promise<number>((resolve, reject) => {
         this._docker.run(
           consensusImage + ` --config-file=/root/config/prysm.yaml`,
           consensusArgs,
@@ -572,9 +554,8 @@ export class Ethereum extends Bitcoin {
           },
         );
       });
-      if(exitCode2 !== 0)
-        throw new Error(`Docker run for ${this.id}-consensus with prysm failed with exit code ${exitCode2}`);
-      
+      if(consensusExitCode !== 0)
+        throw new Error(`Docker run for ${this.id}-consensus with prysm failed with exit code ${consensusExitCode}`);
     }
 
     const instance = this._docker.attach(
@@ -588,7 +569,7 @@ export class Ethereum extends Bitcoin {
       },
     );
 
-    const borInstance = this._docker.attach(
+    const consensusInstance = this._docker.attach(
       this.id + '-consensus',
       output => this._logOutput('consensus - ' + output),
       err => {
@@ -608,8 +589,8 @@ export class Ethereum extends Bitcoin {
 
   async stop(): Promise<void> {
     try {
-      await this._docker.stop(this.id);
-      await this._docker.rm(this.id);
+      await this._docker.stop(this.id + '-execution');
+      await this._docker.rm(this.id + '-execution');
       await timeout(1000);
       await this._docker.stop(this.id + '-consensus');
       await this._docker.rm(this.id + '-consensus');
@@ -619,13 +600,13 @@ export class Ethereum extends Bitcoin {
     }
   }
   
-  
   generateConfig(): string {
     return Ethereum.generateConfig(
       this.client,
       this.network,
       this.peerPort,
-      this.rpcPort);
+      this.rpcPort,
+      );
   }
 
   async _rpcGetVersion(): Promise<string> {
@@ -729,7 +710,7 @@ export class Ethereum extends Bitcoin {
         const version = await this.rpcGetVersion();
         status = version ? Status.RUNNING : Status.STOPPED;
       } else {
-        const stats = await this._docker.containerInspect(this.id);
+        const stats = await this._docker.containerInspect(this.id + '-execution');
         status = stats && stats.State.Running ? Status.RUNNING : Status.STOPPED;
       }
     } catch(err) {
@@ -752,5 +733,4 @@ export class Ethereum extends Bitcoin {
   async getStatus(): Promise<string> {
     return this._getStatus();
   }
-
 }
