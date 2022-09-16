@@ -1,4 +1,4 @@
-import { Ethereum } from '../ethereum/ethereum';
+import { EthereumPreMerge } from '../shared/ethereum-pre-merge';
 import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role } from '../../constants';
 import { v4 as uuid } from 'uuid';
 import { CryptoNodeData, VersionDockerImage } from '../../interfaces/crypto-node';
@@ -12,7 +12,7 @@ import { nethermindConfig } from './config/nethermind';
 import { FS } from '../../util/fs';
 
 
-export class Xdai extends Ethereum {
+export class Xdai extends EthereumPreMerge {
 
   static versions(client: string, networkType: string): VersionDockerImage[] {
     client = client || Xdai.clients[0];

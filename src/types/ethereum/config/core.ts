@@ -13,9 +13,8 @@ IPCPath = "/root/config/geth.ipc"
 AuthAddr = "0.0.0.0"
 AuthPort = {{AUTH_PORT}}
 AuthVirtualHosts = ["*"]
-JWTSecret = "/root/keystore/jwt.hex"
+JWTSecret = "/root/config/jwt.hex"
 
 [Node.P2P]
 ListenAddr = ":{{PEER_PORT}}"
-
 `;

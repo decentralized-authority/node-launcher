@@ -1,4 +1,4 @@
-import { Ethereum } from '../ethereum/ethereum';
+import { EthereumPreMerge } from '../shared/ethereum-pre-merge';
 import { CryptoNodeData, VersionDockerImage } from '../../interfaces/crypto-node';
 import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role } from '../../constants';
 import { timeout } from '../../util';
@@ -28,7 +28,7 @@ interface PolygonVersionDockerImage extends VersionDockerImage {
   generateHeimdallRuntimeArgs: (data: CryptoNodeData) => string
 }
 
-export class Polygon extends Ethereum {
+export class Polygon extends EthereumPreMerge {
 
   static versions(client: string, networkType: string): PolygonVersionDockerImage[] {
     client = client || Polygon.clients[0];
