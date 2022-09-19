@@ -11,7 +11,7 @@ p2p-udp-port: {{PEER_PORT}}
 execution-endpoint: "{{EXEC}}"
 checkpoint-sync-url: "{{CHECKPOINT_SYNC_URL}}"
 genesis-beacon-api-url: "{{GENESIS_BEACON_API_URL}}"
-jwt-secret: /root/keystore/jwt.hex
+jwt-secret: /root/config/jwt.hex
 `;
 
 export const validator = `
