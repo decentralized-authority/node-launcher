@@ -652,7 +652,7 @@ export class Ethereum extends EthereumPreMerge {
       const configExists = await fs.pathExists(configPath);
       const { authPort } = this;
       if(!configExists)
-        await fs.writeFile(configPath, this.generateConfig().replace('{{AUTH_PORT}}', authPort.toString(10)), 'utf8');
+        await fs.writeFile(configPath, this.generateConfig(), 'utf8');
 
       const consensusConfigPath = path.join(configDir, 'prysm.yaml');
       const consensusConfigExists = await fs.pathExists(consensusConfigPath);
@@ -661,7 +661,7 @@ export class Ethereum extends EthereumPreMerge {
         await fs.writeFile(consensusConfigPath, consensusConfig, 'utf8');
       }
 
-      const jwtPath = path.join(walletDir, 'jwt.hex');
+      const jwtPath = path.join(configDir, 'jwt.hex');
       const jwtExists = await fs.pathExists(jwtPath);
       if(!jwtExists) {
         const jwt = Web3.utils.randomHex(32);
