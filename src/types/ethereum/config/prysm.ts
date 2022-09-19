@@ -8,7 +8,7 @@ rpc-host: "0.0.0.0"
 rpc-port: {{RPC_PORT}}
 p2p-tcp-port: {{PEER_PORT}}
 p2p-udp-port: {{PEER_PORT}}
-execution-endpoint: "http://{{EXEC}}"
+execution-endpoint: "{{EXEC}}"
 checkpoint-sync-url: "{{CHECKPOINT_SYNC_URL}}"
 genesis-beacon-api-url: "{{GENESIS_BEACON_API_URL}}"
 jwt-secret: /root/keystore/jwt.hex

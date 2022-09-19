@@ -42,13 +42,8 @@ export class Ethereum extends EthereumPreMerge {
             dataDir: '/root/data',
             walletDir: '/root/keystore',
             configDir: '/root/config',
-<<<<<<< HEAD
-            networks: [NetworkType.MAINNET, NetworkType.GOERLI],
-            breaking: true,
-=======
             networks: [NetworkType.MAINNET, NetworkType.RINKEBY, NetworkType.GOERLI],
             breaking: false,
->>>>>>> 3556542 (Added goerli testnet)
             generateRuntimeArgs(data: CryptoNodeData): string {
               const { network = '' } = data;
               return ` --config=${path.join(this.configDir, Ethereum.configName(data))}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
@@ -434,15 +429,7 @@ export class Ethereum extends EthereumPreMerge {
 
   static networkTypes = [
     NetworkType.MAINNET,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    // NetworkType.RINKEBY,
-=======
     NetworkType.RINKEBY,
->>>>>>> 3556542 (Added goerli testnet)
-=======
-    // NetworkType.RINKEBY,
->>>>>>> 0963dfb (Cleaned up ethereum start method code)
     NetworkType.GOERLI,
   ];
 
@@ -464,23 +451,8 @@ export class Ethereum extends EthereumPreMerge {
   };
 
   static defaultAuthPort = {
-<<<<<<< HEAD
-    [NetworkType.MAINNET]: 8551,
-    [NetworkType.GOERLI]: 8551,
-  };
-
-  static defaultConsensusRPCPort = {
-    [NetworkType.MAINNET]: 8757,
-    [NetworkType.GOERLI]: 18757,
-  };
-
-  static defaultConsensusPeerPort = {
-    [NetworkType.MAINNET]: 8758,
-    [NetworkType.GOERLI]: 18758,
-=======
     [NetworkType.MAINNET]: 8559,
     [NetworkType.GOERLI]: 8559,
->>>>>>> 3556542 (Added goerli testnet)
   };
 
   static defaultCPUs = 8;
@@ -640,7 +612,6 @@ export class Ethereum extends EthereumPreMerge {
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
-<<<<<<< HEAD
     const split = splitVersion(this.version);
     let preMerge = false;
     if(split[0] < 1) {
@@ -652,11 +623,6 @@ export class Ethereum extends EthereumPreMerge {
     }
     const running = await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.id);
     const consensusRunning = consensusDockerImage ? (await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.consensusDockerName())) : false;
-=======
-
-    const running = await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.id);
-    const consensusRunning = await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.consensusDockerName());
->>>>>>> 0963dfb (Cleaned up ethereum start method code)
     if(!running) {
       const {
         dataDir: containerDataDir,
@@ -684,18 +650,14 @@ export class Ethereum extends EthereumPreMerge {
 
       const configPath = path.join(configDir, Ethereum.configName(this));
       const configExists = await fs.pathExists(configPath);
-<<<<<<< HEAD
       const { authPort } = this;
-=======
-      const authPort = Ethereum.defaultAuthPort[this.network];
->>>>>>> 0963dfb (Cleaned up ethereum start method code)
       if(!configExists)
         await fs.writeFile(configPath, this.generateConfig().replace('{{AUTH_PORT}}', authPort.toString(10)), 'utf8');
 
       const consensusConfigPath = path.join(configDir, 'prysm.yaml');
       const consensusConfigExists = await fs.pathExists(consensusConfigPath);
       if(!consensusConfigExists) {
-        const consensusConfig = Ethereum.generateConfig(NodeClient.PRYSM, this.network, this.rpcPort, this.peerPort).replace('{{EXEC}}', this.id + ':' + authPort.toString(10));
+        const consensusConfig = Ethereum.generateConfig(NodeClient.PRYSM, this.network, this.rpcPort, this.peerPort).replace('{{EXEC}}', this.id + '-execution:' + authPort.toString(10));
         await fs.writeFile(consensusConfigPath, consensusConfig, 'utf8');
       }
 
@@ -716,7 +678,7 @@ export class Ethereum extends EthereumPreMerge {
       ];
       const consensusArgs = [
         ...args,
-      '--name', this.consensusDockerName(),
+      '--name', this.id + '-consensus',
       '-p', `8656:${this.rpcPort}`,
       '-p', `8657:${this.peerPort}`,
       ];
@@ -742,26 +704,24 @@ export class Ethereum extends EthereumPreMerge {
         );
       });
       if(exitCode !== 0)
-        throw new Error(`Docker run for ${this.id} execution with ${this.dockerImage} failed with exit code ${exitCode}`);
+        throw new Error(`Docker run for ${this.id}-execution with ${this.dockerImage} failed with exit code ${exitCode}`);
 
-      if(!consensusRunning) {
-        const consensusExitCode = await new Promise<number>((resolve, reject) => {
-          this._docker.run(
-            consensusImage + ` --config-file=/root/config/prysm.yaml --${this.network.toLowerCase()}`,
-            consensusArgs,
-            output => this._logOutput(output),
-            err => {
-              this._logError(err);
-              reject(err);
-            },
-            code => {
-              resolve(code);
-            },
-          );
-        });
-        if(consensusExitCode !== 0)
-          throw new Error(`Docker run for ${this.consensusDockerName()} with prysm failed with exit code ${consensusExitCode}`);
-      }
+      const consensusExitCode = await new Promise<number>((resolve, reject) => {
+        this._docker.run(
+          consensusImage + ` --config-file=/root/config/prysm.yaml --${this.network.toLowerCase()}`,
+          consensusArgs,
+          output => this._logOutput(output),
+          err => {
+            this._logError(err);
+            reject(err);
+          },
+          code => {
+            resolve(code);
+          },
+        );
+      });
+      if(consensusExitCode !== 0)
+        throw new Error(`Docker run for ${this.id}-consensus with prysm failed with exit code ${consensusExitCode}`);
     }
 
     const instance = this._docker.attach(
@@ -775,42 +735,21 @@ export class Ethereum extends EthereumPreMerge {
       },
     );
 
-<<<<<<< HEAD
     const instances = [
-=======
-    const consensusInstance = this._docker.attach(
-      this.consensusDockerName(),
-      output => this._logOutput('consensus - ' + output),
-      err => {
-        this._logError(err);
-      },
-      code => {
-        this._logClose(code);
-      },
-    );
-
-    this._instance = instance;
-    this._instances = [
->>>>>>> 0963dfb (Cleaned up ethereum start method code)
       instance,
-      consensusInstance,
     ];
 
   async stop(): Promise<void> {
     try {
-      await this._docker.stop(this.id);
-      await this._docker.rm(this.id);
+      await this._docker.stop(this.id + '-execution');
+      await this._docker.rm(this.id + '-execution');
       await timeout(1000);
-      await this._docker.stop(this.consensusDockerName());
-      await this._docker.rm(this.consensusDockerName());
+      await this._docker.stop(this.id + '-consensus');
+      await this._docker.rm(this.id + '-consensus');
       await timeout(1000);
     } catch(err) {
       this._logError(err);
     }
-  }
-
-  consensusDockerName(): string {
-    return Ethereum.consensusDockerName(this.id);
   }
 
   generateConfig(): string {
@@ -845,36 +784,8 @@ export class Ethereum extends EthereumPreMerge {
     return Ethereum.consensusDockerName(this.id);
   }
 
-<<<<<<< HEAD
   generateConfig(): string {
     return Ethereum.generateConfig(this);
-=======
-  async _getStatus(): Promise<string> {
-    let status;
-    try {
-      if(this.remote) {
-        const version = await this.rpcGetVersion();
-        status = version ? Status.RUNNING : Status.STOPPED;
-      } else {
-        const stats = await this._docker.containerInspect(this.id);
-        status = stats && stats.State.Running ? Status.RUNNING : Status.STOPPED;
-      }
-    } catch(err) {
-      status = Status.STOPPED;
-    }
-
-    if(status !== Status.STOPPED) {
-      try {
-        const res = await this._makeSyncingCall();
-        if(res.body.result !== false)
-          status = Status.SYNCING;
-      } catch(err) {
-        // do nothing with the error
-      }
-    }
-
-    return status;
->>>>>>> 0963dfb (Cleaned up ethereum start method code)
   }
 
 }
