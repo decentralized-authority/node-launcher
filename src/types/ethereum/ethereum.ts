@@ -38,7 +38,11 @@ export class Ethereum extends EthereumPreMerge {
             version: '1.10.25',
             clientVersion: '1.10.25',
             image: 'ethereum/client-go:v1.10.25',
+<<<<<<< HEAD
             consensusImage: 'rburgett/prysm-beacon-chain:v3.1.1',
+=======
+            consensusImage: 'prysmaticlabs/prysm-beacon-chain:v3.1.1',
+>>>>>>> 9c64093 (Added consensus docker image to node data)
             dataDir: '/root/data',
             walletDir: '/root/keystore',
             configDir: '/root/config',
@@ -683,7 +687,6 @@ export class Ethereum extends EthereumPreMerge {
       '-p', `8657:${this.peerPort}`,
       ];
 
-      const consensusImage = 'prysmaticlabs/prysm-beacon-chain:v3.1.1';
       await this._docker.pull(this.dockerImage, str => this._logOutput(str));
       if(consensusDockerImage)
         await this._docker.pull(consensusDockerImage, str => this._logOutput(str));
@@ -704,6 +707,7 @@ export class Ethereum extends EthereumPreMerge {
         );
       });
       if(exitCode !== 0)
+<<<<<<< HEAD
         throw new Error(`Docker run for ${this.id}-execution with ${this.dockerImage} failed with exit code ${exitCode}`);
 
       const consensusExitCode = await new Promise<number>((resolve, reject) => {
@@ -722,6 +726,28 @@ export class Ethereum extends EthereumPreMerge {
       });
       if(consensusExitCode !== 0)
         throw new Error(`Docker run for ${this.id}-consensus with prysm failed with exit code ${consensusExitCode}`);
+=======
+        throw new Error(`Docker run for ${this.id} execution with ${this.dockerImage} failed with exit code ${exitCode}`);
+
+      if(!consensusRunning && consensusDockerImage) {
+        const consensusExitCode = await new Promise<number>((resolve, reject) => {
+          this._docker.run(
+            consensusDockerImage + ` --config-file=/root/config/prysm.yaml --${this.network.toLowerCase()}`,
+            consensusArgs,
+            output => this._logOutput(output),
+            err => {
+              this._logError(err);
+              reject(err);
+            },
+            code => {
+              resolve(code);
+            },
+          );
+        });
+        if(consensusExitCode !== 0)
+          throw new Error(`Docker run for ${this.consensusDockerName()} with prysm failed with exit code ${consensusExitCode}`);
+      }
+>>>>>>> 9c64093 (Added consensus docker image to node data)
     }
 
     const instance = this._docker.attach(
