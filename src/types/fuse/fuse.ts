@@ -1,6 +1,6 @@
 /* eslint @typescript-eslint/require-await: 1 */
 
-import { Ethereum } from '../ethereum/ethereum';
+import { EthereumPreMerge } from '../shared/ethereum-pre-merge';
 import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role } from '../../constants';
 import { v4 as uuid } from 'uuid';
 import { CryptoNodeData, ValidatorInfo, VersionDockerImage } from '../../interfaces/crypto-node';
@@ -84,7 +84,7 @@ interface FuseVersionDockerImage extends VersionDockerImage {
   imageNetstat: string
 }
 
-export class Fuse extends Ethereum {
+export class Fuse extends EthereumPreMerge {
 
   static versions(client: string, networkType: string): FuseVersionDockerImage[] {
     client = client || Fuse.clients[0];

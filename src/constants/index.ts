@@ -2,6 +2,8 @@ export const NetworkType = {
   MAINNET: 'MAINNET',
   TESTNET: 'TESTNET',
   RINKEBY: 'RINKEBY',
+  GOERLI: 'GOERLI',
+  ROPSTEN: 'ROPSTEN',
 };
 
 export const NodeType = {
@@ -15,6 +17,8 @@ export const NodeClient = {
   OPEN_ETHEREUM: 'OPEN_ETHEREUM',
   PARITY: 'PARITY',
   NETHERMIND: 'NETHERMIND',
+  ERIGON: 'ERIGON',
+  PRYSM: 'PRYSM',
 };
 
 export const Role = {

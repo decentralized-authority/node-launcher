@@ -13,3 +13,12 @@ export const filterVersionsByNetworkType = (networkType: string, versions: Versi
   return versions
     .filter(v => v.networks.includes(networkType));
 };
+
+export const splitVersion = (version: string): [number, number, number] => {
+  const split = version.split('.');
+  const [ numStr0, numStr1, numStr2 ] = split;
+  const num0 = Number(numStr0) || 0;
+  const num1 = Number(numStr1) || 0;
+  const num2 = Number(numStr2) || 0;
+  return [num0, num1, num2];
+};

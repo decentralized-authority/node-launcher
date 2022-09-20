@@ -1,4 +1,4 @@
-import { Ethereum } from '../ethereum/ethereum';
+import { EthereumPreMerge } from '../shared/ethereum-pre-merge';
 import { CryptoNodeData, VersionDockerImage } from '../../interfaces/crypto-node';
 import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role } from '../../constants';
 import { Docker } from '../../util/docker';
@@ -102,7 +102,7 @@ interface HarmonyNodeData extends CryptoNodeData {
   shard: number
 }
 
-export class Harmony extends Ethereum {
+export class Harmony extends EthereumPreMerge {
 
   static versions(client: string, networkType: string): VersionDockerImage[] {
     client = client || Harmony.clients[0];

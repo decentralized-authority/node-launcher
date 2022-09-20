@@ -7,7 +7,7 @@ import request from 'superagent';
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
-import { Ethereum } from '../ethereum/ethereum';
+import { EthereumPreMerge } from '../shared/ethereum-pre-merge';
 import { filterVersionsByNetworkType } from '../../util';
 import * as genesis from './config/genesis';
 
@@ -34,7 +34,7 @@ laddr = "tcp://0.0.0.0:{{RPC_PORT}}"
 laddr = "tcp://0.0.0.0:{{PEER_PORT}}"
 `;
 
-export class OKEX extends Ethereum {
+export class OKEX extends EthereumPreMerge {
 
   static versions(client: string, networkType: string): VersionDockerImage[] {
     client = client || OKEX.clients[0];

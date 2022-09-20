@@ -1,4 +1,4 @@
-import { Ethereum } from '../ethereum/ethereum';
+import { EthereumPreMerge } from '../shared/ethereum-pre-merge';
 import * as coreConfig from './config/core';
 import * as genesis from './config/genesis';
 import { CryptoNodeData, VersionDockerImage } from '../../interfaces/crypto-node';
@@ -11,7 +11,7 @@ import { ChildProcess } from 'child_process';
 import os from 'os';
 import path from 'path';
 
-export class IOTEX extends Ethereum {
+export class IOTEX extends EthereumPreMerge {
 
   static versions(client: string, networkType: string): VersionDockerImage[] {
     client = client || IOTEX.clients[0];

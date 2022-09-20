@@ -1,4 +1,4 @@
-import { Ethereum } from '../ethereum/ethereum';
+import { EthereumPreMerge } from '../shared/ethereum-pre-merge';
 import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role } from '../../constants';
 import { v4 as uuid } from 'uuid';
 import { CryptoNodeData, VersionDockerImage } from '../../interfaces/crypto-node';
@@ -69,7 +69,7 @@ WriteTimeout = 30000000000
 IdleTimeout = 120000000000
 `;
 
-export class BinanceSC extends Ethereum {
+export class BinanceSC extends EthereumPreMerge {
 
   static versions(client: string, networkType: string): VersionDockerImage[] {
     client = client || BinanceSC.clients[0];
