@@ -679,7 +679,7 @@ export class Ethereum extends EthereumPreMerge {
       '--name', this.id,
       '-p', `${this.rpcPort}:${this.rpcPort}`,
       '-p', `${this.peerPort}:${this.peerPort}`,
-      '-p', `${authPort}:${authPort}`,
+      // '-p', `${authPort}:${authPort}`,
       ];
       const consensusArgs = [
         ...args,
