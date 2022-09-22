@@ -38,7 +38,7 @@ export class Ethereum extends EthereumPreMerge {
             version: '1.10.25',
             clientVersion: '1.10.25',
             image: 'ethereum/client-go:v1.10.25',
-            consensusImage: 'prysmaticlabs/prysm-beacon-chain:v3.1.1',
+            consensusImage: 'rburgett/prysm-beacon-chain:v3.1.1',
             dataDir: '/root/data',
             walletDir: '/root/keystore',
             configDir: '/root/config',
