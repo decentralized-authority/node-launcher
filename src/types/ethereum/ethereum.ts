@@ -69,7 +69,7 @@ export class Ethereum extends EthereumPreMerge {
                 });
               if(nextBlockStart < 0)
                 nextBlockStart = splitConfig.length;
-              let authAddrIdx = -1, authPortIdx = -1, authVirtualHostsIdx = -1, jwtSecretIdx = -1;
+              let authAddrIdx = -1, authPortIdx = -1, authVirtualHostsIdx = -1, jwtSecretIdx = -1, dataDirIdx = -1;
               for(let i = nodeBlockStart + 1; i < nextBlockStart; i++) {
                 const s = splitConfig[i];
                 if(/^AuthAddr/.test(s.trim())) {
@@ -80,6 +80,8 @@ export class Ethereum extends EthereumPreMerge {
                   authVirtualHostsIdx = i;
                 } else if(/^JWTSecret/.test(s.trim())) {
                   jwtSecretIdx = i;
+                } else if(/^DataDir/.test(s.trim())) {
+                  dataDirIdx = i;
                 }
               }
               const toAdd = [];
@@ -106,6 +108,12 @@ export class Ethereum extends EthereumPreMerge {
                 splitConfig[jwtSecretIdx] = jwtSecretVal;
               } else {
                 toAdd.push(jwtSecretVal);
+              }
+              const dataDirVal = 'DataDir = "/root/data"';
+              if(dataDirIdx > -1) {
+                splitConfig[dataDirIdx] = dataDirVal;
+              } else {
+                toAdd.push(dataDirVal);
               }
               const newConfig = [
                 ...splitConfig.slice(0, nextBlockStart),
