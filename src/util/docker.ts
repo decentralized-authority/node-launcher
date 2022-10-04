@@ -268,7 +268,7 @@ export class Docker extends EventEmitter {
         onClose(code || 0);
     });
     instance.stdout.on('data', (data: Buffer) => {
-      if(onOutput)
+      if(onOutput && !silent)
         onOutput(data.toString());
     });
     instance.stderr.on('data', (data: Buffer) => {
