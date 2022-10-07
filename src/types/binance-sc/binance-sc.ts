@@ -78,6 +78,19 @@ export class BinanceSC extends EthereumPreMerge {
       case NodeClient.GETH:
         versions = [
           {
+            version: '1.1.15',
+            clientVersion: '1.1.15',
+            image: 'rburgett/bsc_geth:v1.1.15',
+            dataDir: '/blockchain/data',
+            walletDir: '/blockchain/keys',
+            configDir: '/blockchain/config',
+            networks: [NetworkType.MAINNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              return ` --config=${path.join(this.configDir, BinanceSC.configName(data))}`;
+            },
+          },
+          {
             version: '1.1.12',
             clientVersion: '1.1.12',
             image: 'rburgett/bsc_geth:v1.1.12',
@@ -270,6 +283,9 @@ export class BinanceSC extends EthereumPreMerge {
         walletDir: containerWalletDir,
         configDir: containerConfigDir,
       } = versionData;
+
+      await this._docker.pull(this.dockerImage, str => this._logOutput(str));
+
       let args = [
         '--memory', this.dockerMem.toString(10) + 'MB',
         '--cpus', this.dockerCPUs.toString(10),

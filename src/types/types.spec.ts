@@ -23,21 +23,21 @@ import { IOTEX } from './iotex/iotex';
 import { Polygon } from './polygon/polygon';
 
 const chains: [{name: string, constructor: any}] = [
-  {name: 'Bitcoin', constructor: Bitcoin},
-  {name: 'BitcoinCash', constructor: BitcoinCash},
-  {name: 'Dash', constructor: Dash},
-  {name: 'LBRY', constructor: LBRY},
-  {name: 'Litecoin', constructor: Litecoin},
-  {name: 'Ethereum', constructor: Ethereum},
+  // {name: 'Bitcoin', constructor: Bitcoin},
+  // {name: 'BitcoinCash', constructor: BitcoinCash},
+  // {name: 'Dash', constructor: Dash},
+  // {name: 'LBRY', constructor: LBRY},
+  // {name: 'Litecoin', constructor: Litecoin},
+  // {name: 'Ethereum', constructor: Ethereum},
   {name: 'BinanceSC', constructor: BinanceSC},
-  {name: 'Xdai', constructor: Xdai},
-  {name: 'Avalanche', constructor: Avalanche},
-  {name: 'Pocket', constructor: Pocket},
-  {name: 'Fuse', constructor: Fuse},
-  {name: 'Harmony', constructor: Harmony},
-  {name: 'OEC', constructor: OKEX},
-  {name: 'IoTeX', constructor: IOTEX},
-  {name: 'Polygon', constructor: Polygon},
+  // {name: 'Xdai', constructor: Xdai},
+  // {name: 'Avalanche', constructor: Avalanche},
+  // {name: 'Pocket', constructor: Pocket},
+  // {name: 'Fuse', constructor: Fuse},
+  // {name: 'Harmony', constructor: Harmony},
+  // {name: 'OEC', constructor: OKEX},
+  // {name: 'IoTeX', constructor: IOTEX},
+  // {name: 'Polygon', constructor: Polygon},
 ];
 
 chains.forEach(({ name, constructor: NodeConstructor }) => {
