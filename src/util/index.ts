@@ -21,4 +21,8 @@ export const splitVersion = (version: string): [number, number, number] => {
   const num1 = Number(numStr1) || 0;
   const num2 = Number(numStr2) || 0;
   return [num0, num1, num2];
+<<<<<<< HEAD
 };
+=======
+};
+>>>>>>> 01df6a3 (successful deposit, debug duplicate tx)
