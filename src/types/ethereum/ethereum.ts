@@ -531,7 +531,6 @@ export class Ethereum extends EthereumPreMerge {
     if(typeof client === 'string') {
       clientStr = client;
     } else {
-      console.log('-----------------------------------', client)
       clientStr = client.client;
       network = client.network;
       peerPort = client.peerPort;
@@ -887,17 +886,14 @@ export class Ethereum extends EthereumPreMerge {
       await this._docker.stop(this.consensusDockerName());
       await this._docker.rm(this.consensusDockerName());
       await timeout(1000);
-      //if (this.role == Role.VALIDATOR){
       await this._docker.stop(this.validatorDockerName());
       await this._docker.rm(this.validatorDockerName());
       await timeout(1000);
-      //}
     } catch(err) {
       this._logError(err);
     }
   }
 
-  // stakeVal and valDeposit agnostic of client
   async stakeValidator(password: string, numVals = 1, validatorStartIndex = 0, eth1AccountIndex = 0): Promise<string[]> {
     const mnemonic = decrypt(await this._fs.readFile(this.walletDir + "/mnemonic.enc", 'base64'), password);
     const stakingRunning = this.stakingDockerImage ? (await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.stakingDockerName())) : false;
