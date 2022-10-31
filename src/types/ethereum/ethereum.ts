@@ -18,8 +18,8 @@ import { EthereumPreMerge } from '../shared/ethereum-pre-merge';
 import * as bip39 from 'bip39';
 import { Wallet } from 'ethers';
 //import { number } from 'mathjs';
-import { contractAbi } from './contractAbi';
-import { encrypt, decrypt, hexPrefix } from '../../util/crypto';
+import { contractAbi } from './contract-abi';
+import { encrypt, decrypt, hexPrefix, encryptedKeystore } from '../../util/crypto';
 //import { Console } from 'console';
 //import { times } from 'lodash';
 
@@ -34,7 +34,7 @@ interface EthereumCryptoNodeData extends CryptoNodeData {
   stakingDockerImage?: string
   passwordPath?: string
   eth1Address?: string
-  //mnemonicEncrypted?: string
+  mnemonicEncrypted?: encryptedKeystore
   //eth1PrivateKeyEncrypted?: string
   //validatorPublicKeys?: string[]
   //slasherDockerImage?: string
@@ -637,7 +637,7 @@ export class Ethereum extends EthereumPreMerge {
   passwordPath = '';
   eth1Address = '';
   //validatorPublicKeys: string[];
-  //mnemonicEncrypted: '';
+  mnemonicEncrypted: encryptedKeystore;
 
   constructor(data: EthereumCryptoNodeData, docker?: Docker) {
     super(data, docker);
@@ -676,7 +676,7 @@ export class Ethereum extends EthereumPreMerge {
     this.validatorDockerImage = this.remote ? '' : data.validatorDockerImage ? data.validatorDockerImage : (versionObj.validatorImage || '');
     this.validatorRPCPort = data.validatorRPCPort || Ethereum.defaultValidatorRPCPort[this.network];
     this.passwordPath = data.passwordPath || this.passwordPath;
-    //this.mnemonicEncrypted = data.mnemonicEncrypted || this.mnemonicEncrypted;
+    this.mnemonicEncrypted = data.mnemonicEncrypted || <encryptedKeystore>{};
     this.eth1Address = data.eth1Address || this.eth1Address;
     //this.validatorPublicKeys = data.validatorPublicKeys || this.validatorPublicKeys;
     //this.eth1PrivateKeyEncrypted = data.eth1PrivateKeyEncrypted || this.eth1PrivateKeyEncrypted;
@@ -693,8 +693,7 @@ export class Ethereum extends EthereumPreMerge {
       ...this._toObject(),
       authPort: this.authPort,
       consensusRPCPort: this.consensusRPCPort,
-      //consensusGRPCPort: this.consensusGRPCPort,
-      //mnemonicEncrypted: this.mnemonicEncrypted,
+      mnemonicEncrypted: this.mnemonicEncrypted,
       consensusPeerPort: this.consensusPeerPort,
       consensusDockerImage: this.consensusDockerImage,
       stakingDockerImage: this.stakingDockerImage,
@@ -833,9 +832,9 @@ export class Ethereum extends EthereumPreMerge {
       if (this.role === Role.VALIDATOR && !password) {
         throw new Error('You must pass in a password the first time you run start() on a validator. This password will be used to generate the key pair.');
       } else if (this.role == Role.VALIDATOR && !validatorRunning && password ){
-        const mnemonicPath = path.join(this.walletDir + "/mnemonic.enc")
-        const mnemonicExists = await this._fs.pathExists(mnemonicPath);
-        if (!mnemonicExists || this.eth1Address == '')
+        //const mnemonicPath = path.join(this.walletDir + "/mnemonic.enc")
+        //const mnemonicExists = await this._fs.pathExists(mnemonicPath);
+        if (!this.mnemonicEncrypted || this.mnemonicEncrypted.message == '')
           await this.encryptMnemonic(password)
 
         const passwordPath = this.passwordPath || path.join(tmpdir, uuid());
@@ -896,7 +895,7 @@ export class Ethereum extends EthereumPreMerge {
   }
 
   async stakeValidator(password: string, numVals = 1, validatorStartIndex = 0, eth1AccountIndex = 0): Promise<string[]> {
-    const mnemonic = decrypt(await this._fs.readFile(this.walletDir + "/mnemonic.enc", 'base64'), password);
+    const mnemonic = decrypt(this.mnemonicEncrypted, password);
     const stakingRunning = this.stakingDockerImage ? (await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.stakingDockerName())) : false;
     await this._docker.pull(this.stakingDockerImage, str => this._logOutput(str));
     const stakingDir = path.join(this.walletDir, 'validator_keys');
@@ -911,15 +910,15 @@ export class Ethereum extends EthereumPreMerge {
       throw new Error('Geth can only support 64 unmined transactions from the same account without crashing');
     //const validatorStartIndex = 0; // if user provides already used mnemonic start index will be higher. later if we add a feature to add more accounts (32 eth each) to a running validator, so we would need to track the index.
     //const numVals = 1; // 32 eth each, deposit.json will have x num deposit tx's to sign and send to deposit contract, and x num keystores generated off of the same mnemonic. derivation path should be m/12381/3600/{x}/0/0 
-    const mnemonicEncrypted = await this._fs.readFile(path.join(this.walletDir, 'mnemonic.enc'), 'base64');
+    //const mnemonicEncrypted = JSON.parse(await this._fs.readFile(path.join(this.walletDir, 'mnemonic.enc'), 'utf8'));
     const stakingRun = ` --language=english --non_interactive existing-mnemonic ` +
-      `--mnemonic="{{MNEMONIC}}" --validator_start_index=${validatorStartIndex} ` +
+      `--mnemonic="${mnemonic}" --validator_start_index=${validatorStartIndex} ` +
       `--num_validators=${numVals} --folder=/root/keystore ` +
-      `--chain ${this.network.toLowerCase()} --keystore_password {{PASSWORD}}`;
+      `--chain ${this.network.toLowerCase()} --keystore_password ${password}`;
     console.log(stakingRun);
     const stakingExitCode = await new Promise<number>((resolve, reject) => {
       this._docker.run(
-        this.stakingDockerImage + stakingRun.replace('{{MNEMONIC}}', decrypt(mnemonicEncrypted, password)).replace('{{PASSWORD}}', password),
+        this.stakingDockerImage + stakingRun,
         stakingArgs,
         output => this._logOutput(output),
         err => {
@@ -1029,7 +1028,7 @@ export class Ethereum extends EthereumPreMerge {
           + "}. transactionHash for deposit: {" + eth1DepositCheck +"}"
       }
       const jsonUrl = `http://localhost:${this.rpcPort}`;
-      const mnemonicEncrypted = await this._fs.readFile(this.walletDir + "/mnemonic.enc", 'base64');
+      const mnemonicEncrypted = JSON.parse(await this._fs.readFile(this.walletDir + "/mnemonic.enc", 'utf8'));
       const eth1DerivationPath = `m/44'/60'/0'/0/${eth1AccountIndex.toString()}`; //m/44/60/0/0/i is eth1 wallet (aka account aka withdrawal) for account number i
       //console.log(1059, decrypt(mnemonicEncrypted, password), eth1DerivationPath, jsonUrl)
       const eth1Wallet = Wallet.fromMnemonic(decrypt(mnemonicEncrypted, password), eth1DerivationPath);
@@ -1299,25 +1298,25 @@ export class Ethereum extends EthereumPreMerge {
 
   // exitValidator()
 
- async encryptMnemonic(password: string, mnemonic?: string, eth1AccountIndex = 0) {
+ async encryptMnemonic(password: string, mnemonic?: string, eth1AccountIndex = 0): Promise<encryptedKeystore> {
     //console.log(mnemonic, 1100)
     //console.log(1249, this.walletDir)
-    const mnemonicPath = path.join(this.walletDir, "mnemonic.enc")
-    const mnemonicExists = await this._fs.pathExists(mnemonicPath);
+    //const mnemonicPath = path.join(this.walletDir, "mnemonic.enc")
+    const mnemonicExists = this.mnemonicEncrypted && this.mnemonicEncrypted.message!= ''; //await this._fs.pathExists(mnemonicPath);
     //console.log(mnemonicPath, mnemonicExists)
     if (mnemonic){ // if called with mnemonic passed, overwrite existing mnemonic.enc
       //console.log(1103, this.walletDir);
-      await this._fs.ensureDir(this.walletDir)
-      await this._fs.writeFile(mnemonicPath, JSON.stringify(encrypt(mnemonic, password)), 'base64');
-      //console.log('written', mnemonic)
+      //await this._fs.ensureDir(this.walletDir)
+      this.mnemonicEncrypted = encrypt(mnemonic, password, this.id);
+      console.log(1312,  'encrypted', mnemonic)
     } else if (!mnemonic && !mnemonicExists){
       mnemonic = bip39.generateMnemonic(256);
-      //console.log(`Mnemonic: {${mnemonic}}`, this.walletDir);
+      console.log(1315, `Mnemonic: {${mnemonic}}`, this.walletDir);
       //await(timeout(1000));
-      await this._fs.writeFile(this.walletDir + "/mnemonic.enc", JSON.stringify(encrypt(mnemonic, password)), 'base64');
+      this.mnemonicEncrypted = encrypt(mnemonic, password, this.id);
     } else {
-      //console.log(1111);
-      mnemonic = decrypt(await this._fs.readFile(this.walletDir + "/mnemonic.enc", 'base64'), password);
+      console.log(1319);
+      mnemonic = decrypt(this.mnemonicEncrypted, password);
     }
     // if (!this.mnemonicEncrypted) 
     //   this.mnemonicEncrypted = encrypt(mnemonic, password);
@@ -1334,7 +1333,8 @@ export class Ethereum extends EthereumPreMerge {
     }
     await timeout(5000);
     //const mnemonicEncrypted = encrypt(mnemonic, password)
-    console.log("Mnemonic encrypted");
+    console.log("Mnemonic encrypted", mnemonic);
+    return this.mnemonicEncrypted
   }
 
   async enableSlasher(): Promise<boolean> {
