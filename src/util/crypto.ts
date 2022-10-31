@@ -1,10 +1,45 @@
+//import { mnemonicToEntropy } from 'bip39';
 import * as crypto from 'crypto';
-const algorithm = 'aes-256-cbc'; //Using AES encryption
-//const key = crypto.randomBytes(32);
-const iv = crypto.randomBytes(16);
+import { v4 as uuid} from 'uuid';
 
 
-export function hexPrefix(pubkey: string) {
+// export interface MndemonicKeystore {
+//   id:
+//   algorithm: 'aes-256-cbc';
+//   salt: string;
+//   ciphertext: string;
+//   iv: string;
+// }
+
+// export interface kdfParams {
+//   dklen: 32,
+//   n: 262144,
+//   r: 8,
+//   p: 1,
+//   salt: string
+// }
+
+export interface encryptedKeystore {
+  id: string
+  kdfFunction: string
+  kdfParams: {
+    dklen: number
+    n: number
+    r: number
+    p: number
+    salt: string
+  }
+  cipherFunction: string
+  iv: Buffer;
+  message: string
+}
+  // "checksum": {
+  //   "function": "sha256",
+  //   "params": {},
+  //   "message": "cf1baa54b3dde880cf34cc15ac301990fbefcff32d147c35e6471282293fca68"
+  // },
+
+export function hexPrefix(pubkey: string): string {
     if (pubkey.startsWith('0x')) {
     return pubkey;
   } else {
@@ -12,25 +47,54 @@ export function hexPrefix(pubkey: string) {
   }
 }
 
-export function encrypt(text: string, password: string) {
-   //can hash password with sha256, will always create 32 byte hash
-   const passwordHash = crypto.createHash('sha256').update(password, 'utf8').digest('base64').slice(0, 32)
-   const cipher = crypto.createCipheriv(algorithm, Buffer.from(passwordHash), iv);
+export function encrypt(text: string, password: string, id = uuid()): encryptedKeystore {
+  const encryptedMnemonic: encryptedKeystore = {  
+    id: id,
+    kdfFunction: "scrypt",
+    kdfParams: {
+      dklen: 32,
+      n: 262144,
+      r: 8,
+      p: 1,
+      salt: crypto.randomBytes(32).toString('hex')
+    },
+    cipherFunction: 'aes-256-cbc',
+    iv: crypto.randomBytes(16),
+    message: '',
+    }
+   const kdfParams = encryptedMnemonic.kdfParams;
+   console.log(71, encryptedMnemonic)
+   const passwordHash = crypto.scryptSync(password, 
+                                          kdfParams.salt,
+                                          kdfParams.dklen,
+                                          {
+                                            cost: kdfParams.n,
+                                            blockSize: kdfParams.r,
+                                            parallelization: kdfParams.p,
+                                            maxmem: 128 * kdfParams.n * kdfParams.r * 2
+                                          })
+   const cipher = crypto.createCipheriv(encryptedMnemonic.cipherFunction, passwordHash, Buffer.from(encryptedMnemonic.iv));
    const encrypted = cipher.update(text);
-   const encryptedData = Buffer.concat([iv, encrypted, cipher.final()]);
-   return encryptedData.toString('base64');
+   const encryptedData = Buffer.concat([encrypted, cipher.final()]);
+   encryptedMnemonic.message = encryptedData.toString('hex')
+   return encryptedMnemonic;
 }
 
-export function decrypt(encryptedData: string, password: string) {
-  const passwordHash = crypto.createHash('sha256').update(password, 'utf8').digest('base64').slice(0, 32)
-  const encryptedDataBuffer = Buffer.from(encryptedData, 'base64')
-  const ivBuf = encryptedDataBuffer.slice(0, 16)
-  const ciphertext = encryptedDataBuffer.slice(16)
-  const iv = Buffer.from(ivBuf.toString('base64'), 'base64');
-  const encryptedText = Buffer.from(ciphertext.toString('base64'), 'base64');
-  const decipher = crypto.createDecipheriv(algorithm, Buffer.from(passwordHash), iv);
+export function decrypt(encryptedMnemonic: encryptedKeystore, password: string): string {
+  const kdfParams = encryptedMnemonic.kdfParams;
+  const passwordHash = crypto.scryptSync(password, 
+                                          kdfParams.salt,
+                                          kdfParams.dklen,
+                                          {
+                                            cost: kdfParams.n,
+                                            blockSize: kdfParams.r,
+                                            parallelization: kdfParams.p,
+                                            maxmem: 128 * kdfParams.n * kdfParams.r * 2
+                                          })
+  const encryptedText = Buffer.from(encryptedMnemonic.message, 'hex');
+  const decipher = crypto.createDecipheriv(encryptedMnemonic.cipherFunction, passwordHash, Buffer.from(encryptedMnemonic.iv));
   const decryptedText = decipher.update(encryptedText);
   const decrypted = Buffer.concat([decryptedText, decipher.final()]);
-  return decrypted.toString();
+  return decrypted.toString('utf8');
 }
 
