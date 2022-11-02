@@ -673,6 +673,31 @@ export class Pocket extends Bitcoin {
       // const configuration = new Configuration(5, 1000, 0, 40000, undefined, undefined, undefined, undefined, undefined, undefined, false);
       // const pocket = new PocketJS([dispatcher], new HttpRpcProvider(dispatcher), configuration);
       const account = await pocket.keybase.createAccount(password);
+      if (isError(account)) {
+        this._logError(account);
+        return false;
+      } else {
+        const ppk = await pocket.keybase.exportPPKfromAccount(account.addressHex, password, '', password);
+        if (isError(ppk)) {
+          this._logError(ppk);
+          return false;
+        } else {
+          this.privateKeyEncrypted = ppk;
+          this.address = account.addressHex;
+          this.publicKey = account.publicKey.toString('hex');
+          return true;
+        }
+      }
+    } catch (err) {
+      this._logError(err);
+      return false;
+    }
+  }
+
+  async importAccountFromRawPrivateKey(rawPrivateKey: string, password: string): Promise<boolean> {
+    try {
+      const pocket = this.getPocketJsInstance();
+      const account = await pocket.keybase.importAccount(Buffer.from(rawPrivateKey, 'hex'), password);
       if(isError(account)) {
         this._logError(account);
         return false;
