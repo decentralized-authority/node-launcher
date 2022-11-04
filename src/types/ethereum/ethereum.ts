@@ -42,7 +42,7 @@ interface EthereumCryptoNodeData extends CryptoNodeData {
   //metricsDockerImage?: string
 }
 interface EthereumVersionDockerImage extends VersionDockerImage {
-  consensusImage: string
+  consensusImage?: string
   //stakingImage?: string
   validatorImage?: string
   passwordPath?: string
@@ -72,9 +72,9 @@ export class Ethereum extends EthereumPreMerge {
             version: '1.10.25',
             clientVersion: '1.10.25',
             image: 'ethereum/client-go:v1.10.25',
-            consensusImage: 'rburgett/prysm-beacon-chain:v3.1.1',
-            validatorImage: 'prysmaticlabs/prysm-validator:v3.1.1',
-            passwordPath: '/.hidden/pass.pwd',
+            // consensusImage: 'rburgett/prysm-beacon-chain:v3.1.1',
+            // validatorImage: 'prysmaticlabs/prysm-validator:v3.1.1',
+            // passwordPath: '/.hidden/pass.pwd',
             dataDir: '/root/data',
             walletDir: '/root/keystore',
             configDir: '/root/config',
@@ -372,6 +372,20 @@ export class Ethereum extends EthereumPreMerge {
       case NodeClient.NETHERMIND:
         versions = [
           {
+            version: '1.14.5',
+            clientVersion: '1.14.5',
+            image: 'nethermind/nethermind:1.14.5',
+            dataDir: '/nethermind/nethermind_db',
+            walletDir: '/nethermind/keystore',
+            configDir: '/nethermind/config',
+            networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              const { network = '' } = data;
+              return ` --configsDirectory ${this.configDir} --config ${network.toLowerCase()}`;
+            },
+          },
+          {
             version: '1.14.0',
             clientVersion: '1.14.0',
             image: 'nethermind/nethermind:1.14.0',
@@ -380,7 +394,7 @@ export class Ethereum extends EthereumPreMerge {
             dataDir: '/nethermind/nethermind_db',
             walletDir: '/nethermind/keystore',
             configDir: '/nethermind/config',
-            networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
+            networks: [NetworkType.MAINNET, NetworkType.GOERLI],
             breaking: false,
             generateRuntimeArgs(data: CryptoNodeData): string {
               const { network = '' } = data;
@@ -431,8 +445,9 @@ export class Ethereum extends EthereumPreMerge {
             version: '3.1.1',
             clientVersion: '3.1.1',
             image: 'prysmaticlabs/prysm-beacon-chain:v3.1.1',
-            consensusImage: '',
-            validatorImage: '',
+            consensusImage: 'rburgett/prysm-beacon-chain:v3.1.1',
+            validatorImage: 'prysmaticlabs/prysm-validator:v3.1.1',
+            passwordPath: '/.hidden/pass.pwd',
             dataDir: '/root/data',
             walletDir: '/root/keys',
             configDir: '/root/config',
@@ -468,7 +483,7 @@ export class Ethereum extends EthereumPreMerge {
 
   static clients = [
     NodeClient.GETH,
-    // NodeClient.NETHERMIND,
+    NodeClient.NETHERMIND,
     // NodeClient.ERIGON,
     // NodeClient.PRYSM,
   ];
@@ -699,12 +714,14 @@ export class Ethereum extends EthereumPreMerge {
       consensusPeerPort: this.consensusPeerPort,
       consensusDockerImage: this.consensusDockerImage,
       validatorDockerImage: this.validatorDockerImage,
+      validators: this.validators
     };
   }
 
   async start(password?: string, eth1AccountIndex = 0, slasher = 0): Promise<ChildProcess[]> {
     const { consensusDockerImage, validatorDockerImage, _fs: fs } = this;
     const versions = Ethereum.versions(this.client, this.network);
+    //console.log(versions, this.client, this.network)
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
@@ -782,6 +799,7 @@ export class Ethereum extends EthereumPreMerge {
         '--name', this.id,
         '-p', `${this.rpcPort}:${this.rpcPort}`,
         '-p', `${this.peerPort}:${this.peerPort}`,
+        '-p', `${this.peerPort}:${this.peerPort}/udp`,
         //'-p', `${authPort}:${authPort}`,
       ];
       const consensusArgs = [
