@@ -27,7 +27,7 @@ export const validator = `
 accept-terms-of-use: true
 log-file: "/root/data/validator.log"
 verbosity: "info"
-keys-dir: "/root/keystore/validator_keys/" # to import from
+keys-dir: "/root/keystore/validators/" # to import from
 account-password-file: "/.hidden/pass.pwd"
 wallet-dir: "/root/keystore/" # to place imported file into
 wallet-password-file: "/.hidden/pass.pwd"
