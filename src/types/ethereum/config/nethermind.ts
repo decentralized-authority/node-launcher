@@ -109,7 +109,7 @@ export const goerli = `
     "Port": {{RPC_PORT}},
     "EnabledModules": [
       "Eth",
-      "ws",
+      "WS",
       "Subscribe",
       "Trace",
       "TxPool",
@@ -119,7 +119,7 @@ export const goerli = `
       "Net",
       "Parity",
       "Health"
-    ]
+    ],
     "EnginePort": {{AUTH_PORT}},
     "EngineHost": "0.0.0.0",
     "JwtSecretFile": "/nethermind/config/jwt.hex"
