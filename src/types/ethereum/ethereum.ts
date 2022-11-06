@@ -34,22 +34,26 @@ interface EthereumCryptoNodeData extends CryptoNodeData {
   consensusDockerImage?: string
   validatorDockerImage?: string
   validatorRPCPort?: number
-  //stakingDockerImage?: string
   passwordPath?: string
   eth1Address?: string
   mnemonicEncrypted?: EncryptedKeystore
-  validators?: Set<number>
-  //eth1PrivateKeyEncrypted?: string
-  //validatorPublicKeys?: string[]
-  //slasherDockerImage?: string
-  //metricsDockerImage?: string
+  validators: Validators
 }
+
 interface EthereumVersionDockerImage extends VersionDockerImage {
   consensusImage?: string
-  //stakingImage?: string
   validatorImage?: string
   passwordPath?: string
-  //mevImage?: string
+}
+
+interface ValidatorObject {
+  keystore: string
+  pubkey: string
+  status?: string
+}
+
+interface Validators {
+  [key: number] : ValidatorObject
 }
 
 interface DepositKeyInterface {
@@ -452,7 +456,7 @@ export class Ethereum extends EthereumPreMerge {
             validatorImage: 'prysmaticlabs/prysm-validator:v3.1.1',
             passwordPath: '/.hidden/pass.pwd',
             dataDir: '/root/data',
-            walletDir: '/root/keys',
+            walletDir: '/root/keystore',
             configDir: '/root/config',
             networks: [NetworkType.MAINNET, NetworkType.GOERLI],
             breaking: false,
@@ -467,7 +471,7 @@ export class Ethereum extends EthereumPreMerge {
             consensusImage: '',
             validatorImage: '',
             dataDir: '/root/data',
-            walletDir: '/root/keys',
+            walletDir: '/root/keystore',
             configDir: '/root/config',
             networks: [NetworkType.MAINNET, NetworkType.TESTNET],
             breaking: false,
@@ -663,7 +667,7 @@ export class Ethereum extends EthereumPreMerge {
   validatorRPCPort: number;
   passwordPath = '';
   eth1Address = '';
-  validators: Set<number>;
+  validators: Validators; //| Array<number>;
   mnemonicEncrypted: EncryptedKeystore;
   jwt: string;
 
@@ -710,7 +714,7 @@ export class Ethereum extends EthereumPreMerge {
     this.passwordPath = data.passwordPath || this.passwordPath;
     this.mnemonicEncrypted = data.mnemonicEncrypted || <EncryptedKeystore>{};
     this.eth1Address = data.eth1Address || this.eth1Address;
-    this.validators = data.validators || new Set()
+    this.validators = data.validators || <Validators>{};
     this.jwt = data.jwt || Web3.utils.randomHex(32);
     //this.validatorPublicKeys = data.validatorPublicKeys || this.validatorPublicKeys;
     //this.eth1PrivateKeyEncrypted = data.eth1PrivateKeyEncrypted || this.eth1PrivateKeyEncrypted;
@@ -846,16 +850,16 @@ export class Ethereum extends EthereumPreMerge {
           },
         );
       });
-      const instance = this._docker.attach(
-        this.id,
-        output => this._logOutput('execution - ' + output),
-        err => {
-          this._logError(err);
-        },
-        code => {
-          this._logClose(code);
-        },
-      );
+      // const instance = this._docker.attach(
+      //   this.id,
+      //   output => this._logOutput('execution - ' + output),
+      //   err => {
+      //     this._logError(err);
+      //   },
+      //   code => {
+      //     this._logClose(code);
+      //   },
+      // );
       if(exitCode !== 0)
         throw new Error(`Docker run for ${this.id} execution with ${this.dockerImage} failed with exit code ${exitCode}`);
       if(!consensusRunning && consensusDockerImage) {
@@ -880,12 +884,6 @@ export class Ethereum extends EthereumPreMerge {
         throw new Error('You must pass in a password the first time you run start() on a validator. This password will be used to generate the key pair.');
       } else if (this.role == Role.VALIDATOR && !validatorRunning && password ){
         await this.encryptMnemonic(password)
-        // const passwordPath = this.passwordPath || path.join(tmpdir, uuid());
-        // const passwordFileExists = await fs.pathExists(passwordPath);
-        // if(!passwordFileExists)
-        //   await fs.writeFile(passwordPath, password, 'utf8');
-        //const containerPasswordPath = '/.hidden/pass.pwd'
-        // console.log(983, passwordPath, containerPasswordPath);
         await this.prysmImportValidators(password);
         const validatorInstance = await this.prysmRunValidator(password);
         instances.push(validatorInstance)
@@ -939,7 +937,17 @@ export class Ethereum extends EthereumPreMerge {
 
   async stakeValidator(password: string, numVals = 1, validatorStartIndex = 0, eth1AccountIndex = 0, maxPriorityFeePerGas = 2, maxFeePerGas = this.network == NetworkType.MAINNET ? 50 : 100): Promise<string[]> {
     const validatorIndexes = Array.from(Array(numVals).keys()).map(x => x + validatorStartIndex)
-    this.validators = new Set([...this.validators, ...validatorIndexes])
+    const mnemonic = decrypt(this.mnemonicEncrypted, password);
+    for (const validatorIndex in validatorIndexes) {
+      const validatorKeystore = await generateEth2ValidatorKeystore(mnemonic, password, parseInt(validatorIndex))
+      const validator = <ValidatorObject>{
+        keystore: validatorKeystore,
+        pubkey: JSON.parse(validatorKeystore).pubkey
+      }
+      //if (validatorIndex in this.validators) {
+      this.validators[parseInt(validatorIndex) as keyof Validators] = validator
+    }
+   
     const stakingDockerImage = 'icculp/staking-deposit-cli:v2.3.0-DEBUG';
     const stakingRunning = await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.stakingDockerName());
     if (stakingRunning){
@@ -956,7 +964,7 @@ export class Ethereum extends EthereumPreMerge {
     ]
     //if (numVals > 64)
     //  throw new Error('Geth can only support 64 unmined transactions from the same account without crashing');
-    const mnemonic = decrypt(this.mnemonicEncrypted, password);
+    
     const stakingRun = ` --language=english --non_interactive existing-mnemonic ` +
       `--mnemonic="${mnemonic}" --validator_start_index=${validatorStartIndex} ` +
       `--num_validators=${numVals} --folder=/root/keystore ` +
@@ -998,9 +1006,10 @@ export class Ethereum extends EthereumPreMerge {
     for (const file of files) {
       if (file.includes('deposit_data-')) {
         timestamps.push(parseInt(file.split('-', 2)[1].split('.', 1)[0]));
+      } else {
+        this._fs.remove(file)
       }
     }
-    //console.log(1065, timestamps)
     const latestTimestamp = timestamps.reduce((a: number, b: number) => Math.max(a, b), 0);
     const depositJSON = JSON.parse(await this._fs.readFile(path.join(stakingDir, 'deposit_data-' + String(latestTimestamp) + '.json')));
     const depositTXs: string[] = []
@@ -1293,17 +1302,16 @@ export class Ethereum extends EthereumPreMerge {
     const args = await this.prysmGenerateArgs(password)
     const stakingDir = path.join(this.walletDir, 'validators');
     await this._fs.ensureDir(stakingDir);
-    const filename = `keystore-m_12381_3600_0_0_accouuntIndex.json`;
-    const mnemonic = decrypt(this.mnemonicEncrypted, password);
-    //this.validators
-    //console.log(1253, this.validators, generateEth2ValidatorKeystore(mnemonic, password, 0))
-    for (const validatorIndex of this.validators) {
-      await this._fs.writeFile(path.join(stakingDir, filename.replace('accountIndex', validatorIndex.toString())), await generateEth2ValidatorKeystore(mnemonic, password, validatorIndex), 'utf8')
+    const filename = `keystore-m_12381_3600_0_0_accountIndex.json`;
+    //const mnemonic = decrypt(this.mnemonicEncrypted, password);
+    if (Object.keys(this.validators).length > 0) {
+      for (const validatorIndex of Object.keys(this.validators)) {
+        const validator = this.validators[parseInt(validatorIndex) as keyof Validators]
+        const validatorKeystore = validator.keystore
+        validator.status = await this.validatorStatus(validator.pubkey)
+        await this._fs.writeFile(path.join(stakingDir, filename.replace('accountIndex', validatorIndex.toString())), validatorKeystore, 'utf8')
+      }
     }
-    // const files = await this._fs.readdir(stakingDir)
-    // if (!files.length){
-    //   return false
-    // }
     const importRun = ` --config-file=/root/config/prysm-validator.yaml accounts import --${this.network.toLowerCase()}`;
     //console.log(1216, this.walletDir, this.passwordPath)
     const importArgs = [
@@ -1327,7 +1335,17 @@ export class Ethereum extends EthereumPreMerge {
     });
     if(importExitCode !== 0)
       throw new Error(`Docker run for ${this.validatorDockerImage} failed with exit code ${importExitCode}`);
-    await timeout(5000);
+    //await timeout(5000);
+    const validatorInstance = this._docker.attach(
+      this.id + '-import',
+      output => this._logOutput('import - ' + output),
+      err => {
+        this._logError(err);
+      },
+      code => {
+        this._logClose(code);
+      },
+    );
     return true
   }
 
