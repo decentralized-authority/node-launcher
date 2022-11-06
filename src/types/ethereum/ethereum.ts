@@ -79,9 +79,6 @@ export class Ethereum extends EthereumPreMerge {
             version: '1.10.25',
             clientVersion: '1.10.25',
             image: 'ethereum/client-go:v1.10.25',
-            // consensusImage: 'rburgett/prysm-beacon-chain:v3.1.1',
-            // validatorImage: 'prysmaticlabs/prysm-validator:v3.1.1',
-            // passwordPath: '/.hidden/pass.pwd',
             dataDir: '/root/data',
             walletDir: '/root/keystore',
             configDir: '/root/config',
@@ -663,7 +660,6 @@ export class Ethereum extends EthereumPreMerge {
   consensusRPCPort: number;
   consensusDockerImage: string;
   validatorDockerImage: string;
-  //stakingDockerImage: string;
   validatorRPCPort: number;
   passwordPath = '';
   eth1Address = '';
@@ -706,9 +702,7 @@ export class Ethereum extends EthereumPreMerge {
     this.authPort = data.authPort || Ethereum.defaultAuthPort[this.network];
     this.consensusPeerPort = data.consensusPeerPort || Ethereum.defaultConsensusPeerPort[this.network];
     this.consensusRPCPort = data.consensusRPCPort || Ethereum.defaultConsensusRPCPort[this.network];
-    //this.consensusGRPCPort = data.consensusGRPCPort || Ethereum.defaultConsensusGRPCPort[this.network];
     this.consensusDockerImage = this.remote ? '' : data.consensusDockerImage ? data.consensusDockerImage : (consensusVersionObj.consensusImage || '');
-    //this.stakingDockerImage = this.remote ? '' : data.stakingDockerImage ? data.stakingDockerImage : (versionObj.stakingImage || '');
     this.validatorDockerImage = this.remote ? '' : data.validatorDockerImage ? data.validatorDockerImage : (consensusVersionObj.validatorImage || '');
     this.validatorRPCPort = data.validatorRPCPort || Ethereum.defaultValidatorRPCPort[this.network];
     this.passwordPath = data.passwordPath || this.passwordPath;
@@ -716,9 +710,6 @@ export class Ethereum extends EthereumPreMerge {
     this.eth1Address = data.eth1Address || this.eth1Address;
     this.validators = data.validators || <Validators>{};
     this.jwt = data.jwt || Web3.utils.randomHex(32);
-    //this.validatorPublicKeys = data.validatorPublicKeys || this.validatorPublicKeys;
-    //this.eth1PrivateKeyEncrypted = data.eth1PrivateKeyEncrypted || this.eth1PrivateKeyEncrypted;
-    //validatorPublicKeys?: string[]
 
     if(docker) {
       this._docker = docker;
@@ -792,12 +783,11 @@ export class Ethereum extends EthereumPreMerge {
       const { authPort } = this;
       if(!configExists)
         await fs.writeFile(configPath, this.generateConfig(), 'utf8');
-      // end execution prepare      
+      // end execution prepare 
+     
       const jwtPath = path.join(configDir, 'jwt.hex');
       const jwtExists = await fs.pathExists(jwtPath);
       if(!jwtExists) {
-        // this.jwt
-        //const jwt = Web3.utils.randomHex(32);
         await fs.writeFile(jwtPath, this.jwt, 'utf8');
       }
       if(!preMerge) {
@@ -944,7 +934,6 @@ export class Ethereum extends EthereumPreMerge {
         keystore: validatorKeystore,
         pubkey: JSON.parse(validatorKeystore).pubkey
       }
-      //if (validatorIndex in this.validators) {
       this.validators[parseInt(validatorIndex) as keyof Validators] = validator
     }
    
@@ -962,14 +951,10 @@ export class Ethereum extends EthereumPreMerge {
       '--name', this.stakingDockerName(),
       '-v', `${stakingDir}:/root/keystore/validator_keys`,
     ]
-    //if (numVals > 64)
-    //  throw new Error('Geth can only support 64 unmined transactions from the same account without crashing');
-    
     const stakingRun = ` --language=english --non_interactive existing-mnemonic ` +
       `--mnemonic="${mnemonic}" --validator_start_index=${validatorStartIndex} ` +
       `--num_validators=${numVals} --folder=/root/keystore ` +
       `--chain ${this.network.toLowerCase()} --keystore_password ${password}`;
-    //console.log(stakingRun);
     const stakingExitCode = await new Promise<number>((resolve, reject) => {
       this._docker.run(
         stakingDockerImage + stakingRun,
@@ -996,7 +981,6 @@ export class Ethereum extends EthereumPreMerge {
     );
     if(stakingExitCode !== 0)
       throw new Error(`Docker run for ${stakingDockerImage} failed with exit code ${stakingExitCode}`);
-    //await(timeout(10000))
     while (await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.stakingDockerName())){
       console.log("Creating deposit file.")
       await timeout(10000)
@@ -1014,9 +998,7 @@ export class Ethereum extends EthereumPreMerge {
     const depositJSON = JSON.parse(await this._fs.readFile(path.join(stakingDir, 'deposit_data-' + String(latestTimestamp) + '.json')));
     const depositTXs: string[] = []
     if (depositJSON && Array.isArray(depositJSON) ) {
-      //console.log(1072, "first if")
       for (const deposit of depositJSON) {
-        //console.log(1071, deposit)
         try {
           depositTXs.push(await this.validatorDeposit(deposit, password, eth1AccountIndex, maxPriorityFeePerGas, maxFeePerGas));
         } catch(err) {
@@ -1025,7 +1007,6 @@ export class Ethereum extends EthereumPreMerge {
         }
       };
     } else {
-      //console.log(1074, typeof depositJSON)
       try {
         depositTXs.push(await this.validatorDeposit(depositJSON, password, eth1AccountIndex, maxPriorityFeePerGas, maxFeePerGas));
       } catch(err) {
@@ -1033,10 +1014,7 @@ export class Ethereum extends EthereumPreMerge {
         depositTXs.push(err)
       } 
     }
-    // reload validator keys
-    // prysm not neccessary to reload if we reimport;
     await this.prysmImportValidators(password);
-    // run prysmValidator()
     const validatorRunning = await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.validatorDockerName());
     if (!validatorRunning){
       const validatorInstance = await this.prysmRunValidator(password)
@@ -1076,9 +1054,7 @@ export class Ethereum extends EthereumPreMerge {
           + "}. transactionHash for deposit: {" + eth1DepositCheck +"}"
       }
       const jsonUrl = `http://localhost:${this.rpcPort}`;
-      //const mnemonicEncrypted = JSON.parse(await this._fs.readFile(this.walletDir + "/mnemonic.enc", 'utf8'));
       const eth1DerivationPath = `m/44'/60'/0'/0/${eth1AccountIndex.toString()}`; //m/44/60/0/0/i is eth1 wallet (aka account aka withdrawal) for account number i
-      //console.log(1059, decrypt(mnemonicEncrypted, password), eth1DerivationPath, jsonUrl)
       const eth1Wallet = Wallet.fromMnemonic(decrypt(this.mnemonicEncrypted, password), eth1DerivationPath);
       const web3 = new Web3(new Web3.providers.HttpProvider(jsonUrl));
       const eth1Account = web3.eth.accounts.privateKeyToAccount(eth1Wallet.privateKey) // 
@@ -1098,8 +1074,6 @@ export class Ethereum extends EthereumPreMerge {
         //gas: 750000,
         data: {}
       };
-      //console.log(1101, await web3.eth.getTransactionCount(eth1Account.address), await web3.eth.getTransactionCount(eth1Account.address, 'pending'))
-      //web3.eth.getMaxPriorityFeePerGas
       const gasEstimate = await depositContract.methods.deposit( 
           hexPrefix(depositJSON.pubkey),
           hexPrefix(depositJSON.withdrawal_credentials),
@@ -1110,7 +1084,6 @@ export class Ethereum extends EthereumPreMerge {
           console.log(error);
           return "Pubkey {" + depositJSON.pubkey + "} " + error.message
         }); //.on('error', console.warn);
-      //console.log(1087, transactionParameters, typeof gasEstimate) 
       if ((typeof gasEstimate) === "string"){
         return gasEstimate
       } else if ((typeof gasEstimate) === "number" ) {
@@ -1118,8 +1091,6 @@ export class Ethereum extends EthereumPreMerge {
       } else {
         return "Unexpected error, gasEstimate: {" + gasEstimate + "} pubkey {" + depositJSON.pubkey + "}"
       }
-      //console.log('-----------------------------------------', gasEstimate)
-      //return gasEstimate.toString()
         
       // if error in estimate*, send won't take value but catch here only catches error responses, so input error throws error to catch in stake function
       const depositTX = await depositContract.methods.deposit(
@@ -1133,13 +1104,12 @@ export class Ethereum extends EthereumPreMerge {
           return "Pubkey {" + depositJSON.pubkey + "} " + error.message
         });
 
-    //console.log(1110, Object.getOwnPropertyNames(depositTX))
     while (true) {
       console.log('Awaiting confirmation of deposit for pubkey ' + depositJSON.pubkey + ' and transactionHash ' + depositTX.transactionHash)
       //console.log(depositTX, depositTX.transactionHash)
       if (depositTX && depositTX.transactionHash) {
         const receipt = await web3.eth.getTransactionReceipt(depositTX.transactionHash);
-        console.log(1112, receipt.status, receipt.gasUsed)
+        //console.log(1112, receipt.status, receipt.gasUsed)
         if (receipt && receipt.blockNumber) {
           console.log("Deposit for pubkey " + depositJSON.pubkey + "has been confirmed at block number " + receipt.blockNumber);
           console.log("Note that it might take 30 - 90 sceonds for the block to propagate before it's visible in etherscan.io");
@@ -1148,10 +1118,9 @@ export class Ethereum extends EthereumPreMerge {
       } else { // no tx hash to wait for receipt
         break;
       }
-      //console.log("Waiting a mined block to include your contract... currently in block " + web3.eth.blockNumber);
+      //console.log("Waiting for the tx to be mined, currently in block " + web3.eth.blockNumber);
       await timeout(4000);
     }
-    //console.log("before return stakeValidator")
     //console.log(Object.getOwnPropertyNames(depositTX), depositTX);
     return  "Deposit for pubkey {" + hexPrefix(depositJSON.pubkey) + "} confirmed with transactionHash: " + depositTX.transactionHash;
   } else {
@@ -1208,7 +1177,6 @@ export class Ethereum extends EthereumPreMerge {
     const web3 = new Web3(new Web3.providers.HttpProvider(jsonUrl));
     let latest_block = await web3.eth.getBlockNumber();
     let historical_block = latest_block - 10000; // about a day and a half
-    //console.log("\n\n\nlatest: ", latest_block, "historical block: ", historical_block);
     const mainnetStakingAddress = '0x00000000219ab540356cBB839Cbe05303d7705Fa';
     const goerliStakingAddress = '0xff50ed3d0ec03aC01D4C79aAd74928BFF48a7b2b';
     const depositContract = new web3.eth.Contract(contractAbi, this.network == NetworkType.MAINNET ? mainnetStakingAddress : goerliStakingAddress);
@@ -1216,13 +1184,8 @@ export class Ethereum extends EthereumPreMerge {
         'DepositEvent',
         { fromBlock: historical_block, toBlock: 'latest' }
     );
-    //console.log(1147, pubkey, hexPrefix(pubkey))
-    //console.log(1148, events)
-    //console.log(1149, events[0])
-    await timeout(10000)
-    //console.log(events.map(deposit => hexPrefix(deposit.returnValues.pubkey)))
+    //await timeout(10000)
     const deposit = events.filter(deposit => hexPrefix(deposit.returnValues.pubkey) == hexPrefix(pubkey))
-    //console.log("\n\n", deposit)
     if (deposit.length > 0){
       return deposit[0].transactionHash
     } else {
@@ -1256,7 +1219,6 @@ export class Ethereum extends EthereumPreMerge {
     }
     return `We shouldn't reach here`;
   }
-  //  0.0.0.0:55002/eth/v1/node/syncing | jq .data.is_syncing
 
   async prysmRunValidator(password: string): Promise<ChildProcess> {
     await this.generatePrysmValidatorConfig()
@@ -1303,7 +1265,6 @@ export class Ethereum extends EthereumPreMerge {
     const stakingDir = path.join(this.walletDir, 'validators');
     await this._fs.ensureDir(stakingDir);
     const filename = `keystore-m_12381_3600_0_0_accountIndex.json`;
-    //const mnemonic = decrypt(this.mnemonicEncrypted, password);
     if (Object.keys(this.validators).length > 0) {
       for (const validatorIndex of Object.keys(this.validators)) {
         const validator = this.validators[parseInt(validatorIndex) as keyof Validators]
@@ -1313,7 +1274,6 @@ export class Ethereum extends EthereumPreMerge {
       }
     }
     const importRun = ` --config-file=/root/config/prysm-validator.yaml accounts import --${this.network.toLowerCase()}`;
-    //console.log(1216, this.walletDir, this.passwordPath)
     const importArgs = [
       ...args,
       //'--rm',
@@ -1335,7 +1295,6 @@ export class Ethereum extends EthereumPreMerge {
     });
     if(importExitCode !== 0)
       throw new Error(`Docker run for ${this.validatorDockerImage} failed with exit code ${importExitCode}`);
-    //await timeout(5000);
     const validatorInstance = this._docker.attach(
       this.id + '-import',
       output => this._logOutput('import - ' + output),
@@ -1389,7 +1348,6 @@ export class Ethereum extends EthereumPreMerge {
     const validatorConfigExists = await this._fs.pathExists(validatorConfigPath);
     if(!validatorConfigExists) {
       const validatorConfig = prysmConfig.validator
-        //.replace('{{EXEC}}', `http://${this.id}:${authPort.toString(10)}`);
         .replace('{{ETH1_ADDRESS}}', this.eth1Address)
         .replace(/{{CONSENSUS}}/g, `${this.consensusDockerName()}:${prysmValidatorPort}`)
         .replace('{{RPC_PORT}}', this.validatorRPCPort.toString(10))
@@ -1400,41 +1358,25 @@ export class Ethereum extends EthereumPreMerge {
   // exitValidator()
 
  async encryptMnemonic(password: string, mnemonic?: string, eth1AccountIndex = 0): Promise<EncryptedKeystore> {
-    //console.log(mnemonic, 1100)
-    //console.log(1249, this.walletDir)
-    //const mnemonicPath = path.join(this.walletDir, "mnemonic.enc")
     const mnemonicExists = this.mnemonicEncrypted && JSON.stringify(this.mnemonicEncrypted) != '{}' &&  this.mnemonicEncrypted.message != ''; //await this._fs.pathExists(mnemonicPath);
-    //console.log(mnemonicPath, mnemonicExists)
     if (mnemonic){ // if called with mnemonic passed, overwrite existing mnemonic.enc
-      //console.log(1103, this.walletDir);
-      //await this._fs.ensureDir(this.walletDir)
       this.mnemonicEncrypted = encrypt(mnemonic, password, this.id);
       //console.log(1312,  'encrypted', mnemonic)
     } else if (!mnemonic && !mnemonicExists){
       mnemonic = bip39.generateMnemonic(256);
       //console.log(1315, `Mnemonic: {${mnemonic}}`, this.walletDir);
-      //await(timeout(1000));
       this.mnemonicEncrypted = encrypt(mnemonic, password, this.id);
     } else {
       //console.log(1319, mnemonic, !mnemonic, mnemonicExists, !mnemonicExists, this.mnemonicEncrypted, JSON.stringify(this.mnemonicEncrypted));
       mnemonic = decrypt(this.mnemonicEncrypted, password);
     }
-    // if (!this.mnemonicEncrypted) 
-    //   this.mnemonicEncrypted = encrypt(mnemonic, password);
-    // }
     const eth1DerivationPath = `m/44'/60'/0'/0/${eth1AccountIndex.toString()}`; 
-    // m/44/60/0/0/i is eth1 wallet (aka account aka withdrawal) for account number i
-    // for example, if importing the 4th account from metamask, i would be 3
-    //const mnemonicTest = decrypt(await this._fs.readFile(this.walletDir + "/mnemonic.enc", 'utf8'), password);
     if (!this.eth1Address || this.eth1Address == '') {
-      //console.log('here?', mnemonic, eth1DerivationPath);
       this.eth1Address = Wallet.fromMnemonic(mnemonic, eth1DerivationPath).address;
       console.log("Eth1 Wallet address to fund with 32ETH + gas to per Validator: " + this.eth1Address)
       console.log("You can also find this at suggested-fee-recipient: in config/prysm-validator.yml");
     }
-    //console.log(1315, this.eth1Address)
     await timeout(5000);
-    //const mnemonicEncrypted = encrypt(mnemonic, password)
     console.log("Mnemonic encrypted"); //, mnemonic);
     return this.mnemonicEncrypted
   }
@@ -1447,20 +1389,11 @@ export class Ethereum extends EthereumPreMerge {
     const consensusConfig = await this._fs.readFile(consensusConfigPath);
     await this._fs.writeFile(consensusConfigPath, consensusConfig.replace('historical-slasher-node: false', 'historical-slasher-node: true')
                                                                  .replace('slasher: false', 'slasher: true'), 'utf8');
-    //prysm no longer supports remote slasher protection, use doppelganger isntead
-    // const validatorConfigPath = path.join(this.configDir, 'prysm-validator.yaml');
-    // const validatorConfigExists = await this._fs.pathExists(validatorConfigPath);
-    // if(!validatorConfigExists)
-    //   return false;
-    // const validatorConfig = await this._fs.readFile(validatorConfigPath);
-    // await this._fs.writeFile(validatorConfigPath, validatorConfig.replace('enable-external-slasher-protection: false', 'enable-external-slasher-protection: true'), 'utf8');
     console.log("Slashing altruist enabled")
-    await timeout(3000)
     return true;
   }
 
   async disableSlasher(): Promise<boolean> {
-    //console.log(1310, this.configDir)
     const consensusConfigPath = path.join(this.configDir, 'prysm-beacon.yaml');
     const consensusConfigExists = await this._fs.pathExists(consensusConfigPath);
     if(!consensusConfigExists)
@@ -1469,13 +1402,6 @@ export class Ethereum extends EthereumPreMerge {
     await this._fs.writeFile(consensusConfigPath, consensusConfig.replace('historical-slasher-node: true', 'historical-slasher-node: false')
                                                                  .replace('slasher: true', 'slasher: false'), 'utf8');
     console.log("Slashing altruist disabled")
-    await timeout(3000)
-    // const validatorConfigPath = path.join(this.configDir, 'prysm-validator.yaml');
-    // const validatorConfigExists = await this._fs.pathExists(validatorConfigPath);
-    // if(!validatorConfigExists)
-    //   return false;
-    // const validatorConfig = await this._fs.readFile(validatorConfigPath);
-    // await this._fs.writeFile(validatorConfigPath, validatorConfig.replace('enable-external-slasher-protection: true', 'enable-external-slasher-protection: false'), 'utf8');
     return true;
   }
     
