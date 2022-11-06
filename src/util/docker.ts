@@ -278,6 +278,37 @@ export class Docker extends EventEmitter {
     return instance;
   }
 
+  public composeUp(configPath: string, args: string[], onOutput?: (output: string) => void, onErr?: (err: Error) => void, onClose?: (statusCode: number) => void, silent = false): ChildProcess {
+    const command = 'docker-compose';
+    const spawnArgs = [
+      '-f',
+      configPath,
+      'up',
+      ...args,
+    ];
+    if(!silent)
+      this.emit(DockerEvent.INFO, `${command} ${spawnArgs.join(' ')}`);
+    const instance = this._spawn(command, spawnArgs);
+    instance.on('error', err => {
+      this._logError(err);
+      if(onErr)
+        onErr(err);
+    });
+    instance.on('close', code => {
+      if(onClose)
+        onClose(code || 0);
+    });
+    instance.stdout.on('data', (data: Buffer) => {
+      if(onOutput && !silent)
+        onOutput(data.toString());
+    });
+    instance.stderr.on('data', (data: Buffer) => {
+      if(onOutput)
+        onOutput(data.toString());
+    });
+    return instance;
+  }
+
   public exec(containerName: string, args: string[], command: string, onOutput: (output: string) => void, onErr: (err: Error) => void, onClose: (statusCode: number) => void, silent = false): ChildProcess {
     const spawnCommand = 'docker';
     const spawnArgs = [
