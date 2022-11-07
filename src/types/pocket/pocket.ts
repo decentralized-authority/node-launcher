@@ -8,7 +8,7 @@ import os from 'os';
 import path from 'path';
 import { PocketGenesis } from './genesis';
 import request from 'superagent';
-import { filterVersionsByNetworkType, getTmpfs } from '../../util';
+import { filterVersionsByNetworkType, getSecretsDir } from '../../util';
 import { FS } from '../../util/fs';
 import { CoinDenom, Configuration, HttpRpcProvider, Pocket as PocketJS } from '@pokt-network/pocket-js';
 import { isError } from 'lodash';
@@ -437,11 +437,7 @@ export class Pocket extends Bitcoin {
 
       await this._docker.pull(this.dockerImage, str => this._logOutput(str));
 
-      let tmpdir = await getTmpfs();
-      if(!tmpdir)
-        tmpdir = os.tmpdir();
-
-      const secretsDir = path.join(tmpdir, this.id);
+      const tmpdir = os.tmpdir();
 
       let { dataDir } = this;
       if(!dataDir) {
@@ -537,7 +533,7 @@ export class Pocket extends Bitcoin {
       if(!password)
         throw new Error('Password is always required when running the start() method for pokt nodes.');
 
-      await fs.ensureDir(secretsDir);
+      const secretsDir = await getSecretsDir(this.id);
 
       const privateKey = await this.getRawPrivateKey(password);
       const privateKeyB64 = Buffer.from(privateKey, 'hex').toString('base64');

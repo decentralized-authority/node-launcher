@@ -1,6 +1,9 @@
 import crypto from 'crypto';
 import { VersionDockerImage } from '../interfaces/crypto-node';
 import { spawn } from 'child_process';
+import os from 'os';
+import path from 'path';
+import fs from 'fs-extra';
 
 export const generateRandom = (size = 32): string => {
   return crypto.randomBytes(size).toString('hex');
@@ -47,4 +50,18 @@ export const getTmpfs = (): Promise<string> => {
       resolve('');
     });
   });
+};
+
+export const getSecretsDir = async (id: string): Promise<string> => {
+  const tmpdir = os.tmpdir();
+  let tmpfs = await getTmpfs();
+  tmpfs = tmpfs || tmpdir;
+  let secretsDir = path.join(tmpfs, id);
+  try {
+    await fs.ensureDir(secretsDir);
+  } catch(err) {
+    secretsDir = path.join(tmpdir, id);
+    await fs.ensureDir(secretsDir);
+  }
+  return secretsDir;
 };
