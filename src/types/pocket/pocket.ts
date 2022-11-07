@@ -530,36 +530,41 @@ export class Pocket extends Bitcoin {
 
       await this._docker.createNetwork(this.dockerNetwork);
 
-      if(!password)
-        throw new Error('Password is always required when running the start() method for pokt nodes.');
+      // if(!password)
+      //   throw new Error('Password is always required when running the start() method for pokt nodes.');
 
       const secretsDir = await getSecretsDir(this.id);
-
-      const privateKey = await this.getRawPrivateKey(password);
-      const privateKeyB64 = Buffer.from(privateKey, 'hex').toString('base64');
-
       const nodeKeyFileName = 'node_key.json';
       const nodeKeySecretPath = path.join(secretsDir, nodeKeyFileName);
-      await fs.writeJson(nodeKeySecretPath, {
-        priv_key: {
-          type: 'tendermint/PrivKeyEd25519',
-          value: privateKeyB64,
-        },
-      }, {spaces: 2});
-
       const privValKeyFileName = 'priv_val_key.json';
       const privValKeySecretPath = path.join(secretsDir, privValKeyFileName);
-      await fs.writeJson(privValKeySecretPath, {
-        address: this.address,
-        pub_key: {
-          type: 'tendermint/PubKeyEd25519',
-          value: Buffer.from(this.publicKey, 'hex').toString('base64'),
-        },
-        priv_key: {
-          type: 'tendermint/PrivKeyEd25519',
-          value: privateKeyB64,
-        },
-      }, {spaces: 2});
+
+      if(!password) {
+        const nodeKeyFileExists = await fs.pathExists(nodeKeySecretPath);
+        const privValKeyFileExists = await fs.pathExists(privValKeySecretPath);
+        if(!nodeKeyFileExists || !privValKeyFileExists)
+          throw new Error('Password must be sent into start() method on first run in order to unlock the node.');
+      } else {
+        const privateKey = await this.getRawPrivateKey(password);
+        const privateKeyB64 = Buffer.from(privateKey, 'hex').toString('base64');
+        await fs.writeJson(nodeKeySecretPath, {
+          priv_key: {
+            type: 'tendermint/PrivKeyEd25519',
+            value: privateKeyB64,
+          },
+        }, {spaces: 2});
+        await fs.writeJson(privValKeySecretPath, {
+          address: this.address,
+          pub_key: {
+            type: 'tendermint/PubKeyEd25519',
+            value: Buffer.from(this.publicKey, 'hex').toString('base64'),
+          },
+          priv_key: {
+            type: 'tendermint/PrivKeyEd25519',
+            value: privateKeyB64,
+          },
+        }, {spaces: 2});
+      }
 
       const composeConfig = {
         services: {
@@ -594,6 +599,7 @@ export class Pocket extends Bitcoin {
               'node_key_json',
               'priv_val_key_json',
             ],
+            restart: `on-failure:${this.restartAttempts}`,
           },
         },
         networks: {
@@ -632,7 +638,7 @@ export class Pocket extends Bitcoin {
         );
       });
 
-      await fs.remove(secretsDir);
+      // await fs.remove(secretsDir);
 
       if(exitCode !== 0)
         throw new Error(`Docker run for ${this.id} with ${this.dockerImage} failed with exit code ${exitCode}`);
