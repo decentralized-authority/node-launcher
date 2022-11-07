@@ -622,6 +622,7 @@ export class Pocket extends Bitcoin {
 
       const args = [
         '-d',
+        '--remove-orphans',
       ];
       const exitCode = await new Promise<number>((resolve, reject) => {
         this._docker.composeUp(
