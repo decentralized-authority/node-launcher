@@ -8,7 +8,7 @@ import os from 'os';
 import path from 'path';
 import { PocketGenesis } from './genesis';
 import request from 'superagent';
-import { filterVersionsByNetworkType } from '../../util';
+import { filterVersionsByNetworkType, getSecretsDir } from '../../util';
 import { FS } from '../../util/fs';
 import { CoinDenom, Configuration, HttpRpcProvider, Pocket as PocketJS } from '@pokt-network/pocket-js';
 import { isError } from 'lodash';
@@ -45,10 +45,10 @@ const coreConfig = `
         "LogLevel": "*:error",
         "LogFormat": "plain",
         "Genesis": "config/genesis.json",
-        "PrivValidatorKey": "../pocket-keys/priv_val_key.json",
+        "PrivValidatorKey": "../../run/secrets/priv_val_key.json",
         "PrivValidatorState": "../pocket-keys/priv_val_state.json",
         "PrivValidatorListenAddr": "",
-        "NodeKey": "../pocket-keys/node_key.json",
+        "NodeKey": "../../run/secrets/node_key.json",
         "ABCI": "socket",
         "ProfListenAddress": "",
         "FilterPeers": false,
@@ -438,6 +438,7 @@ export class Pocket extends Bitcoin {
       await this._docker.pull(this.dockerImage, str => this._logOutput(str));
 
       const tmpdir = os.tmpdir();
+
       let { dataDir } = this;
       if(!dataDir) {
         dataDir = path.join(tmpdir, uuid());
@@ -511,41 +512,121 @@ export class Pocket extends Bitcoin {
             true,
           );
         });
-        await new Promise<void>((resolve, reject) => {
-          this._docker.run(
-            this.dockerImage + ` accounts set-validator ${this.address} --pwd ${password}`,
-            args,
-            output => this._logOutput(output),
-            err => {
-              reject(err);
-            },
-            () => {
-              resolve();
-            },
-            true,
-          );
-        });
+        // await new Promise<void>((resolve, reject) => {
+        //   this._docker.run(
+        //     this.dockerImage + ` accounts set-validator ${this.address} --pwd ${password}`,
+        //     args,
+        //     output => this._logOutput(output),
+        //     err => {
+        //       reject(err);
+        //     },
+        //     () => {
+        //       resolve();
+        //     },
+        //     true,
+        //   );
+        // });
       }
 
       await this._docker.createNetwork(this.dockerNetwork);
 
+      // if(!password)
+      //   throw new Error('Password is always required when running the start() method for pokt nodes.');
+
+      const secretsDir = await getSecretsDir(this.id);
+      const nodeKeyFileName = 'node_key.json';
+      const nodeKeySecretPath = path.join(secretsDir, nodeKeyFileName);
+      const privValKeyFileName = 'priv_val_key.json';
+      const privValKeySecretPath = path.join(secretsDir, privValKeyFileName);
+
+      if(!password) {
+        const nodeKeyFileExists = await fs.pathExists(nodeKeySecretPath);
+        const privValKeyFileExists = await fs.pathExists(privValKeySecretPath);
+        if(!nodeKeyFileExists || !privValKeyFileExists)
+          throw new Error('Password must be sent into start() method on first run in order to unlock the node.');
+      } else {
+        const privateKey = await this.getRawPrivateKey(password);
+        const privateKeyB64 = Buffer.from(privateKey, 'hex').toString('base64');
+        await fs.writeJson(nodeKeySecretPath, {
+          priv_key: {
+            type: 'tendermint/PrivKeyEd25519',
+            value: privateKeyB64,
+          },
+        }, {spaces: 2});
+        await fs.writeJson(privValKeySecretPath, {
+          address: this.address,
+          pub_key: {
+            type: 'tendermint/PubKeyEd25519',
+            value: Buffer.from(this.publicKey, 'hex').toString('base64'),
+          },
+          priv_key: {
+            type: 'tendermint/PrivKeyEd25519',
+            value: privateKeyB64,
+          },
+        }, {spaces: 2});
+      }
+
+      const composeConfig = {
+        services: {
+          [this.id]: {
+            image: this.dockerImage,
+            container_name: this.id,
+            networks: [
+              this.dockerNetwork,
+            ],
+            deploy: {
+              resources: {
+                limits: {
+                  cpus: this.dockerCPUs.toString(10),
+                  memory: this.dockerMem.toString(10) + 'MB',
+                },
+              },
+            },
+            ports: [
+              `${this.rpcPort}:${this.rpcPort}`,
+              `${this.peerPort}:${this.peerPort}`,
+            ],
+            volumes: [
+              `${configDir}:${containerConfigDir}`,
+              `${dataDir}:${containerDataDir}`,
+              `${walletDir}:${containerWalletDir}`,
+            ],
+            entrypoint: [
+              'pocket',
+              ...versionData.generateRuntimeArgs(this).trim().split(/\s+/),
+            ],
+            secrets: [
+              'node_key_json',
+              'priv_val_key_json',
+            ],
+            restart: `on-failure:${this.restartAttempts}`,
+          },
+        },
+        networks: {
+          [this.dockerNetwork]: {
+            driver: 'bridge',
+          },
+        },
+        secrets: {
+          node_key_json: {
+            file: nodeKeySecretPath,
+          },
+          priv_val_key_json: {
+            file: privValKeySecretPath,
+          },
+        },
+      };
+
+      const composeConfigPath = path.join('/', 'tmp', uuid());
+      await fs.writeJson(composeConfigPath, composeConfig, {spaces: 2});
+
       const args = [
         '-d',
-        `--restart=on-failure:${this.restartAttempts}`,
-        '--memory', this.dockerMem.toString(10) + 'MB',
-        '--cpus', this.dockerCPUs.toString(10),
-        '--name', this.id,
-        '--network', this.dockerNetwork,
-        '-p', `${this.rpcPort}:${this.rpcPort}`,
-        '-p', `${this.peerPort}:${this.peerPort}`,
-        '-v', `${configDir}:${containerConfigDir}`,
-        '-v', `${dataDir}:${containerDataDir}`,
-        '-v', `${walletDir}:${containerWalletDir}`,
-        '--entrypoint', 'pocket',
+        '--remove-orphans',
       ];
       const exitCode = await new Promise<number>((resolve, reject) => {
-        this._docker.run(
-          this.dockerImage + versionData.generateRuntimeArgs(this) + (simulateRelay ? ' --simulateRelay' : ''),
+        this._docker.composeUp(
+          composeConfigPath,
           args,
           output => this._logOutput(output),
           err => {
@@ -557,6 +638,9 @@ export class Pocket extends Bitcoin {
           },
         );
       });
+
+      // await fs.remove(secretsDir);
+
       if(exitCode !== 0)
         throw new Error(`Docker run for ${this.id} with ${this.dockerImage} failed with exit code ${exitCode}`);
     }
