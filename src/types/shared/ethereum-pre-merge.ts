@@ -425,6 +425,10 @@ export class EthereumPreMerge extends Bitcoin {
       if(!matches)
         // check for regular matches
         matches = result.match(/v(\d+\.\d+\.\d+)/);
+      if (this.client == NodeClient.ERIGON){
+        if(!matches)
+          matches = result.match(/\/(\d+\.\d+\.\d+)\//)
+      }
       if(matches && matches.length > 1) {
         return matches[1];
       } else {

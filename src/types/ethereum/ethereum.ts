@@ -502,7 +502,7 @@ export class Ethereum extends EthereumPreMerge {
   static clients = [
     NodeClient.GETH,
     NodeClient.NETHERMIND,
-    //NodeClient.ERIGON,
+    NodeClient.ERIGON,
   ];
 
   static consensusClients = [
@@ -516,7 +516,7 @@ export class Ethereum extends EthereumPreMerge {
 
   static networkTypes = [
     NetworkType.MAINNET,
-    NetworkType.RINKEBY,
+    //NetworkType.RINKEBY,
     NetworkType.GOERLI,
   ];
 

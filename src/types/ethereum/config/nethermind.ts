@@ -48,7 +48,7 @@ export const mainnet = `
     ],
     "EnginePort": {{AUTH_PORT}},
     "EngineHost": "0.0.0.0",
-    "JwtSecretFile": "/nethermind/config/jwt.hex"
+    "JwtSecretFile": "/nethermind/config/jwt.hex",
     "AdditionalRpcUrls": [
     ]
   },
