@@ -10,7 +10,7 @@ import { PocketGenesis } from './genesis';
 import request from 'superagent';
 import { filterVersionsByNetworkType } from '../../util';
 import { FS } from '../../util/fs';
-import { CoinDenom, Configuration, HttpRpcProvider, Pocket as PocketJS } from '@pokt-network/pocket-js';
+import { Account, CoinDenom, Configuration, HttpRpcProvider, Pocket as PocketJS } from '@pokt-network/pocket-js';
 import { isError } from 'lodash';
 import * as math from 'mathjs';
 
@@ -23,6 +23,13 @@ interface PocketNodeData extends CryptoNodeData {
   privateKeyEncrypted: string
   address: string
   domain: string
+  leanAccounts?: LeanAccount[]
+}
+
+export interface LeanAccount {
+  address: string
+  privateKeyEncrypted: string
+  publicKey: string
 }
 
 const coreConfig = `
@@ -180,7 +187,8 @@ const coreConfig = `
         "show_relay_errors": true,
         "disable_tx_events": true,
         "iavl_cache_size": 5000000,
-        "chains_hot_reload": true
+        "chains_hot_reload": true,
+        "lean_pocket": false
     }
 }
 `;
@@ -237,6 +245,24 @@ export class Pocket extends Bitcoin {
           },
         ];
         break;
+      case NodeClient.LEAN_POKT:
+        versions = [
+          {
+            version: 'BETA-0.9.1',
+            clientVersion: 'BETA-0.9.1',
+            image: 'rburgett/lean-pokt:BETA-0.9.1',
+            dataDir: '/root/pocket-data',
+            walletDir: '/root/pocket-keys',
+            configDir: '/root/.pocket/config',
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              const { network = '' } = data;
+              return ` start --${network.toLowerCase()} --keybase=false`;
+            },
+          },
+        ];
+        break;
       default:
         versions = [];
     }
@@ -244,7 +270,8 @@ export class Pocket extends Bitcoin {
   }
 
   static clients = [
-    NodeClient.CORE,
+    // NodeClient.CORE,
+    NodeClient.LEAN_POKT,
   ];
 
   static nodeTypes = [
@@ -285,6 +312,15 @@ export class Pocket extends Bitcoin {
         const config = JSON.parse(coreConfig);
         config.pocket_config.rpc_port = rpcPort.toString(10);
         config.pocket_config.remote_cli_url = `http://localhost:${rpcPort}`;
+        config.pocket_config.lean_pokt = false;
+        config.tendermint_config.P2P.Seeds = Pocket.defaultSeeds[network];
+        config.tendermint_config.P2P.ListenAddress = `tcp://0.0.0.0:${peerPort}`;
+        return JSON.stringify(config, null, '    ');
+      } case NodeClient.LEAN_POKT: {
+        const config = JSON.parse(coreConfig);
+        config.pocket_config.rpc_port = rpcPort.toString(10);
+        config.pocket_config.remote_cli_url = `http://localhost:${rpcPort}`;
+        config.pocket_config.lean_pokt = true;
         config.tendermint_config.P2P.Seeds = Pocket.defaultSeeds[network];
         config.tendermint_config.P2P.ListenAddress = `tcp://0.0.0.0:${peerPort}`;
         return JSON.stringify(config, null, '    ');
@@ -321,6 +357,7 @@ export class Pocket extends Bitcoin {
   privateKeyEncrypted = '';
   address = '';
   role = Pocket.roles[0];
+  leanAccounts: LeanAccount[] = [];
 
   constructor(data: PocketNodeData, docker?: Docker) {
     super(data, docker);
@@ -354,6 +391,7 @@ export class Pocket extends Bitcoin {
     this.publicKey = data.publicKey || this.publicKey;
     this.privateKeyEncrypted = data.privateKeyEncrypted || this.privateKeyEncrypted;
     this.role = data.role || this.role;
+    this.leanAccounts = data.leanAccounts || this.leanAccounts;
 
     if(docker) {
       this._docker = docker;
@@ -368,20 +406,27 @@ export class Pocket extends Bitcoin {
       domain: this.domain,
       publicKey: this.publicKey,
       privateKeyEncrypted: this.privateKeyEncrypted,
+      leanAccounts: this.leanAccounts,
     };
   }
 
   async start(password?: string, simulateRelay = false): Promise<ChildProcess[]> {
+    const { client, leanAccounts } = this;
     const fs = this._fs;
     const versions = Pocket.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
 
-    if(!this.privateKeyEncrypted) {
+    const passwordErrorMessage = 'You must pass in a password the first time you run start() on a validator. This password will be used to generate the key pair.';
+    if(client === NodeClient.CORE && !this.privateKeyEncrypted) {
       if(!password)
-        throw new Error('You must pass in a password the first time you run start() on a validator. This password will be used to generate the key pair.');
+        throw new Error(passwordErrorMessage);
       await this.generateKeyPair(password);
+    } else if(client === NodeClient.LEAN_POKT && leanAccounts.length === 0) {
+      if(!password)
+        throw new Error(passwordErrorMessage);
+      await this.leanGenerateKeys(password, 1);
     }
 
     const running = await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.id);
@@ -442,47 +487,80 @@ export class Pocket extends Bitcoin {
         await fs.writeFile(chainsPath, JSON.stringify(initialChainsData, null, '  '), 'utf8');
       }
 
-      const keybaseExists = await fs.pathExists(path.join(walletDir, 'pocket-keybase.db'));
-      if (!keybaseExists) {
+      if(client === NodeClient.LEAN_POKT) {
+        const nodeKeysPath = path.join(walletDir, this.leanNodeKeysFileName());
+        const nodeKeysExist = await fs.pathExists(nodeKeysPath);
         if(!password)
-          throw new Error('In order to import the new account into the pocket node, the key password must be passed into the start() method on the first run.');
-        const rawPrivatKey = await this.getRawPrivateKey(password);
-        const args = [
-          '-i',
-          '--rm',
-          '-v', `${configDir}:${containerConfigDir}`,
-          '-v', `${dataDir}:${containerDataDir}`,
-          '-v', `${walletDir}:${containerWalletDir}`,
-          '--entrypoint', 'pocket',
-        ];
-        await new Promise<void>((resolve, reject) => {
-          this._docker.run(
-            this.dockerImage + ` accounts import-raw ${rawPrivatKey} --pwd-encrypt ${password}`,
-            args,
-            output => this._logOutput(output),
-            err => {
-              reject(err);
-            },
-            () => {
-              resolve();
-            },
-            true,
-          );
-        });
-        await new Promise<void>((resolve, reject) => {
-          this._docker.run(
-            this.dockerImage + ` accounts set-validator ${this.address} --pwd ${password}`,
-            args,
-            output => this._logOutput(output),
-            err => {
-              reject(err);
-            },
-            () => {
-              resolve();
-            },
-            true,
-          );
-        });
+          throw new Error('In order to import the new accounts into the pocket node, the key password must be passed into the start() method on the first run.');
+        // if(!nodeKeysExist) {
+          const nodeKeysJson = await this.leanGenerateNodeKeysJson(password);
+          await fs.writeFile(nodeKeysPath, nodeKeysJson, 'utf8');
+          const args = [
+            '-i',
+            '--rm',
+            '-v', `${configDir}:${containerConfigDir}`,
+            '-v', `${dataDir}:${containerDataDir}`,
+            '-v', `${walletDir}:${containerWalletDir}`,
+            '--entrypoint', 'pocket',
+          ];
+          await new Promise<void>((resolve, reject) => {
+            this._docker.run(
+              this.dockerImage + ` accounts set-validators ${path.join(containerWalletDir, this.leanNodeKeysFileName())}`,
+              args,
+              output => this._logOutput(output),
+              err => {
+                reject(err);
+              },
+              () => {
+                resolve();
+              },
+              // true,
+            );
+          });
+        // }
+      } else { // Core
+        const keybaseExists = await fs.pathExists(path.join(walletDir, 'pocket-keybase.db'));
+        if (!keybaseExists) {
+          if(!password)
+            throw new Error('In order to import the new account into the pocket node, the key password must be passed into the start() method on the first run.');
+          const rawPrivatKey = await this.getRawPrivateKey(password);
+          const args = [
+            '-i',
+            '--rm',
+            '-v', `${configDir}:${containerConfigDir}`,
+            '-v', `${dataDir}:${containerDataDir}`,
+            '-v', `${walletDir}:${containerWalletDir}`,
+            '--entrypoint', 'pocket',
+          ];
+          await new Promise<void>((resolve, reject) => {
+            this._docker.run(
+              this.dockerImage + ` accounts import-raw ${rawPrivatKey} --pwd-encrypt ${password}`,
+              args,
+              output => this._logOutput(output),
+              err => {
+                reject(err);
+              },
+              () => {
+                resolve();
+              },
+              true,
+            );
+          });
+          await new Promise<void>((resolve, reject) => {
+            this._docker.run(
+              this.dockerImage + ` accounts set-validator ${this.address} --pwd ${password}`,
+              args,
+              output => this._logOutput(output),
+              err => {
+                reject(err);
+              },
+              () => {
+                resolve();
+              },
+              true,
+            );
+          });
+        }
       }
 
       await this._docker.createNetwork(this.dockerNetwork);
@@ -652,10 +730,10 @@ export class Pocket extends Bitcoin {
     }
   }
 
-  async getRawPrivateKey(password: string): Promise<string> {
+  async getRawPrivateKey(password: string, privateKeyEncrypted = this.privateKeyEncrypted): Promise<string> {
     try {
       const pocket = this.getPocketJsInstance();
-      const account = await pocket.keybase.importPPKFromJSON(password, this.privateKeyEncrypted, password);
+      const account = await pocket.keybase.importPPKFromJSON(password, privateKeyEncrypted, password);
       if(isError(account))
         throw account;
       const unlockedAccount = await pocket.keybase.getUnlockedAccount(account.addressHex, password);
@@ -805,6 +883,58 @@ export class Pocket extends Bitcoin {
     if(isError(rawTxResponse))
       throw rawTxResponse;
     return rawTxResponse.hash;
+  }
+
+  async leanGenerateKeys(password: string, num: number): Promise<boolean> {
+    try {
+      const pocket = this.getPocketJsInstance();
+      // const dispatcher = new URL(`http://localhost:${this.rpcPort}`);
+      // const configuration = new Configuration(5, 1000, 0, 40000, undefined, undefined, undefined, undefined, undefined, undefined, false);
+      // const pocket = new PocketJS([dispatcher], new HttpRpcProvider(dispatcher), configuration);
+      const accounts: Account[] = [];
+      for(let i = 0; i < num; i++) {
+        const account = await pocket.keybase.createAccount(password);
+        if(isError(account)) {
+          this._logError(account);
+          return false;
+        } else {
+          accounts.push(account);
+        }
+      }
+      const leanAccounts: LeanAccount[] = [];
+      for(const account of accounts) {
+        const ppk = await pocket.keybase.exportPPKfromAccount(account.addressHex, password, '', password);
+        if(isError(ppk)) {
+          this._logError(ppk);
+          return false;
+        } else {
+          leanAccounts.push({
+            privateKeyEncrypted: ppk,
+            address: account.addressHex,
+            publicKey: account.publicKey.toString('hex'),
+          });
+        }
+      }
+      this.leanAccounts = leanAccounts;
+      return true;
+    } catch(err) {
+      this._logError(err);
+      return false;
+    }
+  }
+
+  async leanGenerateNodeKeysJson(password: string): Promise<string> {
+    const { leanAccounts } = this;
+    const nodeKeys: string[] = [];
+    for(const account of leanAccounts) {
+      const privateKeyHex = await this.getRawPrivateKey(password, account.privateKeyEncrypted);
+      nodeKeys.push(privateKeyHex);
+    }
+    return JSON.stringify(nodeKeys.map(k => ({priv_key: k})), null, '  ');
+  }
+
+  leanNodeKeysFileName(): string {
+    return 'lean_node_keys.json';
   }
 
 }
