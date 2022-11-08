@@ -13,9 +13,17 @@ import { FS } from '../../util/fs';
 import { CoinDenom, Configuration, HttpRpcProvider, Pocket as PocketJS } from '@pokt-network/pocket-js';
 import { isError } from 'lodash';
 import * as math from 'mathjs';
+import { coreConfig } from './config/core';
+import { POKT } from '../../index';
 
 interface PocketValidatorInfo extends ValidatorInfo {
   chains: string[];
+}
+
+export interface PocketAccount {
+  address: string
+  privateKeyEncrypted: string
+  publicKey: string
 }
 
 interface PocketNodeData extends CryptoNodeData {
@@ -23,167 +31,8 @@ interface PocketNodeData extends CryptoNodeData {
   privateKeyEncrypted: string
   address: string
   domain: string
+  accounts: PocketAccount[]
 }
-
-const coreConfig = `
-{
-    "tendermint_config": {
-        "RootDir": "/root/.pocket",
-        "ProxyApp": "tcp://127.0.0.1:26658",
-        "Moniker": "fdd1670a4962",
-        "FastSyncMode": true,
-        "DBBackend": "goleveldb",
-        "LevelDBOptions": {
-            "block_cache_capacity": 83886,
-            "block_cache_evict_removed": false,
-            "block_size": 4096,
-            "disable_buffer_pool": true,
-            "open_files_cache_capacity": -1,
-            "write_buffer": 838860
-        },
-        "DBPath": "../pocket-data/data",
-        "LogLevel": "*:error",
-        "LogFormat": "plain",
-        "Genesis": "config/genesis.json",
-        "PrivValidatorKey": "../../run/secrets/priv_val_key.json",
-        "PrivValidatorState": "../pocket-keys/priv_val_state.json",
-        "PrivValidatorListenAddr": "",
-        "NodeKey": "../../run/secrets/node_key.json",
-        "ABCI": "socket",
-        "ProfListenAddress": "",
-        "FilterPeers": false,
-        "RPC": {
-            "RootDir": "/root/.pocket",
-            "ListenAddress": "tcp://127.0.0.1:26657",
-            "CORSAllowedOrigins": [],
-            "CORSAllowedMethods": [
-                "HEAD",
-                "GET",
-                "POST"
-            ],
-            "CORSAllowedHeaders": [
-                "Origin",
-                "Accept",
-                "Content-Type",
-                "X-Requested-With",
-                "X-Server-Time"
-            ],
-            "GRPCListenAddress": "",
-            "GRPCMaxOpenConnections": 2500,
-            "Unsafe": false,
-            "MaxOpenConnections": 2500,
-            "MaxSubscriptionClients": 100,
-            "MaxSubscriptionsPerClient": 5,
-            "TimeoutBroadcastTxCommit": 10000000000,
-            "MaxBodyBytes": 1000000,
-            "MaxHeaderBytes": 1048576,
-            "TLSCertFile": "",
-            "TLSKeyFile": ""
-        },
-        "P2P": {
-            "RootDir": "/root/.pocket",
-            "ListenAddress": "tcp://0.0.0.0:26656",
-            "ExternalAddress": "",
-            "Seeds": "",
-            "PersistentPeers": "",
-            "UPNP": false,
-            "AddrBook": "config/addrbook.json",
-            "AddrBookStrict": false,
-            "MaxNumInboundPeers": 14,
-            "MaxNumOutboundPeers": 7,
-            "UnconditionalPeerIDs": "",
-            "PersistentPeersMaxDialPeriod": 0,
-            "FlushThrottleTimeout": 100000000,
-            "MaxPacketMsgPayloadSize": 1024,
-            "SendRate": 5120000,
-            "RecvRate": 5120000,
-            "PexReactor": true,
-            "SeedMode": false,
-            "PrivatePeerIDs": "",
-            "AllowDuplicateIP": true,
-            "HandshakeTimeout": 20000000000,
-            "DialTimeout": 3000000000,
-            "TestDialFail": false,
-            "TestFuzz": false,
-            "TestFuzzConfig": {
-                "Mode": 0,
-                "MaxDelay": 3000000000,
-                "ProbDropRW": 0.2,
-                "ProbDropConn": 0,
-                "ProbSleep": 0
-            }
-        },
-        "Mempool": {
-            "RootDir": "/root/.pocket",
-            "Recheck": true,
-            "Broadcast": true,
-            "WalPath": "",
-            "Size": 9000,
-            "MaxTxsBytes": 1073741824,
-            "CacheSize": 9000,
-            "MaxTxBytes": 1048576
-        },
-        "FastSync": {
-            "Version": "v1"
-        },
-        "Consensus": {
-            "RootDir": "/root/.pocket",
-            "WalPath": "../pocket-data/data/cs.wal/wal",
-            "TimeoutPropose": 120000000000,
-            "TimeoutProposeDelta": 10000000000,
-            "TimeoutPrevote": 60000000000,
-            "TimeoutPrevoteDelta": 10000000000,
-            "TimeoutPrecommit": 60000000000,
-            "TimeoutPrecommitDelta": 10000000000,
-            "TimeoutCommit": 780000000000,
-            "SkipTimeoutCommit": false,
-            "CreateEmptyBlocks": true,
-            "CreateEmptyBlocksInterval": 900000000000,
-            "PeerGossipSleepDuration": 30000000000,
-            "PeerQueryMaj23SleepDuration": 20000000000
-        },
-        "TxIndex": {
-            "Indexer": "kv",
-            "IndexKeys": "tx.hash,tx.height,message.sender,transfer.recipient",
-            "IndexAllKeys": false
-        },
-        "Instrumentation": {
-            "Prometheus": false,
-            "PrometheusListenAddr": ":26660",
-            "MaxOpenConnections": 3,
-            "Namespace": "tendermint"
-        }
-    },
-    "pocket_config": {
-        "data_dir": "/root/.pocket",
-        "genesis_file": "genesis.json",
-        "chains_name": "chains.json",
-        "evidence_db_name": "../pocket-data/pocket_evidence",
-        "tendermint_uri": "tcp://localhost:26657",
-        "keybase_name": "../pocket-keys/pocket-keybase",
-        "rpc_port": "8081",
-        "client_block_sync_allowance": 10,
-        "max_evidence_cache_entries": 500,
-        "max_session_cache_entries": 500,
-        "json_sort_relay_responses": true,
-        "remote_cli_url": "http://localhost:8081",
-        "user_agent": "",
-        "validator_cache_size": 40000,
-        "application_cache_size": 10000,
-        "rpc_timeout": 30000,
-        "pocket_prometheus_port": "8083",
-        "prometheus_max_open_files": 3,
-        "max_claim_age_for_proof_retry": 32,
-        "proof_prevalidation": false,
-        "ctx_cache_size": 20,
-        "abci_logging": false,
-        "show_relay_errors": true,
-        "disable_tx_events": true,
-        "iavl_cache_size": 5000000,
-        "chains_hot_reload": true
-    }
-}
-`;
 
 export class Pocket extends Bitcoin {
 
@@ -279,6 +128,24 @@ export class Pocket extends Bitcoin {
           },
         ];
         break;
+      case NodeClient.LEAN_POKT:
+        versions = [
+          {
+            version: 'BETA-0.9.2',
+            clientVersion: 'BETA-0.9.2',
+            image: 'rburgett/pocketcore:lean',
+            dataDir: '/root/pocket-data',
+            walletDir: '/root/pocket-keys',
+            configDir: '/root/.pocket/config',
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              const { network = '' } = data;
+              return ` start --${network.toLowerCase()} --forceSetValidators`;
+            },
+          },
+        ];
+        break;
       default:
         versions = [];
     }
@@ -287,6 +154,7 @@ export class Pocket extends Bitcoin {
 
   static clients = [
     NodeClient.CORE,
+    NodeClient.LEAN_POKT,
   ];
 
   static nodeTypes = [
@@ -330,6 +198,11 @@ export class Pocket extends Bitcoin {
         config.tendermint_config.P2P.Seeds = Pocket.defaultSeeds[network];
         config.tendermint_config.P2P.ListenAddress = `tcp://0.0.0.0:${peerPort}`;
         return JSON.stringify(config, null, '    ');
+      } case NodeClient.LEAN_POKT: {
+        const config = JSON.parse(POKT.generateConfig(NodeClient.CORE, network, peerPort, rpcPort, domain));
+        config.pocket_config.lean_pocket = true;
+        config.pocket_config.lean_pocket_user_key_file = '../../run/secrets/node_keys.json';
+        return JSON.stringify(config, null, '    ');
       } default:
         return '';
     }
@@ -363,6 +236,7 @@ export class Pocket extends Bitcoin {
   privateKeyEncrypted = '';
   address = '';
   role = Pocket.roles[0];
+  accounts: PocketAccount[];
 
   constructor(data: PocketNodeData, docker?: Docker) {
     super(data, docker);
@@ -396,6 +270,19 @@ export class Pocket extends Bitcoin {
     this.publicKey = data.publicKey || this.publicKey;
     this.privateKeyEncrypted = data.privateKeyEncrypted || this.privateKeyEncrypted;
     this.role = data.role || this.role;
+    if(data.accounts && data.accounts.length > 0) {
+      this.accounts = data.accounts;
+    } else if(this.privateKeyEncrypted) {
+      this.accounts = [
+        {
+          address: this.address,
+          privateKeyEncrypted: this.privateKeyEncrypted,
+          publicKey: this.publicKey,
+        },
+      ];
+    } else {
+      this.accounts = [];
+    }
 
     if(docker) {
       this._docker = docker;
@@ -410,10 +297,12 @@ export class Pocket extends Bitcoin {
       domain: this.domain,
       publicKey: this.publicKey,
       privateKeyEncrypted: this.privateKeyEncrypted,
+      accounts: this.accounts,
     };
   }
 
   async start(password?: string, simulateRelay = false): Promise<ChildProcess[]> {
+    const { accounts, client } = this;
     const fs = this._fs;
     const versions = Pocket.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
@@ -512,6 +401,12 @@ export class Pocket extends Bitcoin {
             true,
           );
         });
+        const privValStatePath = path.join(walletDir, 'priv_val_state.json');
+        await fs.writeJson(privValStatePath, {
+          height: '0',
+          round: '0',
+          step: 0,
+        }, {spaces: 2});
         // await new Promise<void>((resolve, reject) => {
         //   this._docker.run(
         //     this.dockerImage + ` accounts set-validator ${this.address} --pwd ${password}`,
@@ -533,17 +428,32 @@ export class Pocket extends Bitcoin {
       // if(!password)
       //   throw new Error('Password is always required when running the start() method for pokt nodes.');
 
+      let secrets: {[key: string]: {file: string}} = {};
+
       const secretsDir = await getSecretsDir(this.id);
       const nodeKeyFileName = 'node_key.json';
       const nodeKeySecretPath = path.join(secretsDir, nodeKeyFileName);
       const privValKeyFileName = 'priv_val_key.json';
       const privValKeySecretPath = path.join(secretsDir, privValKeyFileName);
+      const nodeKeysFileName = 'node_keys.json';
+      const nodeKeysSecretPath = path.join(secretsDir, nodeKeysFileName);
 
       if(!password) {
         const nodeKeyFileExists = await fs.pathExists(nodeKeySecretPath);
         const privValKeyFileExists = await fs.pathExists(privValKeySecretPath);
         if(!nodeKeyFileExists || !privValKeyFileExists)
           throw new Error('Password must be sent into start() method on first run in order to unlock the node.');
+      } else if(client === NodeClient.LEAN_POKT) {
+        const privateKey = await this.getRawPrivateKey(password);
+        await fs.writeJson(
+          nodeKeysSecretPath,
+          [{priv_key: privateKey}],
+          {spaces: 2});
+        secrets = {
+          [nodeKeysFileName]: {
+            file: nodeKeysSecretPath,
+          },
+        };
       } else {
         const privateKey = await this.getRawPrivateKey(password);
         const privateKeyB64 = Buffer.from(privateKey, 'hex').toString('base64');
@@ -564,6 +474,14 @@ export class Pocket extends Bitcoin {
             value: privateKeyB64,
           },
         }, {spaces: 2});
+        secrets = {
+          [nodeKeyFileName]: {
+            file: nodeKeySecretPath,
+          },
+          [privValKeyFileName]: {
+            file: privValKeySecretPath,
+          },
+        };
       }
 
       const composeConfig = {
@@ -595,10 +513,7 @@ export class Pocket extends Bitcoin {
               'pocket',
               ...versionData.generateRuntimeArgs(this).trim().split(/\s+/),
             ],
-            secrets: [
-              'node_key_json',
-              'priv_val_key_json',
-            ],
+            secrets: Object.keys(secrets),
             restart: `on-failure:${this.restartAttempts}`,
           },
         },
@@ -607,14 +522,7 @@ export class Pocket extends Bitcoin {
             driver: 'bridge',
           },
         },
-        secrets: {
-          node_key_json: {
-            file: nodeKeySecretPath,
-          },
-          priv_val_key_json: {
-            file: privValKeySecretPath,
-          },
-        },
+        secrets,
       };
 
       const composeConfigPath = path.join('/', 'tmp', uuid());
@@ -766,9 +674,13 @@ export class Pocket extends Bitcoin {
           this._logError(ppk);
           return false;
         } else {
-          this.privateKeyEncrypted = ppk;
-          this.address = account.addressHex;
-          this.publicKey = account.publicKey.toString('hex');
+          const poktAccount = {
+            privateKeyEncrypted: ppk,
+            address: account.addressHex,
+            publicKey: account.publicKey.toString('hex'),
+          };
+          Object.assign(this, poktAccount);
+          this.accounts.push(poktAccount);
           return true;
         }
       }

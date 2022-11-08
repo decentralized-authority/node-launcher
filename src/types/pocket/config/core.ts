@@ -1,0 +1,160 @@
+export const coreConfig = `
+{
+    "tendermint_config": {
+        "RootDir": "/root/.pocket",
+        "ProxyApp": "tcp://127.0.0.1:26658",
+        "Moniker": "fdd1670a4962",
+        "FastSyncMode": true,
+        "DBBackend": "goleveldb",
+        "LevelDBOptions": {
+            "block_cache_capacity": 83886,
+            "block_cache_evict_removed": false,
+            "block_size": 4096,
+            "disable_buffer_pool": true,
+            "open_files_cache_capacity": -1,
+            "write_buffer": 838860
+        },
+        "DBPath": "../pocket-data/data",
+        "LogLevel": "*:error",
+        "LogFormat": "plain",
+        "Genesis": "config/genesis.json",
+        "PrivValidatorKey": "../../run/secrets/priv_val_key.json",
+        "PrivValidatorState": "../pocket-keys/priv_val_state.json",
+        "PrivValidatorListenAddr": "",
+        "NodeKey": "../../run/secrets/node_key.json",
+        "ABCI": "socket",
+        "ProfListenAddress": "",
+        "FilterPeers": false,
+        "RPC": {
+            "RootDir": "/root/.pocket",
+            "ListenAddress": "tcp://127.0.0.1:26657",
+            "CORSAllowedOrigins": [],
+            "CORSAllowedMethods": [
+                "HEAD",
+                "GET",
+                "POST"
+            ],
+            "CORSAllowedHeaders": [
+                "Origin",
+                "Accept",
+                "Content-Type",
+                "X-Requested-With",
+                "X-Server-Time"
+            ],
+            "GRPCListenAddress": "",
+            "GRPCMaxOpenConnections": 2500,
+            "Unsafe": false,
+            "MaxOpenConnections": 2500,
+            "MaxSubscriptionClients": 100,
+            "MaxSubscriptionsPerClient": 5,
+            "TimeoutBroadcastTxCommit": 10000000000,
+            "MaxBodyBytes": 1000000,
+            "MaxHeaderBytes": 1048576,
+            "TLSCertFile": "",
+            "TLSKeyFile": ""
+        },
+        "P2P": {
+            "RootDir": "/root/.pocket",
+            "ListenAddress": "tcp://0.0.0.0:26656",
+            "ExternalAddress": "",
+            "Seeds": "",
+            "PersistentPeers": "",
+            "UPNP": false,
+            "AddrBook": "config/addrbook.json",
+            "AddrBookStrict": false,
+            "MaxNumInboundPeers": 14,
+            "MaxNumOutboundPeers": 7,
+            "UnconditionalPeerIDs": "",
+            "PersistentPeersMaxDialPeriod": 0,
+            "FlushThrottleTimeout": 100000000,
+            "MaxPacketMsgPayloadSize": 1024,
+            "SendRate": 5120000,
+            "RecvRate": 5120000,
+            "PexReactor": true,
+            "SeedMode": false,
+            "PrivatePeerIDs": "",
+            "AllowDuplicateIP": true,
+            "HandshakeTimeout": 20000000000,
+            "DialTimeout": 3000000000,
+            "TestDialFail": false,
+            "TestFuzz": false,
+            "TestFuzzConfig": {
+                "Mode": 0,
+                "MaxDelay": 3000000000,
+                "ProbDropRW": 0.2,
+                "ProbDropConn": 0,
+                "ProbSleep": 0
+            }
+        },
+        "Mempool": {
+            "RootDir": "/root/.pocket",
+            "Recheck": true,
+            "Broadcast": true,
+            "WalPath": "",
+            "Size": 9000,
+            "MaxTxsBytes": 1073741824,
+            "CacheSize": 9000,
+            "MaxTxBytes": 1048576
+        },
+        "FastSync": {
+            "Version": "v1"
+        },
+        "Consensus": {
+            "RootDir": "/root/.pocket",
+            "WalPath": "../pocket-data/data/cs.wal/wal",
+            "TimeoutPropose": 120000000000,
+            "TimeoutProposeDelta": 10000000000,
+            "TimeoutPrevote": 60000000000,
+            "TimeoutPrevoteDelta": 10000000000,
+            "TimeoutPrecommit": 60000000000,
+            "TimeoutPrecommitDelta": 10000000000,
+            "TimeoutCommit": 780000000000,
+            "SkipTimeoutCommit": false,
+            "CreateEmptyBlocks": true,
+            "CreateEmptyBlocksInterval": 900000000000,
+            "PeerGossipSleepDuration": 30000000000,
+            "PeerQueryMaj23SleepDuration": 20000000000
+        },
+        "TxIndex": {
+            "Indexer": "kv",
+            "IndexKeys": "tx.hash,tx.height,message.sender,transfer.recipient",
+            "IndexAllKeys": false
+        },
+        "Instrumentation": {
+            "Prometheus": false,
+            "PrometheusListenAddr": ":26660",
+            "MaxOpenConnections": 3,
+            "Namespace": "tendermint"
+        }
+    },
+    "pocket_config": {
+        "data_dir": "/root/.pocket",
+        "genesis_file": "genesis.json",
+        "chains_name": "chains.json",
+        "evidence_db_name": "../pocket-data/pocket_evidence",
+        "tendermint_uri": "tcp://localhost:26657",
+        "keybase_name": "../pocket-keys/pocket-keybase",
+        "rpc_port": "8081",
+        "client_block_sync_allowance": 10,
+        "max_evidence_cache_entries": 500,
+        "max_session_cache_entries": 500,
+        "json_sort_relay_responses": true,
+        "remote_cli_url": "http://localhost:8081",
+        "user_agent": "",
+        "validator_cache_size": 40000,
+        "application_cache_size": 10000,
+        "rpc_timeout": 30000,
+        "pocket_prometheus_port": "8083",
+        "prometheus_max_open_files": 3,
+        "max_claim_age_for_proof_retry": 32,
+        "proof_prevalidation": false,
+        "ctx_cache_size": 20,
+        "abci_logging": false,
+        "show_relay_errors": true,
+        "disable_tx_events": true,
+        "iavl_cache_size": 5000000,
+        "chains_hot_reload": true,
+        "lean_pocket": false
+    }
+}
+`;
