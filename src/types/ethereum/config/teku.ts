@@ -1,7 +1,7 @@
 export const teku = `
 # network
 network: {{NETWORK}}
-#initial-state: "https://beaconstate.info/eth/v2/debug/beacon/states/finalized"
+initial-state: {{INITIAL_STATE}}
 
 # database
 data-path: "/opt/teku/data/"

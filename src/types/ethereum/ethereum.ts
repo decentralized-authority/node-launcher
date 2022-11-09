@@ -662,9 +662,16 @@ export class Ethereum extends EthereumPreMerge {
         break;
       }
       case NodeClient.TEKU: {
+        let initialState: string;
+        if(network === NetworkType.GOERLI) {
+          initialState = "https://goerli.beaconstate.info/eth/v2/debug/beacon/states/finalized"
+        } else { // MAINNET
+          initialState = "https://beaconstate.info/eth/v2/debug/beacon/states/finalized"
+        }
         config = tekuConfig
           .replace('{{NETWORK}}', network.toLowerCase())
           .replace('{{EXEC}}', `${id}:${authPort.toString(10)}`)
+          .replace('{{INITIAL_STATE}}', initialState)
         break;
       }
       default:
