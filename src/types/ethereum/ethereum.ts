@@ -12,6 +12,7 @@ import { base as coreConfig } from './config/core';
 import * as nethermindConfig from './config/nethermind';
 import { base as erigonConfig } from './config/erigon';
 import * as prysmConfig from './config/prysm';
+import { teku as tekuConfig } from './config/teku';
 import Web3 from 'web3';
 import { EthereumPreMerge } from '../shared/ethereum-pre-merge';
 //import { nodeModuleNameResolver } from 'typescript';
@@ -84,7 +85,7 @@ export class Ethereum extends EthereumPreMerge {
             configDir: '/root/config',
             networks: [NetworkType.MAINNET, NetworkType.GOERLI],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
               const { network = '' } = data;
               return ` --config=${path.join(this.configDir, Ethereum.configName(data))}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
             },
@@ -178,7 +179,7 @@ export class Ethereum extends EthereumPreMerge {
             configDir: '/root/config',
             networks: [NetworkType.MAINNET, NetworkType.RINKEBY, NetworkType.GOERLI],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
               const { network = '' } = data;
               return ` --config=${path.join(this.configDir, Ethereum.configName(data))}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
             },
@@ -194,7 +195,7 @@ export class Ethereum extends EthereumPreMerge {
             configDir: '/root/config',
             networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
               const { network = '' } = data;
               return ` --config=${path.join(this.configDir, Ethereum.configName(data))}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
             },
@@ -210,7 +211,7 @@ export class Ethereum extends EthereumPreMerge {
             configDir: '/root/config',
             networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
               const { network = '' } = data;
               return ` --config=${path.join(this.configDir, Ethereum.configName(data))}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
             },
@@ -226,7 +227,7 @@ export class Ethereum extends EthereumPreMerge {
             configDir: '/root/config',
             networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
               const { network = '' } = data;
               return ` --config=${path.join(this.configDir, Ethereum.configName(data))}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
             },
@@ -242,7 +243,7 @@ export class Ethereum extends EthereumPreMerge {
             configDir: '/root/config',
             networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
               const { network = '' } = data;
               return ` --config=${path.join(this.configDir, Ethereum.configName(data))}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
             },
@@ -258,11 +259,11 @@ export class Ethereum extends EthereumPreMerge {
             configDir: '/root/config',
             networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
             breaking: true,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
               const { network = '' } = data;
               return ` --config=${path.join(this.configDir, Ethereum.configName(data))}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
             },
-            async upgrade(data: CryptoNodeData): Promise<boolean> {
+            async upgrade(data: EthereumCryptoNodeData): Promise<boolean> {
               const fs = new FS(new Docker());
               const { configDir } = data;
               const configPath = configDir ? path.join(configDir, Ethereum.configName(data)) : '';
@@ -302,7 +303,7 @@ export class Ethereum extends EthereumPreMerge {
             configDir: '/root/config',
             networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
               const { network = '' } = data;
               return ` --config=${path.join(this.configDir, Ethereum.configName(data))}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
             },
@@ -318,7 +319,7 @@ export class Ethereum extends EthereumPreMerge {
             configDir: '/root/config',
             networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
               const { network = '' } = data;
               return ` --config=${path.join(this.configDir, Ethereum.configName(data))}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
             },
@@ -334,7 +335,7 @@ export class Ethereum extends EthereumPreMerge {
             configDir: '/root/config',
             networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
               const { network = '' } = data;
               return ` --config=${path.join(this.configDir, Ethereum.configName(data))}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
             },
@@ -350,7 +351,7 @@ export class Ethereum extends EthereumPreMerge {
             configDir: '/root/config',
             networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
               const { network = '' } = data;
               return ` --config=${path.join(this.configDir, Ethereum.configName(data))}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
             },
@@ -366,7 +367,7 @@ export class Ethereum extends EthereumPreMerge {
             configDir: '/root/config',
             networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
               const { network = '' } = data;
               return ` --config=${path.join(this.configDir, Ethereum.configName(data))}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
             },
@@ -384,7 +385,7 @@ export class Ethereum extends EthereumPreMerge {
             configDir: '/nethermind/config',
             networks: [NetworkType.MAINNET, NetworkType.GOERLI],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
               const { network = '' } = data;
               return ` --configsDirectory ${this.configDir} --config ${network.toLowerCase()}`;
             },
@@ -400,7 +401,7 @@ export class Ethereum extends EthereumPreMerge {
             configDir: '/nethermind/config',
             networks: [NetworkType.MAINNET, NetworkType.GOERLI],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
               const { network = '' } = data;
               return ` --configsDirectory ${this.configDir} --config ${network.toLowerCase()}`;
             },
@@ -416,7 +417,7 @@ export class Ethereum extends EthereumPreMerge {
             configDir: '/nethermind/config',
             networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
               const { network = '' } = data;
               return ` --configsDirectory ${this.configDir} --config ${network.toLowerCase()}`;
             },
@@ -434,7 +435,7 @@ export class Ethereum extends EthereumPreMerge {
             configDir: '/erigon/config',
             networks: [NetworkType.MAINNET, NetworkType.GOERLI],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
               const { network = '' } = data;
               return ` erigon --config=${path.join(this.configDir, Ethereum.configName(data))}  `;
             },
@@ -450,7 +451,7 @@ export class Ethereum extends EthereumPreMerge {
             configDir: '/erigon/config',
             networks: [NetworkType.MAINNET, NetworkType.RINKEBY],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
               const { network = '' } = data;
               return ` erigon --config=${path.join(this.configDir, Ethereum.configName(data))}  `;
             },
@@ -459,6 +460,22 @@ export class Ethereum extends EthereumPreMerge {
         break;
       case NodeClient.PRYSM:
         versions = [
+          {
+            version: '3.1.2',
+            clientVersion: '3.1.2',
+            image: 'prysmaticlabs/prysm-beacon-chain:v3.1.2',
+            consensusImage: 'prysmaticlabs/prysm-beacon-chain:v3.1.2',
+            validatorImage: 'prysmaticlabs/prysm-validator:v3.1.2',
+            passwordPath: '/.hidden/pass.pwd',
+            dataDir: '/root/data',
+            walletDir: '/root/keystore',
+            configDir: '/root/config',
+            networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+            breaking: false,
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+              return ` --config-file=${path.join(this.configDir, Ethereum.configName(data))} `;
+            },
+          },
           {
             version: '3.1.1',
             clientVersion: '3.1.1',
@@ -471,7 +488,7 @@ export class Ethereum extends EthereumPreMerge {
             configDir: '/root/config',
             networks: [NetworkType.MAINNET, NetworkType.GOERLI],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
               return ` --config-file=${path.join(this.configDir, Ethereum.configName(data))} `;
             },
           },
@@ -486,8 +503,29 @@ export class Ethereum extends EthereumPreMerge {
             configDir: '/root/config',
             networks: [NetworkType.MAINNET, NetworkType.TESTNET],
             breaking: false,
-            generateRuntimeArgs(data: CryptoNodeData): string {
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
               return ` --config-file=${path.join(this.configDir, Ethereum.configName(data))} `;
+            },
+          },
+        ];
+        break;
+      case NodeClient.TEKU:
+        versions = [
+          {
+            version: '22.10.2',
+            clientVersion: '22.10.2',
+            image: 'icculp/teku:22.10.2',
+            //consensusImage: 'rburgett/prysm-beacon-chain:v3.1.1',
+            //validatorImage: 'prysmaticlabs/prysm-validator:v3.1.1',
+            passwordPath: '/.hidden/pass.pwd',
+            dataDir: '/opt/teku/data',
+            walletDir: '/opt/teku/keystore',
+            configDir: '/opt/teku/config',
+            networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+            breaking: false,
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+              const consensus = true;
+              return ` --config-file=${path.join(this.configDir, Ethereum.configName(data, consensus))} `;
             },
           },
         ];
@@ -507,6 +545,7 @@ export class Ethereum extends EthereumPreMerge {
 
   static consensusClients = [
     NodeClient.PRYSM,
+    NodeClient.TEKU
   ]
 
   static nodeTypes = [
@@ -561,18 +600,28 @@ export class Ethereum extends EthereumPreMerge {
 
   static defaultMem = 16384;
 
-  static generateConfig(client: Ethereum|string = Ethereum.clients[0], network = NetworkType.MAINNET, peerPort = Ethereum.defaultPeerPort[NetworkType.MAINNET], rpcPort = Ethereum.defaultRPCPort[NetworkType.MAINNET]): string {
+  static generateConfig(client: Ethereum|string = Ethereum.clients[0], network = NetworkType.MAINNET, peerPort = Ethereum.defaultPeerPort[NetworkType.MAINNET], rpcPort = Ethereum.defaultRPCPort[NetworkType.MAINNET], consensus = false): string {
     let clientStr: string;
     let authPort = 0;
+    let id = '';
     if(typeof client === 'string') {
       clientStr = client;
     } else {
-      clientStr = client.client;
+      if (consensus){
+        clientStr = client.consensusClient;
+        peerPort = client.consensusPeerPort;
+        rpcPort = client.consensusRPCPort;
+      } else {
+        clientStr = client.client;
+        peerPort = client.peerPort;
+        rpcPort = client.rpcPort;
+      }
       network = client.network;
-      peerPort = client.peerPort;
-      rpcPort = client.rpcPort;
       authPort = client.authPort;
+      id = client.id;
+      console.log(616, id)
     }
+    console.log(618, id)
     authPort = authPort || Ethereum.defaultAuthPort[network];
     let config = '';
     switch(clientStr) {
@@ -597,6 +646,7 @@ export class Ethereum extends EthereumPreMerge {
         break;
       case NodeClient.PRYSM: {
         let checkpointSyncUrl: string, genesisBeaconApiUrl: string;
+        const prysmValidatorPort = '4000';
         if(network === NetworkType.GOERLI) {
           checkpointSyncUrl = 'https://goerli.beaconstate.info';
           genesisBeaconApiUrl = checkpointSyncUrl;
@@ -604,12 +654,20 @@ export class Ethereum extends EthereumPreMerge {
           checkpointSyncUrl = 'https://beaconstate.ethstaker.cc';
           genesisBeaconApiUrl = checkpointSyncUrl;
         }
-        config = prysmConfig.beacon //.replace('{{AUTH_PORT}}', authPort);
+        config = prysmConfig.beacon
           .replace('{{CHECKPOINT_SYNC_URL}}', checkpointSyncUrl)
           .replace('{{GENESIS_BEACON_API_URL}}', genesisBeaconApiUrl)
-          //.replace('{{RPC_PORT}}', '4000'); // to be fixed
+          .replace('{{EXEC}}', `${id}:${authPort.toString(10)}`)
+          .replace('{{VALIDATOR_RPC_PORT}}', prysmValidatorPort); // not to be confused with grpc-gateway, prysm only...
         break;
-      } default:
+      }
+      case NodeClient.TEKU: {
+        config = tekuConfig
+          .replace('{{NETWORK}}', network.toLowerCase())
+          .replace('{{EXEC}}', `${id}:${authPort.toString(10)}`)
+        break;
+      }
+      default:
         return '';
     }
     return config
@@ -619,14 +677,16 @@ export class Ethereum extends EthereumPreMerge {
       .trim();
   }
 
-  static configName(data: CryptoNodeData): string {
-    const { network, client } = data;
-    switch(client) {
+  static configName(data: EthereumCryptoNodeData, consensus = false): string {
+    const { network = '', client, consensusClient } = data;
+    switch(consensus ? consensusClient : client) {
       case NodeClient.NETHERMIND: {
-        const {network = ''} = data;
         return network.toLowerCase() + '.cfg';
-      } case NodeClient.PRYSM:
+      } 
+      case NodeClient.PRYSM:
           return 'prysm.yaml';
+      case NodeClient.TEKU:
+        return 'teku.yaml';
       default:
         return 'config.toml';
     }
@@ -691,7 +751,7 @@ export class Ethereum extends EthereumPreMerge {
     this.rpcUsername = data.rpcUsername || '';
     this.rpcPassword = data.rpcPassword || '';
     this.client = data.client || Ethereum.clients[0];
-    this.consensusClient = data.consensusClient || Ethereum.consensusClients[0]
+    this.consensusClient = data.consensusClient || Ethereum.consensusClients[0];
     this.dockerCPUs = data.dockerCPUs || this.dockerCPUs;
     this.dockerMem = data.dockerMem || this.dockerMem;
     this.dockerNetwork = data.dockerNetwork || this.dockerNetwork;
@@ -717,7 +777,7 @@ export class Ethereum extends EthereumPreMerge {
     this.authPort = data.authPort || Ethereum.defaultAuthPort[this.network];
     this.consensusPeerPort = data.consensusPeerPort || Ethereum.defaultConsensusPeerPort[this.network];
     this.consensusRPCPort = data.consensusRPCPort || Ethereum.defaultConsensusRPCPort[this.network];
-    this.consensusDockerImage = this.remote ? '' : data.consensusDockerImage ? data.consensusDockerImage : (consensusVersionObj.consensusImage || '');
+    this.consensusDockerImage = this.remote ? '' : data.consensusDockerImage ? data.consensusDockerImage : (consensusVersionObj.consensusImage || consensusVersionObj.image || '');
     this.validatorDockerImage = this.remote ? '' : data.validatorDockerImage ? data.validatorDockerImage : (consensusVersionObj.validatorImage || '');
     this.validatorRPCPort = data.validatorRPCPort || Ethereum.defaultValidatorRPCPort[this.network];
     this.passwordPath = data.passwordPath || this.passwordPath;
@@ -736,6 +796,8 @@ export class Ethereum extends EthereumPreMerge {
     return {
       ...this._toObject(),
       authPort: this.authPort,
+      consensusClient: this.consensusClient,
+      consensusVersion: this.consensusVersion,
       consensusRPCPort: this.consensusRPCPort,
       mnemonicEncrypted: this.mnemonicEncrypted,
       consensusPeerPort: this.consensusPeerPort,
@@ -749,8 +811,10 @@ export class Ethereum extends EthereumPreMerge {
   async start(password?: string, eth1AccountIndex = 0, slasher = 0): Promise<ChildProcess[]> {
     const { consensusDockerImage, validatorDockerImage, _fs: fs } = this;
     const versions = Ethereum.versions(this.client, this.network);
+    const consensusVersions = Ethereum.versions(this.consensusClient, this.network);
     //console.log(versions, this.client, this.network)
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
+    const consensusVersionData = consensusVersions.find(({ version }) => version === this.consensusVersion) || versions[0];
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
     const split = splitVersion(this.version);
@@ -805,22 +869,6 @@ export class Ethereum extends EthereumPreMerge {
       if(!jwtExists) {
         await fs.writeFile(jwtPath, this.jwt, 'utf8');
       }
-      if(!preMerge) {
-        const consensusConfigPath = path.join(configDir, 'prysm-beacon.yaml');
-        const consensusConfigExists = await fs.pathExists(consensusConfigPath);
-        const prysmValidatorPort = '4000';
-        if(!consensusConfigExists) {
-          const consensusConfig = Ethereum.generateConfig(NodeClient.PRYSM, this.network, this.consensusPeerPort, this.consensusRPCPort)
-            .replace('{{EXEC}}', `http://${this.id}:${authPort.toString(10)}`)
-            .replace('{{VALIDATOR_RPC_PORT}}', prysmValidatorPort); // not to be confused with grpc-gateway
-          await fs.writeFile(consensusConfigPath, consensusConfig, 'utf8');
-        }
-      }
-      if (slasher) {
-        this.enableSlasher()
-      } else {
-        this.disableSlasher()
-      }
       const executionArgs = [
         ...args,
         '--name', this.id,
@@ -830,8 +878,23 @@ export class Ethereum extends EthereumPreMerge {
         '-p', `${this.peerPort}:${this.peerPort}/udp`,
         //'-p', `${authPort}:${authPort}`,
       ];
+      if(!preMerge) {
+        const consensus = true;
+        const consensusConfigPath = path.join(configDir, Ethereum.configName(this, consensus));
+        const consensusConfigExists = await fs.pathExists(consensusConfigPath);
+        if(!consensusConfigExists) {
+          const consensusConfig = Ethereum.generateConfig(this, this.network, this.consensusPeerPort, this.consensusRPCPort, consensus)
+          await fs.writeFile(consensusConfigPath, consensusConfig, 'utf8');
+          console.log(consensusConfig)
+        }
+      }
+      if (slasher) {
+        this.enableSlasher()
+      } else {
+        this.disableSlasher()
+      }
       const consensusArgs = [
-        ...await this.prysmGenerateArgs(),
+        ...await this.generateConsensusArgs(),
       '--name', this.consensusDockerName(),
       '-p', `${this.consensusRPCPort}:${this.consensusRPCPort}`,
       '-p', `${this.consensusPeerPort}:${this.consensusPeerPort}`,
@@ -868,10 +931,11 @@ export class Ethereum extends EthereumPreMerge {
       // );
       if(exitCode !== 0)
         throw new Error(`Docker run for ${this.id} execution with ${this.dockerImage} failed with exit code ${exitCode}`);
+      console.log(932, consensusVersionData)
       if(!consensusRunning && consensusDockerImage) {
         const consensusExitCode = await new Promise<number>((resolve, reject) => {
           this._docker.run(
-            consensusDockerImage + ` --config-file=/root/config/prysm-beacon.yaml --${this.network.toLowerCase()}`,
+            consensusDockerImage + consensusVersionData.generateRuntimeArgs(this),
             consensusArgs,
             output => this._logOutput(output),
             err => {
@@ -880,6 +944,16 @@ export class Ethereum extends EthereumPreMerge {
             },
             code => {
               resolve(code);
+            },
+          );
+          const consensusInstance = this._docker.attach(
+            this.consensusDockerName(),
+            output => this._logOutput('consensus - ' + output),
+            err => {
+              this._logError(err);
+            },
+            code => {
+              this._logClose(code);
             },
           );
         });
@@ -1237,7 +1311,7 @@ export class Ethereum extends EthereumPreMerge {
 
   async prysmRunValidator(password: string): Promise<ChildProcess> {
     await this.generatePrysmValidatorConfig()
-    const args = await this.prysmGenerateArgs(password)
+    const args = await this.generateConsensusArgs(password)
     const validatorArgs = [
       ...args,
       '--name', this.validatorDockerName(),
@@ -1276,7 +1350,7 @@ export class Ethereum extends EthereumPreMerge {
 
   async prysmImportValidators(password: string): Promise<boolean> {
     await this.generatePrysmValidatorConfig()
-    const args = await this.prysmGenerateArgs(password)
+    const args = await this.generateConsensusArgs(password)
     const stakingDir = path.join(this.walletDir, 'validators');
     await this._fs.ensureDir(stakingDir);
     const filename = `keystore-m_12381_3600_0_0_accountIndex.json`;
@@ -1323,8 +1397,8 @@ export class Ethereum extends EthereumPreMerge {
     return true
   }
 
-  async prysmGenerateArgs(password?: string): Promise<string[]> {
-    const versions = Ethereum.versions(NodeClient.PRYSM, this.network); //NodeClient.PRYSM
+  async generateConsensusArgs(password?: string): Promise<string[]> {
+    const versions = Ethereum.versions(this.consensusClient, this.network); //NodeClient.PRYSM
     console.log(1312, versions)
     const versionData = versions.find(({ version }) => version === this.version) || versions[0]; //this.consensusVersion?
     console.log(1314, this.version, versionData)
@@ -1352,6 +1426,9 @@ export class Ethereum extends EthereumPreMerge {
         await this._fs.writeFile(passwordPath, password, 'utf8');
       return [...args, '-v', `${passwordPath}:${containerPasswordPath}`]
     }
+    // if (this.consensusClient == NodeClient.TEKU){
+    //   return [...args, '-u', 'root']
+    // }
     return args
   }
 

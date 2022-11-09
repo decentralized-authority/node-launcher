@@ -19,6 +19,7 @@ export const NodeClient = {
   NETHERMIND: 'NETHERMIND',
   ERIGON: 'ERIGON',
   PRYSM: 'PRYSM',
+  TEKU: 'TEKU'
 };
 
 export const Role = {
