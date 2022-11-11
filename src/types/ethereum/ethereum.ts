@@ -426,6 +426,20 @@ export class Ethereum extends EthereumPreMerge {
       case NodeClient.ERIGON:
         versions = [
           {
+            version: '2.29.0',
+            clientVersion: '2.29.0',
+            image: 'icculp/erigon:v2.29.0',
+            dataDir: '/erigon/data',
+            walletDir: '/erigon/keystore',
+            configDir: '/erigon/config',
+            networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              const { network = '' } = data;
+              return ` erigon --config=${path.join(this.configDir, Ethereum.configName(data))}  `;
+            },
+          },
+          {
             version: '2022.08.02',
             clientVersion: '2022.08.2',
             image: 'icculp/erigon:v2022.08.02',
@@ -488,7 +502,7 @@ export class Ethereum extends EthereumPreMerge {
   static clients = [
     NodeClient.GETH,
     NodeClient.NETHERMIND,
-    //NodeClient.ERIGON,
+    NodeClient.ERIGON,
   ];
 
   static consensusClients = [
@@ -502,7 +516,7 @@ export class Ethereum extends EthereumPreMerge {
 
   static networkTypes = [
     NetworkType.MAINNET,
-    NetworkType.RINKEBY,
+    //NetworkType.RINKEBY,
     NetworkType.GOERLI,
   ];
 
@@ -810,6 +824,7 @@ export class Ethereum extends EthereumPreMerge {
       const executionArgs = [
         ...args,
         '--name', this.id,
+        //'--user', 'root',
         '-p', `${this.rpcPort}:${this.rpcPort}`,
         '-p', `${this.peerPort}:${this.peerPort}`,
         '-p', `${this.peerPort}:${this.peerPort}/udp`,
