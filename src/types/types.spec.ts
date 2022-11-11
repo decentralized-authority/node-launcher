@@ -23,21 +23,21 @@ import { IOTEX } from './iotex/iotex';
 import { Polygon } from './polygon/polygon';
 
 const chains: [{name: string, constructor: any}] = [
-  {name: 'Bitcoin', constructor: Bitcoin},
-  {name: 'BitcoinCash', constructor: BitcoinCash},
-  {name: 'Dash', constructor: Dash},
-  {name: 'LBRY', constructor: LBRY},
-  {name: 'Litecoin', constructor: Litecoin},
-  {name: 'Ethereum', constructor: Ethereum},
-  {name: 'BinanceSC', constructor: BinanceSC},
-  {name: 'Xdai', constructor: Xdai},
-  {name: 'Avalanche', constructor: Avalanche},
+  // {name: 'Bitcoin', constructor: Bitcoin},
+  // {name: 'BitcoinCash', constructor: BitcoinCash},
+  // {name: 'Dash', constructor: Dash},
+  // {name: 'LBRY', constructor: LBRY},
+  // {name: 'Litecoin', constructor: Litecoin},
+  // {name: 'Ethereum', constructor: Ethereum},
+  // {name: 'BinanceSC', constructor: BinanceSC},
+  // {name: 'Xdai', constructor: Xdai},
+  // {name: 'Avalanche', constructor: Avalanche},
   {name: 'Pocket', constructor: Pocket},
-  {name: 'Fuse', constructor: Fuse},
-  {name: 'Harmony', constructor: Harmony},
-  {name: 'OEC', constructor: OKEX},
-  {name: 'IoTeX', constructor: IOTEX},
-  {name: 'Polygon', constructor: Polygon},
+  // {name: 'Fuse', constructor: Fuse},
+  // {name: 'Harmony', constructor: Harmony},
+  // {name: 'OEC', constructor: OKEX},
+  // {name: 'IoTeX', constructor: IOTEX},
+  // {name: 'Polygon', constructor: Polygon},
 ];
 
 chains.forEach(({ name, constructor: NodeConstructor }) => {
@@ -294,9 +294,11 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
               network,
               client,
             }, docker);
+
             // node.on(NodeEvent.OUTPUT, console.log);
             // node.on(NodeEvent.ERROR, console.error);
-            // node.on(NodeEvent.CLOSE, console.log);
+            // node.on(NodeEvent.CLOSE, (exitCode: number) => console.log(`Exited with code ${exitCode}`));
+
             const instances = await node.start(keyPassword);
             instances.should.be.an.Array();
             const containerNames: string[] = [];
@@ -320,9 +322,11 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
               network,
               client,
             }, docker);
+
             // node.on(NodeEvent.OUTPUT, console.log);
             // node.on(NodeEvent.ERROR, console.error);
-            // node.on(NodeEvent.CLOSE, console.log);
+            // node.on(NodeEvent.CLOSE, (exitCode: number) => console.log(`Exited with code ${exitCode}`));
+
             await node.start(keyPassword);
             await new Promise(resolve => setTimeout(resolve, 10000));
             await node.stop();
@@ -343,6 +347,11 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
               client,
             }, docker);
 
+            node
+              .on(NodeEvent.ERROR, console.error)
+              // .on(NodeEvent.OUTPUT, console.log)
+              .on(NodeEvent.CLOSE, (exitCode: number) => console.log(`Exited with code ${exitCode}`));
+
             await node.start(keyPassword);
             remoteNode = new NodeConstructor({
               network,
@@ -354,10 +363,6 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
               remoteDomain: 'localhost',
               remoteProtocol: 'http',
             });
-            node
-              .on(NodeEvent.ERROR, console.error)
-              // .on(NodeEvent.OUTPUT, console.log)
-              .on(NodeEvent.CLOSE, (exitCode: number) => console.log(`Exited with code ${exitCode}`));
 
             // Give the node a little time to connect and get up and running
             await timeout(60000 * 1);

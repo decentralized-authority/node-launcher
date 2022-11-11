@@ -667,6 +667,7 @@ export class Ethereum extends EthereumPreMerge {
   mnemonicEncrypted: EncryptedKeystore;
   jwt: string;
 
+
   constructor(data: EthereumCryptoNodeData, docker?: Docker) {
     super(data, docker);
     this.id = data.id || uuid();
@@ -1109,7 +1110,6 @@ export class Ethereum extends EthereumPreMerge {
       //console.log(depositTX, depositTX.transactionHash)
       if (depositTX && depositTX.transactionHash) {
         const receipt = await web3.eth.getTransactionReceipt(depositTX.transactionHash);
-        //console.log(1112, receipt.status, receipt.gasUsed)
         if (receipt && receipt.blockNumber) {
           console.log("Deposit for pubkey " + depositJSON.pubkey + "has been confirmed at block number " + receipt.blockNumber);
           console.log("Note that it might take 30 - 90 sceonds for the block to propagate before it's visible in etherscan.io");
@@ -1360,6 +1360,7 @@ export class Ethereum extends EthereumPreMerge {
  async encryptMnemonic(password: string, mnemonic?: string, eth1AccountIndex = 0): Promise<EncryptedKeystore> {
     const mnemonicExists = this.mnemonicEncrypted && JSON.stringify(this.mnemonicEncrypted) != '{}' &&  this.mnemonicEncrypted.message != ''; //await this._fs.pathExists(mnemonicPath);
     if (mnemonic){ // if called with mnemonic passed, overwrite existing mnemonic.enc
+
       this.mnemonicEncrypted = encrypt(mnemonic, password, this.id);
       //console.log(1312,  'encrypted', mnemonic)
     } else if (!mnemonic && !mnemonicExists){

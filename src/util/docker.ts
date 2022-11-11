@@ -231,34 +231,21 @@ export class Docker extends EventEmitter {
     const runArgsStr = splitImage.slice(1).join(' ');
     const splitRunArgs = [''];
     let quotedStr = '';
-    console.log(234, runArgsStr);
     for(let i = 0; i < runArgsStr.length; i++) {
       const char = runArgsStr[i];
       const isQuote = /['"]/.test(char);
       if(quotedStr) {
         quotedStr += char;
         if(isQuote) {
-          console.log("240 docker.ts");
-          console.log(i);
-          console.log(quotedStr);
-          console.log(char);
-          console.log(splitRunArgs[splitRunArgs.length - 1]);
-          if (splitRunArgs[splitRunArgs.length - 1] == '--mnemonic=') {
-            splitRunArgs[splitRunArgs.length - 1] += quotedStr;
-          } else {
-            splitRunArgs.push(quotedStr);
-          }
+          splitRunArgs.push(quotedStr);
           quotedStr = '';
         }
       } else if(isQuote) { // if it is an opening quote
-        console.log(2);
         quotedStr += char;
       } else if(/\s/.test(char)) { // if it is white space
-        console.log(3);
         splitRunArgs.push('');
       } else { // if it is not whitespace
-        console.log(4);
-        splitRunArgs[splitRunArgs.length - 1] += char; 
+        splitRunArgs[splitRunArgs.length - 1] += char;
       }
     }
     const spawnArgs = [
@@ -268,10 +255,38 @@ export class Docker extends EventEmitter {
       ...splitRunArgs
         .filter(s => s),
     ];
-    console.log("258 docker.ts spawnArgs");
-    console.log(spawnArgs);
     if(!silent)
-      console.log(274);
+      this.emit(DockerEvent.INFO, `${command} ${spawnArgs.join(' ')}`);
+    const instance = this._spawn(command, spawnArgs);
+    instance.on('error', err => {
+      this._logError(err);
+      if(onErr)
+        onErr(err);
+    });
+    instance.on('close', code => {
+      if(onClose)
+        onClose(code || 0);
+    });
+    instance.stdout.on('data', (data: Buffer) => {
+      if(onOutput && !silent)
+        onOutput(data.toString());
+    });
+    instance.stderr.on('data', (data: Buffer) => {
+      if(onOutput)
+        onOutput(data.toString());
+    });
+    return instance;
+  }
+
+  public composeUp(configPath: string, args: string[], onOutput?: (output: string) => void, onErr?: (err: Error) => void, onClose?: (statusCode: number) => void, silent = false): ChildProcess {
+    const command = 'docker-compose';
+    const spawnArgs = [
+      '-f',
+      configPath,
+      'up',
+      ...args,
+    ];
+    if(!silent)
       this.emit(DockerEvent.INFO, `${command} ${spawnArgs.join(' ')}`);
     const instance = this._spawn(command, spawnArgs);
     instance.on('error', err => {
