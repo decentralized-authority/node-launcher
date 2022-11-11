@@ -24,19 +24,21 @@ rest-api-cors-origins: ["*"]
 p2p-port: {{PEER_PORT}}
 `;
 
+validator = `
+
+# validators
+validator-keys: "/root/keystore/validators:/.hidden/"
+validators-graffiti: "Running with Node Launcher"
+validator-api-keystore-password-file: "/.hidden/pass.pwd"
+validator-api-port: {{VALIDATOR_RPC}}
+validators-external-signer-slashing-protection-enabled: false
+
+# fee recipient
+validators-proposer-default-fee-recipient: "{{ETH1_ADDRESS}}"
+
+# metrics
+metrics-enabled: true
+metrics-port: 8008
+`
 
 
-
-// # validators
-// validator-keys: "/root/keystore/validators:/.hidden/pass.pwd"
-// validators-graffiti: "Running with Node Launcher"
-// validator-api-keystore-password-file: "/.hidden/pass.pwd"
-// validator-api-port: {{VALIDATOR_RPC}}
-// validators-external-signer-slashing-protection-enabled: false
-
-// # fee recipient
-// validators-proposer-default-fee-recipient: "{{ETH1_ADDRESS}}"
-
-// # metrics
-// metrics-enabled: true
-// metrics-port: 8008

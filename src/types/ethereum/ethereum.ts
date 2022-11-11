@@ -1355,6 +1355,60 @@ export class Ethereum extends EthereumPreMerge {
     return(validatorInstance);
   }
 
+  async tekuImportValidators(password: string): Promise<boolean> {
+    const versions = Ethereum.versions(this.consensusClient, this.network); //NodeClient.PRYSM
+    const versionData = versions.find(({ version }) => version === this.version) || versions[0]; //this.consensusVersion?
+    const {
+      passwordPath: containerPasswordPath
+    } = versionData;
+    //await this.generatePrysmValidatorConfig()
+    //const args = await this.generateConsensusArgs(password)
+    const stakingDir = path.join(this.walletDir, 'validators');
+    await this._fs.ensureDir(stakingDir);
+    const filename = `keystore-m_12381_3600_0_0_accountIndex.json`;
+    if (Object.keys(this.validators).length > 0) {
+      for (const validatorIndex of Object.keys(this.validators)) {
+        const validator = this.validators[parseInt(validatorIndex) as keyof Validators]
+        const validatorKeystore = validator.keystore
+        validator.status = await this.validatorStatus(validator.pubkey)
+        await this._fs.writeFile(path.join(stakingDir, filename.replace('accountIndex', validatorIndex.toString())), validatorKeystore, 'utf8')
+      }
+    }
+    // const importRun = ` --config-file=/root/config/prysm-validator.yaml accounts import --${this.network.toLowerCase()}`;
+    // const importArgs = [
+    //   ...args,
+    //   //'--rm',
+    //   '--name', this.id + '-import',
+    // ];
+    // const importExitCode = await new Promise<number>((resolve, reject) => {
+    //   this._docker.run(
+    //     this.validatorDockerImage + importRun,
+    //     importArgs,
+    //     output => this._logOutput(output),
+    //     err => {
+    //       this._logError(err);
+    //       reject(err);
+    //     },
+    //     code => {
+    //       resolve(code);
+    //     },
+    //   );
+    // });
+    // if(importExitCode !== 0)
+    //   throw new Error(`Docker run for ${this.validatorDockerImage} failed with exit code ${importExitCode}`);
+    // const validatorInstance = this._docker.attach(
+    //   this.id + '-import',
+    //   output => this._logOutput('import - ' + output),
+    //   err => {
+    //     this._logError(err);
+    //   },
+    //   code => {
+    //     this._logClose(code);
+    //   },
+    // );
+    return true
+  }
+
   async prysmImportValidators(password: string): Promise<boolean> {
     await this.generatePrysmValidatorConfig()
     const args = await this.generateConsensusArgs(password)
@@ -1406,9 +1460,7 @@ export class Ethereum extends EthereumPreMerge {
 
   async generateConsensusArgs(password?: string): Promise<string[]> {
     const versions = Ethereum.versions(this.consensusClient, this.network); //NodeClient.PRYSM
-    console.log(1312, versions)
     const versionData = versions.find(({ version }) => version === this.version) || versions[0]; //this.consensusVersion?
-    console.log(1314, this.version, versionData)
     const {
       dataDir: containerDataDir,
       walletDir: containerWalletDir,
@@ -1431,7 +1483,7 @@ export class Ethereum extends EthereumPreMerge {
       const passwordFileExists = await this._fs.pathExists(passwordPath);
       if(!passwordFileExists)
         await this._fs.writeFile(passwordPath, password, 'utf8');
-      return [...args, '-v', `${passwordPath}:${containerPasswordPath}`]
+      return [...args, '-v', `${this.passwordPath}:${containerPasswordPath}`]
     }
     // if (this.consensusClient == NodeClient.TEKU){
     //   return [...args, '-u', 'root']
