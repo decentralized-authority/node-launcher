@@ -3,7 +3,8 @@ datadir: "/root/data"
 accept-terms-of-use: true
 rpc-http-enabled: true
 http-modules: "prysm,eth"
-#network-id: 0
+network-id: "{{NETWORK_ID}}"
+chain-id: "{{CHAIN_ID}}"
 rpc-host: "0.0.0.0"
 rpc-port: {{VALIDATOR_RPC_PORT}} # this is the port the validator needs to connect to. (they both use grpc, but this is technical debt) I think this should not be exposed to user in docker and be closed to the world
 grpc-gateway-corsdomain: "*"
@@ -17,7 +18,7 @@ checkpoint-sync-url: "{{CHECKPOINT_SYNC_URL}}" # syncs in ~12 hours, should we s
 genesis-beacon-api-url: "{{GENESIS_BEACON_API_URL}}"
 jwt-secret: /root/config/jwt.hex
 
-# will add 1TB + and needs to be enabled on validator as well
+# will add 1TB + 
 historical-slasher-node: false
 slasher: false
 
@@ -28,9 +29,9 @@ accept-terms-of-use: true
 log-file: "/root/data/validator.log"
 verbosity: "info"
 keys-dir: "/root/keystore/validators/" # to import from
-account-password-file: "/.hidden/pass.pwd"
+account-password-file: "/run/secrets/password"
 wallet-dir: "/root/keystore/" # to place imported file into
-wallet-password-file: "/.hidden/pass.pwd"
+wallet-password-file: "/run/secrets/password"
 enable-doppelganger: true
 
 # grpc-gateway-corsdomain: "http://localhost:7500,http://127.0.0.1:7500,http://0.0.0.0:7500,http://localhost:4242,http://127.0.0.1:4242,http://localhost:4200,http://0.0.0.0:4242,http://127.0.0.1:4200,http://0.0.0.0:4200,http://localhost:3000,http://0.0.0.0:3000,http://127.0.0.1:3000" #Comma separated list of domains from which to accept cross origin requests (browser enforced). This flag has no effect if not used with --grpc-gateway-port. (default: "http://localhost:7500,http://127.0.0.1:7500,http://0.0.0.0:7500,http://localhost:4242,http://127.0.0.1:4242,http://localhost:4200,http://0.0.0.0:4242,http://127.0.0.1:4200,http://0.0.0.0:4200,http://localhost:3000,http://0.0.0.0:3000,http://127.0.0.1:3000")

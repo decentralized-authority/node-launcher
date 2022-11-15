@@ -621,11 +621,12 @@ export class Pocket extends Bitcoin {
       await fs.writeJson(composeConfigPath, composeConfig, {spaces: 2});
 
       const args = [
+        'up',
         '-d',
         '--remove-orphans',
       ];
       const exitCode = await new Promise<number>((resolve, reject) => {
-        this._docker.composeUp(
+        this._docker.composeDo(
           composeConfigPath,
           args,
           output => this._logOutput(output),

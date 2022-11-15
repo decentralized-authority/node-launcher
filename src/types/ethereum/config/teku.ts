@@ -21,16 +21,16 @@ rest-api-enabled: true
 rest-api-interface: "0.0.0.0"
 rest-api-port: {{RPC_PORT}}
 rest-api-cors-origins: ["*"]
+rest-api-host-allowlist: ["*"]
 p2p-port: {{PEER_PORT}}
 `;
 
-validator = `
+export const validator = `
 
 # validators
-validator-keys: "/root/keystore/validators:/.hidden/"
+#validator-keys: ":" if not valid keys + pass here will shut down.
 validators-graffiti: "Running with Node Launcher"
-validator-api-keystore-password-file: "/.hidden/pass.pwd"
-validator-api-port: {{VALIDATOR_RPC}}
+validator-api-port: {{VALIDATOR_RPC_PORT}}
 validators-external-signer-slashing-protection-enabled: false
 
 # fee recipient
