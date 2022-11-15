@@ -13,7 +13,7 @@ log-destination: "BOTH"
 log-file: "/opt/teku/data/teku.log"
 
 # execution engine
-ee-endpoint: "http://{{EXEC}}"
+ee-endpoint: "{{EXEC}}"
 ee-jwt-secret-file: "/opt/teku/config/jwt.hex" 
 
 # rpc
@@ -28,7 +28,7 @@ p2p-port: {{PEER_PORT}}
 export const validator = `
 
 # validators
-#validator-keys: ":" if not valid keys + pass here will shut down.
+#validator-keys: ":"
 validators-graffiti: "Running with Node Launcher"
 validator-api-port: {{VALIDATOR_RPC_PORT}}
 validators-external-signer-slashing-protection-enabled: false

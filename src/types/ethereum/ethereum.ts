@@ -8,6 +8,7 @@ import { FS } from '../../util/fs';
 import { base as coreConfig } from './config/core';
 import * as nethermindConfig from './config/nethermind';
 import { base as erigonConfig } from './config/erigon';
+import { base as nimbusConfig, validator as nimbusValidatorConfig } from './config/nimbus';
 import * as prysmConfig from './config/prysm';
 import { teku as tekuConfig, validator as tekuValidatorConfig } from './config/teku';
 import { EthereumPreMerge } from '../shared/ethereum-pre-merge';
@@ -83,11 +84,12 @@ interface ContainerService {
       }
     }
   }
-  command:        string
-  ports:          string[]
-  volumes:        string[]
-  networks:       string[]
-  secrets?:       string[]
+  command: string
+  user?: string
+  ports: string[]
+  volumes: string[]
+  networks: string[]
+  secrets?:  string[]
 }
 
 export class Ethereum extends EthereumPreMerge {
@@ -555,10 +557,26 @@ export class Ethereum extends EthereumPreMerge {
             version: '22.10.2',
             clientVersion: '22.10.2',
             image: 'icculp/teku:22.10.2',
-            passwordPath: '/.hidden/pass.pwd',
             dataDir: '/opt/teku/data',
             walletDir: '/opt/teku/keystore',
             configDir: '/opt/teku/config',
+            networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+            breaking: false,
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+              return ` --config-file=${path.join(this.configDir, Ethereum.configName(data, consensusFlag))} `;
+            },
+          },
+        ];
+        break;
+      case NodeClient.NIMBUS:
+        versions = [
+          {
+            version: '22.10.1',
+            clientVersion: '22.10.1',
+            image: 'statusim/nimbus-eth2:multiarch-v22.10.1',
+            dataDir: '/var/lib/data',
+            walletDir: '/var/lib/keystore',
+            configDir: '/var/lib/config',
             networks: [NetworkType.MAINNET, NetworkType.GOERLI],
             breaking: false,
             generateRuntimeArgs(data: EthereumCryptoNodeData): string {
@@ -579,10 +597,10 @@ export class Ethereum extends EthereumPreMerge {
     NodeClient.NETHERMIND,
     NodeClient.ERIGON,
   ];
-
   static consensusClients = [
     NodeClient.PRYSM,
-    NodeClient.TEKU
+    NodeClient.TEKU,
+    NodeClient.NIMBUS
   ]
 
   static nodeTypes = [
@@ -641,6 +659,7 @@ export class Ethereum extends EthereumPreMerge {
     let clientStr: string;
     let authPort = 0;
     let id, role, address, validatorRPCPort = '';
+    let checkpointSyncUrl = '';
     if(typeof client === 'string') {
       clientStr = client;
     } else {
@@ -662,13 +681,23 @@ export class Ethereum extends EthereumPreMerge {
     }
     authPort = authPort || Ethereum.defaultAuthPort[network];
     let config = '';
+    switch (network) { // prysm and nimbus can use this url
+      case NetworkType.MAINNET:
+        checkpointSyncUrl = 'https://goerli.beaconstate.ethstaker.cc';
+        break;
+      case NetworkType.GOERLI:
+        checkpointSyncUrl = 'https://beaconstate.ethstaker.cc';
+        break;
+    }
     switch(clientStr) {
       case NodeClient.GETH:
         switch(network) {
           case NetworkType.MAINNET:
             config = coreConfig.replace('{{NETWORK_ID}}', '1');
+            break;
           case NetworkType.GOERLI:
             config = coreConfig.replace('{{NETWORK_ID}}', '5');
+            break;
         }
         break;
       case NodeClient.NETHERMIND:
@@ -687,20 +716,15 @@ export class Ethereum extends EthereumPreMerge {
       case NodeClient.ERIGON:
         config = erigonConfig.replace('{{NETWORK}}', network.toLowerCase());
         break;
-      case NodeClient.PRYSM: {
-        let checkpointSyncUrl: string, genesisBeaconApiUrl: string;
+      case NodeClient.PRYSM: { // /\ execution \/ consensus
+        let genesisBeaconApiUrl = checkpointSyncUrl
         const prysmValidatorPort = '4000';
-        let networkId = '1';
+        let networkId = '1'; //mainnet
         let chainId = '1';
         if(network === NetworkType.GOERLI) {
-          checkpointSyncUrl = 'https://goerli.beaconstate.ethstaker.cc';
-          genesisBeaconApiUrl = checkpointSyncUrl;
           networkId = '5';
           chainId = '5';
-        } else { // MAINNET
-          checkpointSyncUrl = 'https://beaconstate.ethstaker.cc';
-          genesisBeaconApiUrl = checkpointSyncUrl;
-        }
+        } 
         config = prysmConfig.beacon
           .replace('{{CHECKPOINT_SYNC_URL}}', checkpointSyncUrl)
           .replace('{{GENESIS_BEACON_API_URL}}', genesisBeaconApiUrl)
@@ -717,14 +741,25 @@ export class Ethereum extends EthereumPreMerge {
         } else { // MAINNET
           initialState = "https://beaconstate.info/eth/v2/debug/beacon/states/finalized"
         }
-
         config = tekuConfig
-          .replace('{{EXEC}}', `${id}:${authPort.toString(10)}`)
+          .replace('{{EXEC}}', `http://${id}:${authPort.toString(10)}`)
           .replace('{{INITIAL_STATE}}', initialState)
         if (role == Role.VALIDATOR){
         config += tekuValidatorConfig
           .replace('{{ETH1_ADDRESS}}', address || '')
           .replace('{{VALIDATOR_RPC_PORT}}', validatorRPCPort)
+        }
+        break;
+      }
+      case NodeClient.NIMBUS: {
+        config = nimbusConfig
+          .replace('{{EXEC}}', `http://${id}:${authPort.toString(10)}`)
+          .replace('{{CHECKPOINT_SYNC_URL}}', checkpointSyncUrl)
+          .replace('{{NETWORK}}', network.toLowerCase());
+        if (role == Role.VALIDATOR) {
+          config += nimbusValidatorConfig
+            .replace('{{ETH1_ADDRESS}}', address || '')
+            //.replace('{{VALIDATOR_RPC_PORT}}', validatorRPCPort)
         }
         break;
       }
@@ -749,6 +784,8 @@ export class Ethereum extends EthereumPreMerge {
           return 'prysm.yaml';
       case NodeClient.TEKU:
         return 'teku.yaml';
+      case NodeClient.NIMBUS:
+        return 'nimbus.toml';
       default:
         return 'config.toml';
     }
@@ -878,7 +915,7 @@ export class Ethereum extends EthereumPreMerge {
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
     const consensusVersions = Ethereum.versions(this.consensusClient, this.network);
     const consensusVersionData = consensusVersions.find(({ version }) => version === this.consensusVersion) || consensusVersions[0];
-    
+    console.log(917)
     if(!versionData)
       throw new Error(`Unknown version ${this.version}`);
     const split = splitVersion(this.version);
@@ -905,6 +942,7 @@ export class Ethereum extends EthereumPreMerge {
         walletDir: consensusContainerWalletDir,
         configDir: consensusContainerConfigDir
       } = consensusVersionData;
+      console.log(917)
       const tmpdir = os.tmpdir();
       const dataDir = this.dataDir || path.join(tmpdir, uuid());
       await fs.ensureDir(dataDir);
@@ -991,6 +1029,7 @@ export class Ethereum extends EthereumPreMerge {
         image: this.consensusDockerImage,
         container_name: this.consensusDockerName(),
         networks: [this.dockerNetwork],
+        user: "root", // make image or set permissions of data dir from 755 and 700
         deploy: {
           resources: {
             limits: {
