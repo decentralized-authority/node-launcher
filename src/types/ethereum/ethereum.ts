@@ -7,9 +7,9 @@ import { Docker } from '../../util/docker';
 import { FS } from '../../util/fs';
 import { base as coreConfig } from './config/core';
 import * as nethermindConfig from './config/nethermind';
+import * as prysmConfig from './config/prysm';
 import { base as erigonConfig } from './config/erigon';
 import { base as nimbusConfig, validator as nimbusValidatorConfig } from './config/nimbus';
-import * as prysmConfig from './config/prysm';
 import { teku as tekuConfig, validator as tekuValidatorConfig } from './config/teku';
 import { EthereumPreMerge } from '../shared/ethereum-pre-merge';
 import { contractAbi } from './contract-abi';
@@ -52,7 +52,13 @@ interface ValidatorObject {
 }
 
 interface Validators {
-  [key: number] : ValidatorObject
+  [key: number]: ValidatorObject
+}
+
+interface Secrets {
+  [key: string]: {
+    file: string
+  }
 }
 
 interface DepositKeyInterface {
@@ -909,7 +915,7 @@ export class Ethereum extends EthereumPreMerge {
 
   async start(password?: string, eth1AccountIndex = 0, slasher = 0): Promise<ChildProcess[]> {
     const { consensusDockerImage, validatorDockerImage, _fs: fs } = this;
-    const secretsDir = await getSecretsDir(this.id)
+    const secretsDir = await getSecretsDir(uuid())
     const passwordSecretPath = path.join(secretsDir, 'pass.pwd');
     const versions = Ethereum.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
@@ -942,7 +948,7 @@ export class Ethereum extends EthereumPreMerge {
         walletDir: consensusContainerWalletDir,
         configDir: consensusContainerConfigDir
       } = consensusVersionData;
-      console.log(917)
+
       const tmpdir = os.tmpdir();
       const dataDir = this.dataDir || path.join(tmpdir, uuid());
       await fs.ensureDir(dataDir);
@@ -955,10 +961,8 @@ export class Ethereum extends EthereumPreMerge {
 
       const configPath = path.join(configDir, Ethereum.configName(this));
       const configExists = await fs.pathExists(configPath);
-      //const { authPort } = this;
       if(!configExists)
         await fs.writeFile(configPath, this.generateConfig(), 'utf8');
-      // end execution prepare 
      
       const jwtPath = path.join(configDir, 'jwt.hex');
       const jwtExists = await fs.pathExists(jwtPath);
@@ -1014,7 +1018,6 @@ export class Ethereum extends EthereumPreMerge {
           `${this.rpcPort}:${this.rpcPort}`,
             `${this.peerPort}:${this.peerPort}`,
             `${this.peerPort}:${this.peerPort}/udp`,
-            //'-p', `${authPort}:${authPort}`,
           ],
         volumes: [
           `${this.configDir}:${containerConfigDir}`,
@@ -1029,7 +1032,6 @@ export class Ethereum extends EthereumPreMerge {
         image: this.consensusDockerImage,
         container_name: this.consensusDockerName(),
         networks: [this.dockerNetwork],
-        user: "root", // make image or set permissions of data dir from 755 and 700
         deploy: {
           resources: {
             limits: {
@@ -1052,12 +1054,13 @@ export class Ethereum extends EthereumPreMerge {
         secrets: [],
         restart: `on-failure:${this.restartAttempts}`,
       } as ContainerService
+    if (this.consensusClient == NodeClient.NIMBUS)
+      consensusService.user = "root"
     const services: Services = {
       executionService: executionService,
       consensusService: consensusService
       //validatorService?: validatorService
     } as Services
-
     if (this.role === Role.VALIDATOR && password) {
       switch (this.consensusClient) {
         case NodeClient.PRYSM: {
@@ -1097,7 +1100,6 @@ export class Ethereum extends EthereumPreMerge {
         }
       }        
     } //end validator
-
     const composeConfig = {
       version: "3.1",
       services: services, //validatorService,
@@ -1136,11 +1138,10 @@ export class Ethereum extends EthereumPreMerge {
         },
       );
     });
+    await fs.remove(secretsDir)
     if(exitCode !== 0)
       throw new Error(`Docker-compose for ${this.id} et al with ${this.dockerImage} failed with exit code ${exitCode}`);
     } // end !running
-
-    await fs.remove(secretsDir)
     this._instances = await this.dockerAttach();
     this._instance = this._instances[0];
     return this.instances();
@@ -1209,7 +1210,7 @@ export class Ethereum extends EthereumPreMerge {
     } as ContainerService
     const composeConfig = {
       version: "3.1",
-      services: {stakingService: stakingService}, //validatorService,
+      services: { stakingService: stakingService }, //validatorService,
       networks: {
         [this.dockerNetwork]: {
           driver: 'bridge',
@@ -1221,15 +1222,12 @@ export class Ethereum extends EthereumPreMerge {
       //   },
       // },
     };
-    //const composeConfigPath = path.join('/', 'tmp', uuid());
     const composeConfigPath = path.join(this.configDir, 'staking.yml')
     await this._fs.writeJson(composeConfigPath, composeConfig, {spaces: 2});
     const args = [
       'run',
       '--rm',
       'stakingService',
-      //'-d',
-      //'--remove-orphans',
     ];
     const stakingExitCode = await new Promise<number>((resolve, reject) => {
       this._docker.composeDo(
@@ -1306,11 +1304,13 @@ export class Ethereum extends EthereumPreMerge {
         break;
       case NodeClient.TEKU:
         await this.tekuImportValidators(password)
+        break;
+      case NodeClient.NIMBUS:
+        await this.nimbusImportValidators(password);
+        break;
     }
-    const secretsDir = await getSecretsDir(this.id)
-    await this._fs.remove(secretsDir)
+    const secretsDir = await getSecretsDir(uuid())
     const passwordSecretPath = path.join(secretsDir, 'pass.pwd');
-    await this._fs.ensureDir(secretsDir)
     await this._fs.writeFile(passwordSecretPath, password)
     await new Promise<number>((resolve, reject) => {
       this._docker.composeDo(
@@ -1454,7 +1454,6 @@ export class Ethereum extends EthereumPreMerge {
 
     while (true) {
       console.log('Awaiting confirmation of deposit for pubkey ' + depositJSON.pubkey + ' and transactionHash ' + depositTX.transactionHash)
-      //console.log(depositTX, depositTX.transactionHash)
       if (depositTX && depositTX.transactionHash) {
         const receipt = await web3.eth.getTransactionReceipt(depositTX.transactionHash);
         if (receipt && receipt.blockNumber) {
@@ -1694,6 +1693,35 @@ export class Ethereum extends EthereumPreMerge {
       },
     );
     return true
+  }
+
+  async nimbusImportValidators(password: string): Promise<boolean> {
+    const composeFilePath = path.join(this.configDir, 'docker-compose.yml')
+    const composeFile = JSON.parse(await this._fs.readFile(composeFilePath))
+    const secretsDir = await getSecretsDir(uuid())
+    const passwordSecretPath = path.join(secretsDir, 'pass.pwd');
+    await this._fs.writeFile(passwordSecretPath, password)
+    await this._fs.chmod(passwordSecretPath, '0600')
+    const keyPathname = `keystore.json`;
+    if (Object.keys(this.validators).length > 0) {
+      for (const validatorIndex of Object.keys(this.validators)) {
+        const validator = this.validators[parseInt(validatorIndex) as keyof Validators]
+        const validatorKeystore = validator.keystore
+        validator.status = await this.validatorStatus(validator.pubkey)
+        const passwordFilename = hexPrefix(validator.pubkey)
+        composeFile.services.consensusService.secrets.push(passwordFilename)
+        composeFile.secrets[passwordFilename] = { file: passwordSecretPath }
+        const pubDir = path.join(this.walletDir, 'validators', hexPrefix(validator.pubkey))
+        await this._fs.ensureDir(pubDir)
+        await this._fs.writeFile(path.join(pubDir, keyPathname), validatorKeystore, 'utf8')
+      }
+    }
+    await this._fs.writeFile(composeFilePath, JSON.stringify(composeFile));
+    await this._docker.composeDo(path.join(this.configDir, 'docker-compose.yml'), ['up', '-d', '--remove-orphans'])
+    await timeout(50000) // wait for container to restart before removing secrets dir
+    await this._fs.remove(secretsDir)
+    await this.dockerAttach()
+    return true;
   }
 
   async generateConsensusArgs(password?: string): Promise<string[]> { // create service interface 

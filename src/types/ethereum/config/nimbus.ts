@@ -10,10 +10,16 @@ rest-port = {{RPC_PORT}}
 rest-address = "0.0.0.0"
 #backfill = false #??
 web3-url = ["{{EXEC}}"]
+jwt-secret = "/var/lib/config/jwt.hex"
+`
 
-jwt-secret = "/var/lib/config/jwt.hex"`
 
-export const validator = ``
-//metrics
-//metrics-port=8008 \
-//#suggested-fee-recipient=0x_CHANGE_THIS_TO_MY_ETH_FEE_RECIPIENT_ADDRESS
+
+export const validator = `
+
+validators-dir = "/var/lib/keystore/validators"
+secrets-dir = "/run/secrets"
+suggested-fee-recipient = {{ETH1_ADDRESS}}
+doppelganger-detection = true
+in-process-validators = true
+`
