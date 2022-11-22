@@ -591,6 +591,25 @@ export class Ethereum extends EthereumPreMerge {
           },
         ];
         break;
+        case NodeClient.LIGHTHOUSE:
+          versions = [
+            {
+              version: '3.2.1',
+              clientVersion: '3.2.1',
+              image: 'sigp/lighthouse:v3.2.1',
+              dataDir: '/root/data',
+              walletDir: '/root/keystore',
+              configDir: '/root/config',
+              networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+              breaking: false,
+              generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+                const { consensusRPCPort, consensusPeerPort, network, id, rpcPort, authPort } = data;
+                const checkpointSyncUrl = network == NetworkType.MAINNET ? 'https://beaconstate.ethstaker.cc' : 'https://goerli.beaconstate.ethstaker.cc'
+                return ` lighthouse beacon --http --eth1 --checkpoint-sync-url="${checkpointSyncUrl}" --datadir=/root/data --execution-endpoint=http://${id}:${authPort} --execution-jwt=/root/config/jwt.hex --port=${consensusPeerPort} --http-address=0.0.0.0 --http-allow-origin=* --http-port=${consensusRPCPort} --network=${network?.toLowerCase()}  `;
+              },
+            },
+          ];
+          break;
       default:
         versions = [];
     }
@@ -768,6 +787,12 @@ export class Ethereum extends EthereumPreMerge {
             //.replace('{{VALIDATOR_RPC_PORT}}', validatorRPCPort)
         }
         break;
+      }
+      case NodeClient.LIGHTHOUSE: {
+        config = '' //lighthouseConfig;
+        if (role == Role.VALIDATOR) {
+          config += '';
+        }
       }
       default:
         return '';
