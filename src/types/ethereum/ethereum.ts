@@ -11,6 +11,7 @@ import * as prysmConfig from './config/prysm';
 import { base as erigonConfig } from './config/erigon';
 import { base as nimbusConfig, validator as nimbusValidatorConfig } from './config/nimbus';
 import { teku as tekuConfig, validator as tekuValidatorConfig } from './config/teku';
+import { base as lighthouseBase, validator as lighthouseValidator } from './config/lighthouse'
 import { EthereumPreMerge } from '../shared/ethereum-pre-merge';
 import { contractAbi } from './contract-abi';
 import { Wallet } from 'ethers';
@@ -597,6 +598,7 @@ export class Ethereum extends EthereumPreMerge {
               version: '3.2.1',
               clientVersion: '3.2.1',
               image: 'sigp/lighthouse:v3.2.1',
+              validatorImage: 'sigp/lighthouse:v3.2.1',
               dataDir: '/root/data',
               walletDir: '/root/keystore',
               configDir: '/root/config',
@@ -1083,9 +1085,25 @@ export class Ethereum extends EthereumPreMerge {
       consensusService.user = "root"
     const services: Services = {
       executionService: executionService,
-      consensusService: consensusService
+      consensusService: consensusService,
       //validatorService?: validatorService
     } as Services
+    const composeConfig = {
+      version: "3.1",
+      services: services, //validatorService,
+      networks: {
+        [this.dockerNetwork]: {
+          driver: 'bridge',
+        },
+      },
+      secrets: {
+        password: {
+          file: passwordSecretPath,
+        },
+      },
+    };
+    const composeConfigPath = path.join(this.configDir, 'docker-compose.yml')
+    await fs.writeJson(composeConfigPath, composeConfig, {spaces: 2});
     if (this.role === Role.VALIDATOR && password) {
       switch (this.consensusClient) {
         case NodeClient.PRYSM: {
@@ -1123,26 +1141,40 @@ export class Ethereum extends EthereumPreMerge {
           //this._fs.
           break;
         }
+        case NodeClient.LIGHTHOUSE: {
+          await this.lighthouseImportValidators(password);
+          services['validatorService'] = {
+            image: this.validatorDockerImage,
+            container_name: this.validatorDockerName(),
+            networks: [this.dockerNetwork],
+            deploy: {
+              resources: {
+                limits: {
+                  cpus: this.dockerCPUs.toString(10),
+                  memory: this.dockerMem.toString(10) + 'MB',
+                }
+              }
+            },
+            ports: [
+              `${this.validatorRPCPort}:${this.validatorRPCPort}`,
+              ],
+            volumes: [
+              `${this.configDir}:${consensusContainerConfigDir}`,
+              `${this.dataDir}:${consensusContainerDataDir}`,
+              `${this.walletDir}:${consensusContainerWalletDir}`,
+            ],
+            command: ` lighthouse validator --beacon-nodes="http://${this.consensusDockerName()}:${this.consensusRPCPort}" --validators-dir=/root/keystore/validators --enable-doppelganger-protection --suggested-fee-recipient=${hexPrefix(this.eth1Address)} --network=${this.network.toLowerCase()}`,
+            secrets: ['password'],
+            restart: `on-failure:${this.restartAttempts}`,
+          } as ContainerService
+          break;
+        }
       }        
     } //end validator
-    const composeConfig = {
-      version: "3.1",
-      services: services, //validatorService,
-      networks: {
-        [this.dockerNetwork]: {
-          driver: 'bridge',
-        },
-      },
-      secrets: {
-        password: {
-          file: passwordSecretPath,
-        },
-      },
-    };
+    
 
     //const composeConfigPath = path.join('/', 'tmp', uuid());
-    const composeConfigPath = path.join(this.configDir, 'docker-compose.yml')
-    await fs.writeJson(composeConfigPath, composeConfig, {spaces: 2});
+    
 
     const args = [
       'up',
@@ -1315,14 +1347,6 @@ export class Ethereum extends EthereumPreMerge {
         depositTXs.push(err)
       } 
     }
-    switch(this.consensusClient) {
-      case NodeClient.PRYSM:
-        await this.prysmImportValidators(password);
-        break;
-      case NodeClient.TEKU:
-        await this.tekuImportValidators(password);
-        break;
-    }
     switch (this.consensusClient) {
       case NodeClient.PRYSM:
         await this.prysmImportValidators(password);
@@ -1333,6 +1357,9 @@ export class Ethereum extends EthereumPreMerge {
       case NodeClient.NIMBUS:
         await this.nimbusImportValidators(password);
         break;
+      case NodeClient.LIGHTHOUSE:
+        await this.lighthouseImportValidators(password);
+        break;
     }
     const secretsDir = await getSecretsDir(uuid())
     const passwordSecretPath = path.join(secretsDir, 'pass.pwd');
@@ -1341,7 +1368,7 @@ export class Ethereum extends EthereumPreMerge {
       this._docker.composeDo(
         path.join(this.configDir, 'docker-compose.yml'),
         [
-          'restart',
+          'up', '-d', '--remove-orphans'
         ],
         output => this._logOutput(output),
         err => {
@@ -1742,10 +1769,54 @@ export class Ethereum extends EthereumPreMerge {
       }
     }
     await this._fs.writeFile(composeFilePath, JSON.stringify(composeFile));
-    await this._docker.composeDo(path.join(this.configDir, 'docker-compose.yml'), ['up', '-d', '--remove-orphans'])
+    await this._docker.composeDo(path.join(this.configDir, 'docker-compose.yml'), ['up', '-d', '--remove-orphans']) // need to restart here to load in secrets and then rm dir
     await timeout(50000) // wait for container to restart before removing secrets dir
     await this._fs.remove(secretsDir)
     await this.dockerAttach()
+    return true;
+  }
+
+  async lighthouseImportValidators(password: string): Promise<boolean> {
+    // write validator_definitions.yml
+    // write keystore files in pubkeydir/
+
+    const definitionsPath = path.join(this.configDir, 'validator_definitions.yml')
+    let validatorDefinitions = lighthouseBase
+    //console.log(password)
+
+    
+    const composeFilePath = path.join(this.configDir, 'docker-compose.yml')
+    const composeFile = JSON.parse(await this._fs.readFile(composeFilePath))
+    const secretsDir = await getSecretsDir(uuid())
+    const passwordSecretPath = path.join(secretsDir, 'pass.pwd');
+    await this._fs.writeFile(passwordSecretPath, password)
+    // //await this._fs.chmod(passwordSecretPath, '0600')
+    // const keyPathname = `keystore.json`;
+    if (Object.keys(this.validators).length > 0) {
+      await this._fs.ensureDir(path.join(this.walletDir, 'validators'))
+      for (const validatorIndex of Object.keys(this.validators)) {
+        const validator = this.validators[parseInt(validatorIndex) as keyof Validators]
+        const validatorKeystore = validator.keystore
+        validator.status = await this.validatorStatus(validator.pubkey)
+        const keyPathname = `keystore-${JSON.parse(validator.keystore).path.replace(/\//g, '_')}.json`;
+        //const passwordFilename = hexPrefix(validator.pubkey)
+        //composeFile.services.consensusService.secrets.push(passwordFilename)
+        //composeFile.secrets[passwordFilename] = { file: passwordSecretPath }
+        //const pubDir = path.join(this.walletDir, 'validators', hexPrefix(validator.pubkey))
+        //await this._fs.ensureDir(pubDir)
+        await this._fs.writeFile(path.join(this.walletDir, 'validators', keyPathname), validatorKeystore, 'utf8')
+
+        validatorDefinitions += lighthouseValidator.replace('{{PUBLIC_KEY}}', hexPrefix(validator.pubkey))
+                                                   .replace('{{KEYSTORE_PATH}}', keyPathname)
+      }
+    }
+    await this._fs.writeFile(definitionsPath, validatorDefinitions)
+    composeFile.secrets.password.file = passwordSecretPath;
+    await this._fs.writeFile(composeFilePath, JSON.stringify(composeFile));
+    await this._docker.composeDo(path.join(this.configDir, 'docker-compose.yml'), ['restart', 'validatorService'])
+    await timeout(50000) // wait for container to restart before removing secrets dir
+    await this._fs.remove(secretsDir)
+    // await this.dockerAttach()
     return true;
   }
 
