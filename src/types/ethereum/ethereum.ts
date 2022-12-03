@@ -964,6 +964,7 @@ export class Ethereum extends EthereumPreMerge {
     const consensusRunning = consensusDockerImage ? (await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.consensusDockerName())) : false;
     const validatorRunning = validatorDockerImage ? (await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.validatorDockerName())) : false;
     if(!running || !consensusRunning  || !validatorRunning) {
+      console.log('HEREEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE')
       // execution versiondata, args, and dirs..
       const {
         dataDir: containerDataDir,
@@ -1093,7 +1094,7 @@ export class Ethereum extends EthereumPreMerge {
       services: services, //validatorService,
       networks: {
         [this.dockerNetwork]: {
-          driver: 'bridge',
+          external: 'true',
         },
       },
       secrets: {
@@ -1142,7 +1143,6 @@ export class Ethereum extends EthereumPreMerge {
           break;
         }
         case NodeClient.LIGHTHOUSE: {
-          await this.lighthouseImportValidators(password);
           services['validatorService'] = {
             image: this.validatorDockerImage,
             container_name: this.validatorDockerName(),
@@ -1167,15 +1167,18 @@ export class Ethereum extends EthereumPreMerge {
             secrets: ['password'],
             restart: `on-failure:${this.restartAttempts}`,
           } as ContainerService
+          await fs.writeJson(composeConfigPath, composeConfig, {spaces: 2});
+          await this.lighthouseImportValidators(password);
           break;
         }
-      }        
+      }    
+      await fs.writeJson(composeConfigPath, composeConfig, {spaces: 2});    
     } //end validator
     
 
     //const composeConfigPath = path.join('/', 'tmp', uuid());
-    
-
+    console.log('GOING UPPPPP', passwordSecretPath)
+    //await timeout(10000)
     const args = [
       'up',
       '-d',
@@ -1207,17 +1210,21 @@ export class Ethereum extends EthereumPreMerge {
   async stop(): Promise<void> {
     try {
       await this._docker.composeDo(path.join(this.configDir, 'docker-compose.yml'), ['down'])
-      // await this._docker.stop(this.id);
-      // await this._docker.rm(this.id);
-      // await timeout(1000);
-      // await this._docker.stop(this.consensusDockerName());
-      // await this._docker.rm(this.consensusDockerName());
-      // await timeout(1000);
-      // await this._docker.stop(this.validatorDockerName());
-      // await this._docker.rm(this.validatorDockerName());
-      // await timeout(1000);
     } catch(err) {
       this._logError(err);
+      try {
+      await this._docker.stop(this.id);
+      await this._docker.rm(this.id);
+      await timeout(1000);
+      await this._docker.stop(this.consensusDockerName());
+      await this._docker.rm(this.consensusDockerName());
+      await timeout(1000);
+      await this._docker.stop(this.validatorDockerName());
+      await this._docker.rm(this.validatorDockerName());
+      await timeout(1000);
+      } catch (err) {
+        this._logError(err);
+      }
     }
   }
 
@@ -1262,15 +1269,14 @@ export class Ethereum extends EthereumPreMerge {
         `${stakingDir}:${containerStakingDir}`,
       ],
       command: stakingRun,
-      //secrets: ['password'],
       restart: `on-failure:${this.restartAttempts}`,
     } as ContainerService
     const composeConfig = {
-      version: "3.1",
-      services: { stakingService: stakingService }, //validatorService,
+      version: "3.3",
+      services: { stakingService: stakingService },
       networks: {
         [this.dockerNetwork]: {
-          driver: 'bridge',
+          external: true,
         },
       },
       // secrets: {
@@ -1286,6 +1292,7 @@ export class Ethereum extends EthereumPreMerge {
       '--rm',
       'stakingService',
     ];
+    console.log(1296, composeConfig)
     const stakingExitCode = await new Promise<number>((resolve, reject) => {
       this._docker.composeDo(
         composeConfigPath,
@@ -1300,23 +1307,23 @@ export class Ethereum extends EthereumPreMerge {
         },
       );
     });
-    const stakingInstance = this._docker.attach(
-      this.stakingDockerName(),
-      output => this._logOutput('staking - ' + output),
-      err => {
-        this._logError(err);
-      },
-      code => {
-        this._logClose(code);
-      },
-    );
+    //const stakingInstance = this._docker.attach(
+    //  this.stakingDockerName(),
+    //  output => this._logOutput('staking - ' + output),
+    //  err => {
+    //    this._logError(err);
+    //  },
+    //  code => {
+    //    this._logClose(code);
+    //  },
+    //);
     await this._fs.remove(composeConfigPath)
     if(stakingExitCode !== 0) {
       throw new Error(`Docker run for ${stakingDockerImage} failed with exit code ${stakingExitCode}`);
     }
     while (await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.stakingDockerName())){
       console.log("Creating deposit file.")
-      await timeout(10000)
+      await timeout(5000)
     };
     const files = await this._fs.readdir(stakingDir)
     const timestamps: Array<number> = [];
@@ -1387,17 +1394,17 @@ export class Ethereum extends EthereumPreMerge {
 
   async dockerAttach(): Promise<ChildProcess[]> {
     const instances = []
-    const instance = this._docker.attach(
-      this.id,
-      output => this._logOutput('execution - ' + output),
-      err => {
-        this._logError(err);
-      },
-      code => {
-        this._logClose(code);
-      },
-    );
-    instances.push(instance)
+    // const instance = this._docker.attach(
+    //   this.id,
+    //   output => this._logOutput('execution - ' + output),
+    //   err => {
+    //     this._logError(err);
+    //   },
+    //   code => {
+    //     this._logClose(code);
+    //   },
+    // );
+    // instances.push(instance)
     const consensusInstance = this._docker.attach(
       this.consensusDockerName(),
       output => this._logOutput('consensus - ' + output),
@@ -1769,7 +1776,18 @@ export class Ethereum extends EthereumPreMerge {
       }
     }
     await this._fs.writeFile(composeFilePath, JSON.stringify(composeFile));
-    await this._docker.composeDo(path.join(this.configDir, 'docker-compose.yml'), ['up', '-d', '--remove-orphans']) // need to restart here to load in secrets and then rm dir
+    await new Promise<number>((resolve, reject) => {
+      this._docker.composeDo(path.join(this.configDir, 'docker-compose.yml'), ['up', '-d', '--remove-orphans'], 
+      output => this._logOutput(output),
+          err => {
+            this._logError(err);
+            reject(err);
+          },
+          code => {
+            resolve(code);
+          },
+      )
+    }); // need to restart here to load in secrets and then rm dir
     await timeout(50000) // wait for container to restart before removing secrets dir
     await this._fs.remove(secretsDir)
     await this.dockerAttach()
@@ -1779,18 +1797,25 @@ export class Ethereum extends EthereumPreMerge {
   async lighthouseImportValidators(password: string): Promise<boolean> {
     // write validator_definitions.yml
     // write keystore files in pubkeydir/
+    const definitionsDir = path.join(this.walletDir, 'validators')
+    //const definitionsPath = path.join(definitionsDir, 'validator_definitions.yml')
+    const slashingPath = path.join(definitionsDir, 'slashing_protection.sqlite')
+    await this._fs.ensureDir(definitionsDir)
+    const slashingDBExists = await this._fs.pathExists(slashingPath);
+    if (!slashingDBExists) {
+      // first try moving db from default folder
+      const defaultSlashingPath = path.join(this.dataDir, this.network.toLowerCase(), 'validators', 'slashing_protection.sqlite')
+      //await this._fs.copy(defaultSlashingPath, slashingPath)
+      //this._docker.run(this.validatorDockerImage + ' validator_client', ['-v', `${this.walletDir}/validators/slashing_protection.sqlite:/home/`])
+      // init new db, not recommended
 
-    const definitionsPath = path.join(this.configDir, 'validator_definitions.yml')
-    let validatorDefinitions = lighthouseBase
+    }
+    //let validatorDefinitions = ''
+    //validatorDefinitions += lighthouseBase
     //console.log(password)
-
-    
     const composeFilePath = path.join(this.configDir, 'docker-compose.yml')
     const composeFile = JSON.parse(await this._fs.readFile(composeFilePath))
-    const secretsDir = await getSecretsDir(uuid())
-    const passwordSecretPath = path.join(secretsDir, 'pass.pwd');
-    await this._fs.writeFile(passwordSecretPath, password)
-    // //await this._fs.chmod(passwordSecretPath, '0600')
+    //await this._fs.chmod(passwordSecretPath, '0600')
     // const keyPathname = `keystore.json`;
     if (Object.keys(this.validators).length > 0) {
       await this._fs.ensureDir(path.join(this.walletDir, 'validators'))
@@ -1804,16 +1829,78 @@ export class Ethereum extends EthereumPreMerge {
         //composeFile.secrets[passwordFilename] = { file: passwordSecretPath }
         //const pubDir = path.join(this.walletDir, 'validators', hexPrefix(validator.pubkey))
         //await this._fs.ensureDir(pubDir)
-        await this._fs.writeFile(path.join(this.walletDir, 'validators', keyPathname), validatorKeystore, 'utf8')
+        //await this._fs.writeFile(path.join(this.walletDir, 'validators', keyPathname), validatorKeystore, 'utf8')
 
-        validatorDefinitions += lighthouseValidator.replace('{{PUBLIC_KEY}}', hexPrefix(validator.pubkey))
-                                                   .replace('{{KEYSTORE_PATH}}', keyPathname)
+        //validatorDefinitions += lighthouseValidator.replace('{{PUBLIC_KEY}}', hexPrefix(validator.pubkey))
+        //                                           .replace('{{KEYSTORE_PATH}}', keyPathname)
       }
     }
-    await this._fs.writeFile(definitionsPath, validatorDefinitions)
+    //await this._fs.writeFile(definitionsPath, validatorDefinitions)
+    let flag = true
+    this._docker.composeDo(path.join(this.configDir, 'docker-compose.yml'), ['down', 'validatorService'])
+      .on('close', (code) => {
+      flag = false
+    })
+    while (flag) {
+      console.log(flag)
+      await timeout(10)
+    }
+    //await timeout(10000)
+    const secretsDir = await getSecretsDir(uuid())
+    const passwordSecretPath = path.join(secretsDir, 'pass.pwd');
     composeFile.secrets.password.file = passwordSecretPath;
-    await this._fs.writeFile(composeFilePath, JSON.stringify(composeFile));
-    await this._docker.composeDo(path.join(this.configDir, 'docker-compose.yml'), ['restart', 'validatorService'])
+    //console.log(1855, composeFile, composeFile.services.validatorService.command)
+    const command = composeFile.services.validatorService.command
+    composeFile.services.validatorService.command = ` lighthouse --network ${this.network.toLowerCase()} account validator --validators-dir=/root/keystore/validators import --reuse-password --stdin-inputs --password-file=/run/secrets/password  --directory=/root/keystore/validator_keys `
+    
+    await this._fs.ensureDir(secretsDir)
+    await this._fs.writeFile(passwordSecretPath, password)
+    await this._fs.writeJson(composeFilePath, composeFile, {spaces: 2});
+    //console.log(1855, composeFile)
+    await new Promise<number>((resolve, reject) => {
+      this._docker.composeDo(path.join(this.configDir, 'docker-compose.yml'), 
+      ['up', '-d', 'validatorService',], //'lighthouse', `--network ${this.network.toLowerCase()} account validator --validators-dir=/root/keystore/validators import --reuse-password --stdin-inputs --password-file=/run/secrets/password  --directory=/root/keystore/validator_keys `],
+      output => this._logOutput(output),
+          err => {
+            this._logError(err);
+            reject(err);
+          },
+          code => {
+            resolve(code);
+          },
+      ).on('close', (code) => {
+        flag = false
+      })
+      while (flag) {
+        console.log(flag)
+        timeout(10)
+      }
+    });
+    composeFile.services.validatorService.command = command;
+    await this._fs.writeJson(composeFilePath, composeFile, {spaces: 2});
+    // replace password with dir
+    if (await this._fs.pathExists(path.join(this.walletDir, 'validators', 'validator_keys'))) {
+      const validatorDefinitions = await this._fs.readFile(path.join(this.walletDir, 'validators', 'validator_definitions.yml'), 'utf8')
+      await this._fs.writeFile(path.join(this.walletDir, 'validators'), validatorDefinitions.replace(password, '/run/secrets/password'))  
+    }
+    // const initSlashing =  this._docker.run(this.validatorDockerImage + ' validator_client --validators-dir=/root/keystore/validators --init-slashing-protection ', 
+    //                 ['--name', this.validatorDockerName() + '-import',
+    //                 '-v', `$${this.walletDir}/validators/:/root/keystore/validators`,
+    //               ])
+    // this._docker.attach(this.validatorDockerName() + '-import')
+    // let flag = true
+    // while (flag) {
+    //   initSlashing.on('close', (code) => {
+    //     flag = false
+    //   })
+    //   await timeout(1)
+    // }
+    //
+    console.log(1822, composeFile, passwordSecretPath)
+    await this._fs.remove(passwordSecretPath)
+    await this._fs.ensureDir(secretsDir)
+    await this._fs.writeFile(passwordSecretPath, password)
+    this._docker.composeDo(path.join(this.configDir, 'docker-compose.yml'), ['up', '-d', 'validatorService', '--remove-orphans'])
     await timeout(50000) // wait for container to restart before removing secrets dir
     await this._fs.remove(secretsDir)
     // await this.dockerAttach()
@@ -1881,7 +1968,7 @@ export class Ethereum extends EthereumPreMerge {
     if (!this.eth1Address || this.eth1Address == '') {
       this.eth1Address = Wallet.fromMnemonic(mnemonic, eth1DerivationPath).address;
       console.log("Eth1 Wallet address to fund with 32ETH + gas to per Validator: " + this.eth1Address)
-      console.log("You can also find this at suggested-fee-recipient: in config/prysm-validator.yml");
+      console.log("You should also be able to find this as the suggested-fee-recipient parameter in the validator config");
     }
     await timeout(5000);
     console.log("Mnemonic encrypted"); //, mnemonic);

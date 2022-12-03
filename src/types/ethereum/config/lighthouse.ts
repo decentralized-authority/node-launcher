@@ -6,5 +6,5 @@ export const validator = `- enabled: true
   description: ""
   type: local_keystore
   voting_keystore_path: /root/keystore/validators/{{KEYSTORE_PATH}}
-  voting_keystore_password_path: /root/secrets/password
+  voting_keystore_password_path: /run/secrets/password
 `
