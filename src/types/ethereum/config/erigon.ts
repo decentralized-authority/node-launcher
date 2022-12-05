@@ -3,6 +3,7 @@ datadir = "/erigon/data/erigon"
 port = "{{PEER_PORT}}"
 chain = "{{NETWORK}}"
 http = "true"
+externalcl = "true"
 
 "http.addr" = "0.0.0.0"
 "http.api" = "eth,erigon,web3,net,debug,trace,txpool,miner"

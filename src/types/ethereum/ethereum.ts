@@ -423,6 +423,20 @@ export class Ethereum extends EthereumPreMerge {
       case NodeClient.NETHERMIND:
         versions = [
           {
+            version: '1.14.7',
+            clientVersion: '1.14.7',
+            image: 'nethermind/nethermind:1.14.7',
+            dataDir: '/nethermind/nethermind_db',
+            walletDir: '/nethermind/keystore',
+            configDir: '/nethermind/config',
+            networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+            breaking: false,
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+              const { network = '' } = data;
+              return ` --configsDirectory ${this.configDir} --config ${network.toLowerCase()}`;
+            },
+          },
+          {
             version: '1.14.5',
             clientVersion: '1.14.5',
             image: 'nethermind/nethermind:1.14.5',
@@ -472,6 +486,20 @@ export class Ethereum extends EthereumPreMerge {
         break;
       case NodeClient.ERIGON:
         versions = [
+          {
+            version: '2.30.0',
+            clientVersion: '2.30.0',
+            image: 'thorax/erigon:v2.30.0',
+            dataDir: '/erigon/data',
+            walletDir: '/erigon/keystore',
+            configDir: '/erigon/config',
+            networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+            breaking: false,
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+              const { network = '' } = data;
+              return ` erigon --config=${path.join(this.configDir, Ethereum.configName(data))}  `;
+            },
+          },
           {
             version: '2.29.0',
             clientVersion: '2.29.0',
@@ -561,6 +589,19 @@ export class Ethereum extends EthereumPreMerge {
       case NodeClient.TEKU:
         versions = [
           {
+            version: '22.11.0',
+            clientVersion: '22.11.0',
+            image: 'consensys/teku:22.11.0',
+            dataDir: '/opt/teku/data',
+            walletDir: '/opt/teku/keystore',
+            configDir: '/opt/teku/config',
+            networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+            breaking: false,
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+              return ` --config-file=${path.join(this.configDir, Ethereum.configName(data, consensusFlag))} `;
+            },
+          },
+          {
             version: '22.10.2',
             clientVersion: '22.10.2',
             image: 'icculp/teku:22.10.2',
@@ -577,6 +618,19 @@ export class Ethereum extends EthereumPreMerge {
         break;
       case NodeClient.NIMBUS:
         versions = [
+          {
+            version: '22.11.0',
+            clientVersion: '22.11.0',
+            image: 'statusim/nimbus-eth2:multiarch-v22.11.0',
+            dataDir: '/var/lib/data',
+            walletDir: '/var/lib/keystore',
+            configDir: '/var/lib/config',
+            networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+            breaking: false,
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+              return ` --config-file=${path.join(this.configDir, Ethereum.configName(data, consensusFlag))} `;
+            },
+          },
           {
             version: '22.10.1',
             clientVersion: '22.10.1',
@@ -642,9 +696,9 @@ export class Ethereum extends EthereumPreMerge {
   ];
 
   static consensusClients = [
-    // NodeClient.PRYSM,
-    // NodeClient.TEKU,
-    // NodeClient.NIMBUS,
+    NodeClient.PRYSM,
+    NodeClient.TEKU,
+    NodeClient.NIMBUS,
     NodeClient.LIGHTHOUSE,
   ]
 
@@ -1093,7 +1147,9 @@ export class Ethereum extends EthereumPreMerge {
         secrets: [],
         restart: `on-failure:${this.restartAttempts}`,
       } as ContainerService
-    if (this.consensusClient == NodeClient.NIMBUS)
+    if (this.client == NodeClient.ERIGON)
+      executionService.user = "root"
+    if ([NodeClient.NIMBUS, NodeClient.TEKU].includes(this.consensusClient))
       consensusService.user = "root"
     const services: Services = {
       executionService: executionService,
