@@ -20,7 +20,8 @@ export const NodeClient = {
   ERIGON: 'ERIGON',
   PRYSM: 'PRYSM',
   TEKU: 'TEKU',
-  NIMBUS: 'NIMBUS'
+  NIMBUS: 'NIMBUS',
+  LIGHTHOUSE: 'LIGHTHOUSE'
 };
 
 export const Role = {
