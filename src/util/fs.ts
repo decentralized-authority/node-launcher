@@ -76,4 +76,12 @@ export class FS {
     }
   }
 
+  async chmod(dirPath: string, mode: string): Promise<void> {
+    if(this._useDocker) {
+      return this._fs.chmod(dirPath, mode);
+    } else {
+      return this._fs.chmod(dirPath, mode);
+    }
+  }
+
 }
