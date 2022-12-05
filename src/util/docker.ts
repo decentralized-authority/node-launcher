@@ -281,8 +281,9 @@ export class Docker extends EventEmitter {
   public composeDo(configPath: string, args: string[], onOutput?: (output: string) => void, onErr?: (err: Error) => void, onClose?: (statusCode: number) => void, silent = false): ChildProcess {
     const command = 'docker-compose';
     const spawnArgs = [
+      '--compatibility',
       '-f',
-      configPath,
+      configPath, 
       // 'up', rather than create a new function for docker-compose run --rm, or down or whatever else, should just specify command as first arg of args
       ...args,
     ];

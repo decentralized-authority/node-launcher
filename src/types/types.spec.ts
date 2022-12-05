@@ -23,21 +23,21 @@ import { IOTEX } from './iotex/iotex';
 import { Polygon } from './polygon/polygon';
 
 const chains: [{name: string, constructor: any}] = [
-  // {name: 'Bitcoin', constructor: Bitcoin},
-  // {name: 'BitcoinCash', constructor: BitcoinCash},
-  // {name: 'Dash', constructor: Dash},
-  // {name: 'LBRY', constructor: LBRY},
-  // {name: 'Litecoin', constructor: Litecoin},
-  // {name: 'Ethereum', constructor: Ethereum},
-  // {name: 'BinanceSC', constructor: BinanceSC},
-  // {name: 'Xdai', constructor: Xdai},
-  // {name: 'Avalanche', constructor: Avalanche},
+  {name: 'Bitcoin', constructor: Bitcoin},
+  {name: 'BitcoinCash', constructor: BitcoinCash},
+  {name: 'Dash', constructor: Dash},
+  {name: 'LBRY', constructor: LBRY},
+  {name: 'Litecoin', constructor: Litecoin},
+  {name: 'Ethereum', constructor: Ethereum},
+  {name: 'BinanceSC', constructor: BinanceSC},
+  {name: 'Xdai', constructor: Xdai},
+  {name: 'Avalanche', constructor: Avalanche},
   {name: 'Pocket', constructor: Pocket},
-  // {name: 'Fuse', constructor: Fuse},
-  // {name: 'Harmony', constructor: Harmony},
-  // {name: 'OEC', constructor: OKEX},
-  // {name: 'IoTeX', constructor: IOTEX},
-  // {name: 'Polygon', constructor: Polygon},
+  {name: 'Fuse', constructor: Fuse},
+  {name: 'Harmony', constructor: Harmony},
+  {name: 'OEC', constructor: OKEX},
+  {name: 'IoTeX', constructor: IOTEX},
+  {name: 'Polygon', constructor: Polygon},
 ];
 
 chains.forEach(({ name, constructor: NodeConstructor }) => {
@@ -287,7 +287,7 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
           it('should start a node', async function() {
 
             this.timeout(360000);
-
+            
             const id = uuid();
             node = new NodeConstructor({
               id,
@@ -330,6 +330,7 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
             await node.start(keyPassword);
             await new Promise(resolve => setTimeout(resolve, 10000));
             await node.stop();
+            await new Promise(resolve => setTimeout(resolve, 20000));
             for(const instance of node.instances()) {
               instance.exitCode.should.be.a.Number();
             }
@@ -442,6 +443,7 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
               runningStatus.should.not.equal(Status.STOPPED);
               Object.values(Status).includes(runningStatus).should.be.True();
               await node.stop();
+              await new Promise(resolve => setTimeout(resolve, 10000));
               const stoppedStatus = await node.getStatus();
               stoppedStatus.should.equal(Status.STOPPED);
             });
