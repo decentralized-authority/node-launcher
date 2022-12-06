@@ -429,7 +429,7 @@ export class Ethereum extends EthereumPreMerge {
             dataDir: '/nethermind/nethermind_db',
             walletDir: '/nethermind/keystore',
             configDir: '/nethermind/config',
-            networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+            networks: [NetworkType.MAINNET, NetworkType.GOERLI, NetworkType.XDAI],
             breaking: false,
             generateRuntimeArgs(data: EthereumCryptoNodeData): string {
               const { network = '' } = data;
@@ -595,7 +595,7 @@ export class Ethereum extends EthereumPreMerge {
             dataDir: '/opt/teku/data',
             walletDir: '/opt/teku/keystore',
             configDir: '/opt/teku/config',
-            networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+            networks: [NetworkType.MAINNET, NetworkType.GOERLI, NetworkType.XDAI],
             breaking: false,
             generateRuntimeArgs(data: EthereumCryptoNodeData): string {
               return ` --config-file=${path.join(this.configDir, Ethereum.configName(data, consensusFlag))} `;
@@ -708,14 +708,15 @@ export class Ethereum extends EthereumPreMerge {
   ];
 
   static networkTypes = [
-    //NetworkType.MAINNET,
+    NetworkType.MAINNET,
     //NetworkType.RINKEBY,
     NetworkType.GOERLI,
+    NetworkType.XDAI,
   ];
 
   static roles = [
     Role.NODE,
-    //Role.VALIDATOR,
+    Role.VALIDATOR,
   ];
 
   static defaultRPCPort = {
@@ -733,6 +734,7 @@ export class Ethereum extends EthereumPreMerge {
   static defaultAuthPort = {
     [NetworkType.MAINNET]: 8551,
     [NetworkType.GOERLI]: 7651,
+    [NetworkType.XDAI]: 8551,
   };
 
   static defaultConsensusRPCPort = {
@@ -810,6 +812,9 @@ export class Ethereum extends EthereumPreMerge {
           case NetworkType.RINKEBY:
             config = nethermindConfig.rinkeby;
             break;
+          case NetworkType.XDAI:
+              config = nethermindConfig.xdai;
+              break;
           }
         break;
       case NodeClient.ERIGON:
@@ -837,8 +842,13 @@ export class Ethereum extends EthereumPreMerge {
         let initialState: string;
         if(network === NetworkType.GOERLI) {
           initialState = "https://goerli.beaconstate.info/eth/v2/debug/beacon/states/finalized"
-        } else { // MAINNET
+        } else if (network === NetworkType.MAINNET) { // MAINNET
           initialState = "https://beaconstate.info/eth/v2/debug/beacon/states/finalized"
+        } else if (network === NetworkType.XDAI) {
+          initialState = "https://checkpoint.gnosischain.com"
+          network = "gnosis"
+        } else {
+          initialState = ""
         }
         config = tekuConfig
           .replace('{{EXEC}}', `http://${id}:${authPort.toString(10)}`)

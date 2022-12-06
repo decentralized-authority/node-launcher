@@ -4,6 +4,7 @@ export const NetworkType = {
   RINKEBY: 'RINKEBY',
   GOERLI: 'GOERLI',
   ROPSTEN: 'ROPSTEN',
+  XDAI: 'XDAI',
 };
 
 export const NodeType = {

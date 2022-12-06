@@ -177,3 +177,53 @@ export const rinkeby = `
   },
 }
 `;
+
+export const xdai = `{
+  "Init": {
+    "ChainSpecPath": "chainspec/xdai.json",
+    "GenesisHash": "0x4f1dd23188aab3a76b463e4af801b52b1248ef073c648cbdc4c9333d3da79756",
+    "BaseDbPath": "nethermind_db/xdai",
+    "LogFileName": "xdai.logs.txt",
+    "MemoryHint": 768000000
+  },
+  "JsonRpc": {
+    "Enabled": true,
+    "Port": {{RPC_PORT}},
+    "EnginePort": {{AUTH_PORT}},
+    "EngineHost": "0.0.0.0",
+    "JwtSecretFile": "/nethermind/config/jwt.hex",
+  },
+  "Sync": {
+    "FastSync": true,
+    "PivotNumber": 25050000,
+    "PivotHash": "0x7cbc6a801a57ae7b112c30d189914b9dacd05ccb66b4377fc12c7aeecb4bdb2d",
+    "PivotTotalDifficulty": "8524073291369508509757533916165793696614115624",
+    "FastBlocks": true,
+    "UseGethLimitsInFastBlocks": false,
+    "FastSyncCatchUpHeightDelta": 10000000000
+  },
+  "Merge": {
+    "SecondsPerSlot": 5
+  },
+  "Mining": {
+    "MinGasPrice": "1000000000"
+  },
+  "Network": {
+    "DiscoveryPort": {{PEER_PORT}},
+    "P2PPort": {{PEER_PORT}}
+  },
+  "EthStats": {
+    "Name": "Nethermind xDai"
+  },
+  "Metrics": {
+    "NodeName": "xDai"
+  },
+  "Bloom": {
+    "IndexLevelBucketSizes": [
+      16,
+      16,
+      16
+    ]
+  }
+}
+`
