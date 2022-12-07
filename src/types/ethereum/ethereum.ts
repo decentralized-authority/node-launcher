@@ -56,11 +56,7 @@ interface Validators {
   [key: number]: ValidatorObject
 }
 
-interface Secrets {
-  [key: string]: {
-    file: string
-  }
-}
+
 
 interface DepositKeyInterface {
   pubkey: string;
@@ -74,9 +70,7 @@ interface DepositKeyInterface {
 }
 
 interface Services {
-  executionService: ContainerService
-  consensusService: ContainerService
-  validatorService?: ContainerService
+  [key: string]: ContainerService
 }
 
 interface ContainerService {
@@ -1171,8 +1165,8 @@ export class Ethereum extends EthereumPreMerge {
     if ([NodeClient.NIMBUS, NodeClient.TEKU].includes(this.consensusClient))
       consensusService.user = "root"
     const services: Services = {
-      executionService: executionService,
-      consensusService: consensusService,
+      [this.id]: executionService,
+      [this.consensusDockerName()]: consensusService,
       //validatorService?: validatorService
     } as Services
     const composeConfig = {
@@ -1195,7 +1189,7 @@ export class Ethereum extends EthereumPreMerge {
       switch (this.consensusClient) {
         case NodeClient.PRYSM: {
           await this.prysmImportValidators(password);
-          services['validatorService'] = {
+          services[this.validatorDockerName()] = {
             image: this.validatorDockerImage,
             container_name: this.validatorDockerName(),
             networks: [this.dockerNetwork],
@@ -1223,13 +1217,13 @@ export class Ethereum extends EthereumPreMerge {
         }
         case NodeClient.TEKU: {
           const tekuValidators = await this.tekuImportValidators(password);
-          services['consensusService']['secrets'] = ['password']
+          services[this.consensusDockerName()]['secrets'] = ['password']
           //const tekuConfig = 
           //this._fs.
           break;
         }
         case NodeClient.LIGHTHOUSE: {
-          services['validatorService'] = {
+          services[this.validatorDockerName()] = {
             image: this.validatorDockerImage,
             container_name: this.validatorDockerName(),
             networks: [this.dockerNetwork],
@@ -1264,7 +1258,7 @@ export class Ethereum extends EthereumPreMerge {
     const args = [
       'up',
       '-d',
-      '--remove-orphans',
+      //'--remove-orphans',
     ];
     const exitCode = await new Promise<number>((resolve, reject) => {
       this._docker.composeDo(
@@ -1459,7 +1453,7 @@ export class Ethereum extends EthereumPreMerge {
       this._docker.composeDo(
         path.join(this.configDir, 'docker-compose.yml'),
         [
-          'up', '-d', '--remove-orphans'
+          'up', '-d', //'--remove-orphans'
         ],
         output => this._logOutput(output),
         err => {
@@ -1858,7 +1852,7 @@ export class Ethereum extends EthereumPreMerge {
     }
     await this._fs.writeFile(composeFilePath, JSON.stringify(composeFile));
     await new Promise<number>((resolve, reject) => {
-      this._docker.composeDo(path.join(this.configDir, 'docker-compose.yml'), ['up', '-d', '--remove-orphans'], 
+      this._docker.composeDo(path.join(this.configDir, 'docker-compose.yml'), ['up', '-d', ], //'--remove-orphans'], 
       output => this._logOutput(output),
           err => {
             this._logError(err);
@@ -1923,7 +1917,7 @@ export class Ethereum extends EthereumPreMerge {
     }
     await this._fs.remove(passwordSecretPath)
     await this._fs.writeFile(passwordSecretPath, password)
-    this._docker.composeDo(path.join(this.configDir, 'docker-compose.yml'), ['up', '-d', 'validatorService', '--remove-orphans'])
+    this._docker.composeDo(path.join(this.configDir, 'docker-compose.yml'), ['up', '-d', 'validatorService', ]) //'--remove-orphans'])
     this._docker.attach(this.validatorDockerName())
     await this._fs.remove(secretsDir)
     return true;

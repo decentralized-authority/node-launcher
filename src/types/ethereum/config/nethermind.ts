@@ -189,6 +189,7 @@ export const xdai = `{
   "JsonRpc": {
     "Enabled": true,
     "Port": {{RPC_PORT}},
+    "Host": "0.0.0.0",
     "EnginePort": {{AUTH_PORT}},
     "EngineHost": "0.0.0.0",
     "JwtSecretFile": "/nethermind/config/jwt.hex",
