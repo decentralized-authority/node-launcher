@@ -192,6 +192,18 @@ export const xdai = `{
     "EnginePort": {{AUTH_PORT}},
     "EngineHost": "0.0.0.0",
     "JwtSecretFile": "/nethermind/config/jwt.hex",
+    "EnabledModules": [
+      "Eth",
+      "Subscribe",
+      "Trace",
+      "TxPool",
+      "Web3",
+      "Personal",
+      "Proof",
+      "Net",
+      "Parity",
+      "Health"
+    ],
   },
   "Sync": {
     "FastSync": true,

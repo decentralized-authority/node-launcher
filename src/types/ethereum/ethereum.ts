@@ -656,12 +656,21 @@ export class Ethereum extends EthereumPreMerge {
             dataDir: '/root/data',
             walletDir: '/root/keystore',
             configDir: '/root/config',
-            networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+            networks: [NetworkType.MAINNET, NetworkType.GOERLI, NetworkType.XDAI],
             breaking: false,
             generateRuntimeArgs(data: EthereumCryptoNodeData): string {
               const { consensusRPCPort, consensusPeerPort, network, id, rpcPort, authPort } = data;
-              const checkpointSyncUrl = network == NetworkType.MAINNET ? 'https://beaconstate.ethstaker.cc' : 'https://goerli.beaconstate.ethstaker.cc'
-              return ` lighthouse beacon --http --eth1 --checkpoint-sync-url="${checkpointSyncUrl}" --datadir=/root/data --execution-endpoint=http://${id}:${authPort} --execution-jwt=/root/config/jwt.hex --port=${consensusPeerPort} --http-address=0.0.0.0 --http-allow-origin=* --http-port=${consensusRPCPort} --network=${network?.toLowerCase()}  `;
+              let network_ = network || '';
+              let  checkpointSyncUrl = ''
+              if (network == NetworkType.MAINNET) {
+                checkpointSyncUrl = 'https://beaconstate.ethstaker.cc';
+              } else if (network === NetworkType.GOERLI) {
+                checkpointSyncUrl = 'https://goerli.beaconstate.ethstaker.cc'
+              } else if (network === NetworkType.XDAI) {
+                checkpointSyncUrl = 'https://checkpoint.gnosischain.com/'
+                network_ = 'gnosis'
+              }
+              return ` lighthouse beacon --http --eth1 --checkpoint-sync-url="${checkpointSyncUrl}" --datadir=/root/data --execution-endpoint=http://${id}:${authPort} --execution-jwt=/root/config/jwt.hex --port=${consensusPeerPort} --http-address=0.0.0.0 --http-allow-origin=* --http-port=${consensusRPCPort} --network=${network_.toLowerCase()}  `;
             },
           },
           {
