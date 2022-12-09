@@ -1843,7 +1843,7 @@ export class Ethereum extends EthereumPreMerge {
         const validatorKeystore = validator.keystore
         validator.status = await this.validatorStatus(validator.pubkey)
         const passwordFilename = hexPrefix(validator.pubkey)
-        composeFile.services.consensusService.secrets.push(passwordFilename)
+        composeFile.services[this.consensusDockerName()].secrets.push(passwordFilename)
         composeFile.secrets[passwordFilename] = { file: passwordSecretPath }
         const pubDir = path.join(this.walletDir, 'validators', hexPrefix(validator.pubkey))
         await this._fs.ensureDir(pubDir)
@@ -1863,7 +1863,7 @@ export class Ethereum extends EthereumPreMerge {
           },
       )
     });
-    await timeout(50000)
+    //await timeout(50000)
     await this._fs.remove(secretsDir)
     await this.dockerAttach()
     return true;
