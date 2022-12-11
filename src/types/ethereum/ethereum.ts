@@ -969,7 +969,7 @@ export class Ethereum extends EthereumPreMerge {
   consensusRPCPort: number;
   consensusDockerImage: string;
   validatorDockerImage: string;
-  validatorRPCPort = Ethereum.defaultValidatorRPCPort[this.network ? this.network : 0];
+  validatorRPCPort: number;
   passwordPath = '';
   eth1Address = '';
   validators: Validators; //| Array<number>;
@@ -1015,7 +1015,7 @@ export class Ethereum extends EthereumPreMerge {
     this.consensusRPCPort = data.consensusRPCPort || Ethereum.defaultConsensusRPCPort[this.network];
     this.consensusDockerImage = this.remote ? '' : data.consensusDockerImage ? data.consensusDockerImage : (consensusVersionObj.consensusImage || consensusVersionObj.image || '');
     this.validatorDockerImage = this.remote ? '' : data.validatorDockerImage ? data.validatorDockerImage : (consensusVersionObj.validatorImage || '');
-    this.validatorRPCPort = data.validatorRPCPort || this.validatorRPCPort;
+    this.validatorRPCPort = data.validatorRPCPort || Ethereum.defaultValidatorRPCPort[this.network];
     this.passwordPath = data.passwordPath || this.passwordPath;
     this.mnemonicEncrypted = data.mnemonicEncrypted || <EncryptedKeystore>{};
     this.eth1Address = data.eth1Address || this.eth1Address;
@@ -1035,6 +1035,7 @@ export class Ethereum extends EthereumPreMerge {
       consensusClient: this.consensusClient,
       consensusVersion: this.consensusVersion,
       consensusRPCPort: this.consensusRPCPort,
+      validatorRPCPort: this.validatorRPCPort,
       mnemonicEncrypted: this.mnemonicEncrypted,
       consensusPeerPort: this.consensusPeerPort,
       consensusDockerImage: this.consensusDockerImage,
@@ -1206,7 +1207,6 @@ export class Ethereum extends EthereumPreMerge {
     if (this.role === Role.VALIDATOR && password) {
       switch (this.consensusClient) {
         case NodeClient.PRYSM: {
-          await this.prysmImportValidators(password);
           services[this.validatorDockerName()] = {
             image: this.validatorDockerImage,
             container_name: this.validatorDockerName(),
@@ -1227,10 +1227,12 @@ export class Ethereum extends EthereumPreMerge {
               `${this.dataDir}:${consensusContainerDataDir}`,
               `${this.walletDir}:${consensusContainerWalletDir}`,
             ],
-            command: consensusVersionData.generateRuntimeArgs(this),
+            command: ` --config-file=/root/config/prysm-validator.yaml --${this.network.toLowerCase()}`,
             secrets: ['password'],
             restart: `on-failure:${this.restartAttempts}`,
           } as ContainerService
+          await fs.writeJson(composeConfigPath, composeConfig, {spaces: 2});
+          await this.prysmImportValidators(password);
           break;
         }
         case NodeClient.TEKU: {
@@ -1469,7 +1471,7 @@ export class Ethereum extends EthereumPreMerge {
     await this._fs.writeJson(composeFilePath, composeFile, {spaces: 2});
     await new Promise<number>((resolve, reject) => {
       this._docker.composeDo(
-        path.join(this.configDir, 'docker-compose.yml'),
+        composeFilePath,
         [
           'up', '-d', //'--remove-orphans'
         ],
@@ -1800,7 +1802,8 @@ export class Ethereum extends EthereumPreMerge {
 
   async prysmImportValidators(password: string): Promise<boolean> {
     await this.generatePrysmValidatorConfig()
-    const args = await this.generateConsensusArgs(password)
+    console.log(1804, 'prysmImportValidators')
+    //const args = await this.generateConsensusArgs(password)
     const stakingDir = path.join(this.walletDir, 'validators');
     await this._fs.ensureDir(stakingDir);
     const filename = `keystore-m_12381_3600_0_0_accountIndex.json`;
@@ -1812,38 +1815,95 @@ export class Ethereum extends EthereumPreMerge {
         await this._fs.writeFile(path.join(stakingDir, filename.replace('accountIndex', validatorIndex.toString())), validatorKeystore, 'utf8')
       }
     }
-    const importRun = ` --config-file=/root/config/prysm-validator.yaml accounts import --${this.network.toLowerCase()}`;
-    const importArgs = [
-      ...args,
-      '--rm',
-      '--name', this.id + '-import',
-    ];
-    const importExitCode = await new Promise<number>((resolve, reject) => {
-      this._docker.run(
-        this.validatorDockerImage + importRun,
-        importArgs,
-        output => this._logOutput(output),
-        err => {
-          this._logError(err);
-          reject(err);
-        },
-        code => {
-          resolve(code);
-        },
-      );
+
+    // {
+    //   image: this.validatorDockerImage,
+    //   container_name: this.validatorDockerName(),
+    //   networks: [this.dockerNetwork],
+    //   deploy: {
+    //     resources: {
+    //       limits: {
+    //         cpus: this.dockerCPUs.toString(10),
+    //         memory: this.dockerMem.toString(10) + 'MB',
+    //       }
+    //     }
+    //   },
+    //   ports: [
+    //     `${this.validatorRPCPort}:${this.validatorRPCPort}`,
+    //     ],
+    //   volumes: [
+    //     `${this.configDir}:${consensusContainerConfigDir}`,
+    //     `${this.dataDir}:${consensusContainerDataDir}`,
+    //     `${this.walletDir}:${consensusContainerWalletDir}`,
+    //   ],
+    //   command: consensusVersionData.generateRuntimeArgs(this),
+    //   secrets: ['password'],
+    //   restart: `on-failure:${this.restartAttempts}`,
+    // } as ContainerService
+
+
+// docker run the import on the already running service?
+    // let flag = true
+    // this._docker.composeDo(path.join(this.configDir, 'docker-compose.yml'), ['down', this.validatorDockerName()]) // can't import while slashing db locked
+    //   .on('close', (code) => {
+    //   flag = false
+    // })
+    // while (flag) {
+    //   await timeout(10)
+    // }
+    const composeFilePath = path.join(this.configDir, 'docker-compose.yml')
+    const composeFile = JSON.parse(await this._fs.readFile(composeFilePath))
+    const secretsDir = await getSecretsDir(uuid())
+    const passwordSecretPath = path.join(secretsDir, 'pass.pwd');
+    composeFile.secrets.password.file = passwordSecretPath;
+    //const command = composeFile.services[this.validatorDockerName()].command
+    const importName = this.validatorDockerName() + '-import';
+    composeFile.services[importName] = { ...composeFile.services[this.validatorDockerName()] };
+    composeFile.services[importName].container_name = importName, composeFile.services[importName].ports = [];
+    composeFile.services[importName].command = ` --config-file=/root/config/prysm-validator.yaml accounts import --${this.network.toLowerCase()}`;
+    await this._fs.ensureDir(secretsDir)
+    await this._fs.writeFile(passwordSecretPath, password)
+    await this._fs.writeJson(composeFilePath, composeFile, {spaces: 2});
+    await new Promise<number>((resolve, reject) => {
+      this._docker.composeDo(composeFilePath, 
+      ['run', '--rm', importName],
+      output => this._logOutput(output),
+          err => {
+            this._logError(err);
+            reject(err);
+          },
+          code => {
+            resolve(code);
+          },
+      )
     });
-    if(importExitCode !== 0)
-      throw new Error(`Docker run for ${this.validatorDockerImage} failed with exit code ${importExitCode}`);
-    const validatorInstance = this._docker.attach(
-      this.id + '-import',
-      output => this._logOutput('import - ' + output),
-      err => {
-        this._logError(err);
-      },
-      code => {
-        this._logClose(code);
-      },
-    );
+    this._docker.attach(importName)
+    while (await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(importName)) {
+      console.log(1916)
+      timeout(5000)
+    }
+    delete composeFile.services[importName]
+    // console.log(1884, composeFile.services)
+    // await timeout(10000)
+    await this._fs.writeJson(composeFilePath, composeFile, {spaces: 2});
+    await this._fs.remove(secretsDir)
+    await this._fs.ensureDir(secretsDir)
+    await this._fs.writeFile(passwordSecretPath, password)
+    await this._fs.writeJson(composeFilePath, composeFile, {spaces: 2});
+    await new Promise<number>((resolve, reject) => {
+      this._docker.composeDo(composeFilePath, 
+      ['up', '-d', this.validatorDockerName()],
+      output => this._logOutput(output),
+          err => {
+            this._logError(err);
+            reject(err);
+          },
+          code => {
+            resolve(code);
+          },
+      )
+    });
+    this._docker.attach(this.validatorDockerName())
     return true
   }
 
@@ -1870,7 +1930,7 @@ export class Ethereum extends EthereumPreMerge {
     }
     await this._fs.writeFile(composeFilePath, JSON.stringify(composeFile));
     await new Promise<number>((resolve, reject) => {
-      this._docker.composeDo(path.join(this.configDir, 'docker-compose.yml'), ['up', '-d', ], //'--remove-orphans'], 
+      this._docker.composeDo(composeFilePath, ['up', '-d', ], //'--remove-orphans'], 
       output => this._logOutput(output),
           err => {
             this._logError(err);
@@ -1900,7 +1960,7 @@ export class Ethereum extends EthereumPreMerge {
       return false
     }
     let flag = true
-    this._docker.composeDo(path.join(this.configDir, 'docker-compose.yml'), ['down', this.validatorDockerName()]) // can't import while slashing db locked
+    this._docker.composeDo(composeFilePath, ['down', this.validatorDockerName()]) // can't import while slashing db locked
       .on('close', (code) => {
       flag = false
     })
@@ -1917,7 +1977,7 @@ export class Ethereum extends EthereumPreMerge {
     await this._fs.writeJson(composeFilePath, composeFile, {spaces: 2});
     // import validators
     await new Promise<number>((resolve, reject) => {
-      this._docker.composeDo(path.join(this.configDir, 'docker-compose.yml'), 
+      this._docker.composeDo(composeFilePath, 
       ['up', '-d', this.validatorDockerName(),],
       output => this._logOutput(output),
           err => {
@@ -1944,7 +2004,7 @@ export class Ethereum extends EthereumPreMerge {
     await this._fs.writeFile(passwordSecretPath, password)
 
     //console.log(1928)
-    this._docker.composeDo(path.join(this.configDir, 'docker-compose.yml'), ['up', '-d', this.validatorDockerName(), ]) //'--remove-orphans'])
+    this._docker.composeDo(composeFilePath, ['up', '-d', this.validatorDockerName(), ]) //'--remove-orphans'])
     this._docker.attach(this.validatorDockerName())
     await this._fs.remove(secretsDir)
     return true;
