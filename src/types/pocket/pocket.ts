@@ -699,7 +699,7 @@ export class Pocket extends Bitcoin {
     const chainsData: {id: string}[] = JSON.parse(chainsJson);
     const chains = chainsData.map(c => c.id);
     const fee = 10000;
-    const command = `nodes stake custodial ${this.address} ${amount} ${chains.join(',')} https://${this.domain}:443 ${this.network.toLowerCase()} ${fee} ${this.network !== NetworkType.TESTNET} --pwd ${password}`;
+    const command = `nodes stake custodial ${this.address} ${amount} ${chains.join(',')} https://${this.domain}:443 ${this.network.toLowerCase()} ${fee} false --pwd ${password}`;
     const txPatt = /[0-9a-f]{64}/i;
     let outputStr = '';
     if(running) {
