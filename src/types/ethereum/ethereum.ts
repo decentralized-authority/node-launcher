@@ -1,4 +1,3 @@
-
 import { CryptoNodeData, VersionDockerImage } from '../../interfaces/crypto-node';
 import { defaultDockerNetwork, NetworkType, NodeClient, NodeType, Role, Status } from '../../constants';
 import { filterVersionsByNetworkType, splitVersion, timeout, getSecretsDir } from '../../util';
@@ -11,7 +10,7 @@ import * as prysmConfig from './config/prysm';
 import { base as erigonConfig } from './config/erigon';
 import { base as nimbusConfig, validator as nimbusValidatorConfig } from './config/nimbus';
 import { teku as tekuConfig, validator as tekuValidatorConfig } from './config/teku';
-import { base as lighthouseBase, validator as lighthouseValidator } from './config/lighthouse'
+import { base as lighthouseBase, validator as lighthouseValidator } from './config/lighthouse';
 import { EthereumPreMerge } from '../shared/ethereum-pre-merge';
 import { contractAbi } from './contract-abi';
 import { Wallet } from 'ethers';
@@ -23,7 +22,6 @@ import path from 'path';
 import os from 'os';
 import Web3 from 'web3';
 import { receiveMessageOnPort } from 'worker_threads';
-
 
 interface EthereumCryptoNodeData extends CryptoNodeData {
   jwt: string
@@ -56,8 +54,6 @@ interface ValidatorObject {
 interface Validators {
   [key: number]: ValidatorObject
 }
-
-
 
 interface DepositKeyInterface {
   pubkey: string;
@@ -731,14 +727,14 @@ export class Ethereum extends EthereumPreMerge {
             generateRuntimeArgs(data: EthereumCryptoNodeData): string {
               const { consensusRPCPort, consensusPeerPort, network, id, rpcPort, authPort } = data;
               let network_ = network || '';
-              let  checkpointSyncUrl = ''
+              let  checkpointSyncUrl = '';
               if (network == NetworkType.MAINNET) {
                 checkpointSyncUrl = 'https://beaconstate.ethstaker.cc';
               } else if (network === NetworkType.GOERLI) {
-                checkpointSyncUrl = 'https://goerli.beaconstate.ethstaker.cc'
+                checkpointSyncUrl = 'https://goerli.beaconstate.ethstaker.cc';
               } else if (network === NetworkType.XDAI) {
-                checkpointSyncUrl = 'https://checkpoint.gnosischain.com/'
-                network_ = 'gnosis'
+                checkpointSyncUrl = 'https://checkpoint.gnosischain.com/';
+                network_ = 'gnosis';
               }
               return ` lighthouse beacon --http --eth1 --checkpoint-sync-url="${checkpointSyncUrl}" --datadir=/root/data --execution-endpoint=http://${id}:${authPort} --execution-jwt=/root/config/jwt.hex --port=${consensusPeerPort} --http-address=0.0.0.0 --http-allow-origin=* --http-port=${consensusRPCPort} --network=${network_.toLowerCase()}  `;
             },
@@ -755,7 +751,7 @@ export class Ethereum extends EthereumPreMerge {
             breaking: false,
             generateRuntimeArgs(data: EthereumCryptoNodeData): string {
               const { consensusRPCPort, consensusPeerPort, network, id, rpcPort, authPort } = data;
-              const checkpointSyncUrl = network == NetworkType.MAINNET ? 'https://beaconstate.ethstaker.cc' : 'https://goerli.beaconstate.ethstaker.cc'
+              const checkpointSyncUrl = network == NetworkType.MAINNET ? 'https://beaconstate.ethstaker.cc' : 'https://goerli.beaconstate.ethstaker.cc';
               return ` lighthouse beacon --http --eth1 --checkpoint-sync-url="${checkpointSyncUrl}" --datadir=/root/data --execution-endpoint=http://${id}:${authPort} --execution-jwt=/root/config/jwt.hex --port=${consensusPeerPort} --http-address=0.0.0.0 --http-allow-origin=* --http-port=${consensusRPCPort} --network=${network?.toLowerCase()}  `;
             },
           },
@@ -779,7 +775,7 @@ export class Ethereum extends EthereumPreMerge {
     NodeClient.TEKU,
     NodeClient.NIMBUS,
     NodeClient.LIGHTHOUSE,
-  ]
+  ];
 
   static nodeTypes = [
     NodeType.FULL,
@@ -829,7 +825,7 @@ export class Ethereum extends EthereumPreMerge {
   static defaultValidatorRPCPort = {
     [NetworkType.MAINNET]: 7000,
     [NetworkType.GOERLI]: 16000,
-  }; // validator grpc gateway 
+  }; // validator grpc gateway
 
   static defaultCPUs = 8;
 
@@ -843,7 +839,7 @@ export class Ethereum extends EthereumPreMerge {
     if(typeof client === 'string') {
       clientStr = client;
     } else {
-      if (consensus){
+      if (consensus) {
         clientStr = client.consensusClient;
         peerPort = client.consensusPeerPort;
         rpcPort = client.consensusRPCPort;
@@ -900,42 +896,42 @@ export class Ethereum extends EthereumPreMerge {
         config = erigonConfig.replace('{{NETWORK}}', network.toLowerCase());
         break;
       case NodeClient.PRYSM: { // /\ execution \/ consensus
-        let genesisBeaconApiUrl = checkpointSyncUrl
+        const genesisBeaconApiUrl = checkpointSyncUrl;
         const prysmValidatorPort = '4000';
         let networkId = '1'; //mainnet
         let chainId = '1';
         if(network === NetworkType.GOERLI) {
           networkId = '5';
           chainId = '5';
-        } 
+        }
         config = prysmConfig.beacon
           .replace('{{CHECKPOINT_SYNC_URL}}', checkpointSyncUrl)
           .replace('{{GENESIS_BEACON_API_URL}}', genesisBeaconApiUrl)
           .replace('{{EXEC}}', `http://${id}:${authPort.toString(10)}`)
           .replace('{{VALIDATOR_RPC_PORT}}', prysmValidatorPort) // not to be confused with grpc-gateway, prysm only...
           .replace('{{NETWORK_ID}}', networkId)
-          .replace('{{CHAIN_ID}}', chainId)
+          .replace('{{CHAIN_ID}}', chainId);
         break;
       }
       case NodeClient.TEKU: {
         let initialState: string;
         if(network === NetworkType.GOERLI) {
-          initialState = "https://goerli.beaconstate.info/eth/v2/debug/beacon/states/finalized"
+          initialState = 'https://goerli.beaconstate.info/eth/v2/debug/beacon/states/finalized';
         } else if (network === NetworkType.MAINNET) { // MAINNET
-          initialState = "https://beaconstate.info/eth/v2/debug/beacon/states/finalized"
+          initialState = 'https://beaconstate.info/eth/v2/debug/beacon/states/finalized';
         } else if (network === NetworkType.XDAI) {
-          initialState = "https://checkpoint.gnosischain.com"
-          network = "gnosis"
+          initialState = 'https://checkpoint.gnosischain.com';
+          network = 'gnosis';
         } else {
-          initialState = ""
+          initialState = '';
         }
         config = tekuConfig
           .replace('{{EXEC}}', `http://${id}:${authPort.toString(10)}`)
-          .replace('{{INITIAL_STATE}}', initialState)
-        if (role == Role.VALIDATOR){
+          .replace('{{INITIAL_STATE}}', initialState);
+        if (role == Role.VALIDATOR) {
         config += tekuValidatorConfig
           .replace('{{ETH1_ADDRESS}}', address || '')
-          .replace('{{VALIDATOR_RPC_PORT}}', validatorRPCPort)
+          .replace('{{VALIDATOR_RPC_PORT}}', validatorRPCPort);
         }
         break;
       }
@@ -946,16 +942,17 @@ export class Ethereum extends EthereumPreMerge {
           .replace('{{NETWORK}}', network.toLowerCase());
         if (role == Role.VALIDATOR) {
             config += nimbusValidatorConfig
-              .replace('{{ETH1_ADDRESS}}', address || '')
+              .replace('{{ETH1_ADDRESS}}', address || '');
               //.replace('{{VALIDATOR_RPC_PORT}}', validatorRPCPort)
           }
         break;
       }
       case NodeClient.LIGHTHOUSE: {
-        config = '' //lighthouseConfig;
+        config = ''; //lighthouseConfig;
         if (role == Role.VALIDATOR) {
           config += '';
         }
+        break;
       }
       default:
         return '';
@@ -973,7 +970,7 @@ export class Ethereum extends EthereumPreMerge {
     switch(consensus ? consensusClient : client) {
       case NodeClient.NETHERMIND: {
         return network.toLowerCase() + '.cfg';
-      } 
+      }
       case NodeClient.PRYSM:
           return 'prysm.yaml';
       case NodeClient.TEKU:
@@ -1099,13 +1096,13 @@ export class Ethereum extends EthereumPreMerge {
       consensusDockerImage: this.consensusDockerImage,
       validatorDockerImage: this.validatorDockerImage,
       validators: this.validators,
-      jwt: this.jwt
+      jwt: this.jwt,
     };
   }
 
   async start(password?: string, eth1AccountIndex = 0, slasher = 0): Promise<ChildProcess[]> {
     const { consensusDockerImage, validatorDockerImage, _fs: fs } = this;
-    const secretsDir = await getSecretsDir(uuid())
+    const secretsDir = await getSecretsDir(uuid());
     const passwordSecretPath = path.join(secretsDir, 'pass.pwd');
     const versions = Ethereum.versions(this.client, this.network);
     const versionData = versions.find(({ version }) => version === this.version) || versions[0];
@@ -1130,12 +1127,12 @@ export class Ethereum extends EthereumPreMerge {
       const {
         dataDir: containerDataDir,
         walletDir: containerWalletDir,
-        configDir: containerConfigDir
+        configDir: containerConfigDir,
       } = versionData;
       const {
         dataDir: consensusContainerDataDir,
         walletDir: consensusContainerWalletDir,
-        configDir: consensusContainerConfigDir
+        configDir: consensusContainerConfigDir,
       } = consensusVersionData;
 
       const tmpdir = os.tmpdir();
@@ -1147,7 +1144,7 @@ export class Ethereum extends EthereumPreMerge {
       const configExists = await fs.pathExists(configPath);
       if(!configExists)
         await fs.writeFile(configPath, this.generateConfig(), 'utf8');
-     
+
       const jwtPath = path.join(this.configDir, 'jwt.hex');
       const jwtExists = await fs.pathExists(jwtPath);
       if(!jwtExists) {
@@ -1155,24 +1152,24 @@ export class Ethereum extends EthereumPreMerge {
       }
       if (this.role === Role.VALIDATOR && !password) {
         throw new Error('You must pass in a password the first time you run start() on a validator. This password will be used to generate the key pair.');
-      } else if (this.role == Role.VALIDATOR && !validatorRunning && password ){
-        await fs.writeFile(passwordSecretPath, password)
-        await this.encryptMnemonic(password)
+      } else if (this.role == Role.VALIDATOR && !validatorRunning && password ) {
+        await fs.writeFile(passwordSecretPath, password);
+        await this.encryptMnemonic(password);
       }
       if(!preMerge) {
         const consensus = true;
         const consensusConfigPath = path.join(this.configDir, Ethereum.configName(this, consensus));
         const consensusConfigExists = await fs.pathExists(consensusConfigPath);
         if(!consensusConfigExists) {
-          const consensusConfig = Ethereum.generateConfig(this, this.network, this.consensusPeerPort, this.consensusRPCPort, consensus)
+          const consensusConfig = Ethereum.generateConfig(this, this.network, this.consensusPeerPort, this.consensusRPCPort, consensus);
           await fs.writeFile(consensusConfigPath, consensusConfig, 'utf8');
         }
         switch (this.consensusClient) {
           case NodeClient.PRYSM: {
             if (slasher) {
-              this.enableSlasher()
+              await this.enableSlasher();
             } else {
-              this.disableSlasher()
+              await this.disableSlasher();
             }
             break;
           }
@@ -1194,8 +1191,8 @@ export class Ethereum extends EthereumPreMerge {
             limits: {
               cpus: this.dockerCPUs.toString(10),
               memory: this.dockerMem.toString(10) + 'MB',
-            }
-          }
+            },
+          },
         },
         ports: [
           `${this.rpcPort}:${this.rpcPort}`,
@@ -1210,7 +1207,7 @@ export class Ethereum extends EthereumPreMerge {
         command: versionData.generateRuntimeArgs(this),
         //secrets: [],
         restart: `on-failure:${this.restartAttempts}`,
-      } as ContainerService
+      } as ContainerService;
       const consensusService: ContainerService = {
         image: this.consensusDockerImage,
         container_name: this.consensusDockerName(),
@@ -1220,8 +1217,8 @@ export class Ethereum extends EthereumPreMerge {
             limits: {
               cpus: this.dockerCPUs.toString(10),
               memory: this.dockerMem.toString(10) + 'MB',
-            }
-          }
+            },
+          },
         },
         ports: [
           `${this.consensusRPCPort}:${this.consensusRPCPort}`,
@@ -1236,18 +1233,18 @@ export class Ethereum extends EthereumPreMerge {
         command: consensusVersionData.generateRuntimeArgs(this),
         secrets: [],
         restart: `on-failure:${this.restartAttempts}`,
-      } as ContainerService
+      } as ContainerService;
       if (this.client == NodeClient.ERIGON)
-        executionService.user = "root"
+        executionService.user = 'root';
       if ([NodeClient.NIMBUS, NodeClient.TEKU].includes(this.consensusClient))
-        consensusService.user = "root"
+        consensusService.user = 'root';
       const services: Services = {
         [this.id]: executionService,
         [this.consensusDockerName()]: consensusService,
         //validatorService?: validatorService
-      } as Services
+      } as Services;
       const composeConfig = {
-        version: "3.1",
+        version: '3.1',
         services: services, //validatorService,
         networks: {
           [this.dockerNetwork]: {
@@ -1260,7 +1257,7 @@ export class Ethereum extends EthereumPreMerge {
           },
         },
       };
-      const composeConfigPath = path.join(this.configDir, 'docker-compose.yml')
+      const composeConfigPath = path.join(this.configDir, 'docker-compose.yml');
       await fs.writeJson(composeConfigPath, composeConfig, {spaces: 2});
       if (this.role === Role.VALIDATOR && password) {
         switch (this.consensusClient) {
@@ -1274,8 +1271,8 @@ export class Ethereum extends EthereumPreMerge {
                   limits: {
                     cpus: this.dockerCPUs.toString(10),
                     memory: this.dockerMem.toString(10) + 'MB',
-                  }
-                }
+                  },
+                },
               },
               ports: [
                 `${this.validatorRPCPort}:${this.validatorRPCPort}`,
@@ -1288,15 +1285,15 @@ export class Ethereum extends EthereumPreMerge {
               command: ` --config-file=/root/config/prysm-validator.yaml --${this.network.toLowerCase()}`,
               secrets: ['password'],
               restart: `on-failure:${this.restartAttempts}`,
-            } as ContainerService
+            } as ContainerService;
             await fs.writeJson(composeConfigPath, composeConfig, {spaces: 2});
             await this.prysmImportValidators(password);
             break;
           }
           case NodeClient.TEKU: {
             const tekuValidators = await this.tekuImportValidators(password);
-            services[this.consensusDockerName()]['secrets'] = ['password']
-            //const tekuConfig = 
+            services[this.consensusDockerName()]['secrets'] = ['password'];
+            //const tekuConfig =
             //this._fs.
             break;
           }
@@ -1310,8 +1307,8 @@ export class Ethereum extends EthereumPreMerge {
                   limits: {
                     cpus: this.dockerCPUs.toString(10),
                     memory: this.dockerMem.toString(10) + 'MB',
-                  }
-                }
+                  },
+                },
               },
               ports: [
                 `${this.validatorRPCPort}:${this.validatorRPCPort}`,
@@ -1324,14 +1321,14 @@ export class Ethereum extends EthereumPreMerge {
               command: ` lighthouse validator --beacon-nodes="http://${this.consensusDockerName()}:${this.consensusRPCPort}" --validators-dir=/root/keystore/validators --enable-doppelganger-protection --suggested-fee-recipient=${hexPrefix(this.eth1Address)} --network=${this.network.toLowerCase()}`,
               secrets: ['password'],
               restart: `on-failure:${this.restartAttempts}`,
-            } as ContainerService
+            } as ContainerService;
             await fs.writeJson(composeConfigPath, composeConfig, {spaces: 2});
             await this.lighthouseImportValidators(password);
             break;
           }
-          
-        }    
-        await fs.writeJson(composeConfigPath, composeConfig, {spaces: 2});    
+
+        }
+        await fs.writeJson(composeConfigPath, composeConfig, {spaces: 2});
       } //end validator
       const args = [
         'up',
@@ -1352,7 +1349,7 @@ export class Ethereum extends EthereumPreMerge {
           },
         );
       });
-      await fs.remove(secretsDir)
+      await fs.remove(secretsDir);
       if(exitCode !== 0)
         throw new Error(`Docker-compose for ${this.id} et al with ${this.dockerImage} failed with exit code ${exitCode}`);
 
@@ -1361,7 +1358,7 @@ export class Ethereum extends EthereumPreMerge {
           case NodeClient.NIMBUS: {
             // nimbus can't import from cli non-interactively yet, so have to do it manually by having mounted passwords matching the name of keystore
             // so has to import after already running, or passwords will get wiped out and container will fail
-            this.nimbusImportValidators(password);
+            await this.nimbusImportValidators(password);
             break;
           }
         }
@@ -1374,7 +1371,7 @@ export class Ethereum extends EthereumPreMerge {
 
   async stop(): Promise<void> {
     try {
-      this._docker.composeDo(path.join(this.configDir, 'docker-compose.yml'), ['down'])
+      this._docker.composeDo(path.join(this.configDir, 'docker-compose.yml'), ['down']);
     } catch(err) {
       this._logError(err);
       try {
@@ -1394,26 +1391,26 @@ export class Ethereum extends EthereumPreMerge {
   }
 
   async stakeValidator(password: string, numVals = 1, validatorStartIndex = 0, eth1AccountIndex = 0, maxPriorityFeePerGas = 2, maxFeePerGas = this.network == NetworkType.MAINNET ? 50 : 100): Promise<string[]> {
-    const validatorIndexes = Array.from(Array(numVals).keys()).map(x => x + validatorStartIndex)
+    const validatorIndexes = Array.from(Array(numVals).keys()).map(x => x + validatorStartIndex);
     const mnemonic = decrypt(this.mnemonicEncrypted, password);
     for (const validatorIndex in validatorIndexes) {
-      const validatorKeystore = await generateEth2ValidatorKeystore(mnemonic, password, parseInt(validatorIndex))
+      const validatorKeystore = await generateEth2ValidatorKeystore(mnemonic, password, parseInt(validatorIndex));
       const validator = <ValidatorObject>{
         keystore: validatorKeystore,
-        pubkey: JSON.parse(validatorKeystore).pubkey
-      }
-      this.validators[parseInt(validatorIndex) as keyof Validators] = validator
+        pubkey: JSON.parse(validatorKeystore).pubkey,
+      };
+      this.validators[parseInt(validatorIndex) ] = validator;
     }
     const stakingDockerImage = 'icculp/staking-deposit-cli:v2.3.0-DEBUG';
     const stakingRunning = await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.stakingDockerName());
-    if (stakingRunning){
-      return ["Staking already in process"]
+    if (stakingRunning) {
+      return ['Staking already in process'];
     }
     await this._docker.pull(stakingDockerImage, str => this._logOutput(str));
     const stakingDir = path.join(this.walletDir, 'validator_keys');
     const containerStakingDir = '/root/keystore/validator_keys';
     await this._fs.ensureDir(stakingDir);
-    const stakingRun = ` --language=english --non_interactive existing-mnemonic ` +
+    const stakingRun = ' --language=english --non_interactive existing-mnemonic ' +
       `--mnemonic="${mnemonic}" --validator_start_index=${validatorStartIndex} ` +
       `--num_validators=${numVals} --folder=/root/keystore ` +
       `--chain ${this.network.toLowerCase()} --keystore_password ${password}`;
@@ -1426,8 +1423,8 @@ export class Ethereum extends EthereumPreMerge {
           limits: {
             cpus: this.dockerCPUs.toString(10),
             memory: this.dockerMem.toString(10) + 'MB',
-          }
-        }
+          },
+        },
       },
       ports: [],
       volumes: [
@@ -1435,9 +1432,9 @@ export class Ethereum extends EthereumPreMerge {
       ],
       command: stakingRun,
       restart: `on-failure:${this.restartAttempts}`,
-    } as ContainerService
+    } as ContainerService;
     const composeConfig = {
-      version: "3.3",
+      version: '3.3',
       services: { [this.stakingDockerName()]: stakingService },
       networks: {
         [this.dockerNetwork]: {
@@ -1450,7 +1447,7 @@ export class Ethereum extends EthereumPreMerge {
       //   },
       // },
     };
-    const composeConfigPath = path.join(this.configDir, 'staking.yml')
+    const composeConfigPath = path.join(this.configDir, 'staking.yml');
     await this._fs.writeJson(composeConfigPath, composeConfig, {spaces: 2});
     const args = [
       'run',
@@ -1481,48 +1478,48 @@ export class Ethereum extends EthereumPreMerge {
     //    this._logClose(code);
     //  },
     //);
-    await this._fs.remove(composeConfigPath)
+    await this._fs.remove(composeConfigPath);
     if(stakingExitCode !== 0) {
       throw new Error(`Docker run for ${stakingDockerImage} failed with exit code ${stakingExitCode}`);
     }
-    while (await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.stakingDockerName())){
-      await timeout(5000)
-    };
-    const files = await this._fs.readdir(stakingDir)
+    while (await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.stakingDockerName())) {
+      await timeout(5000);
+    }
+    const files = await this._fs.readdir(stakingDir);
     const timestamps: Array<number> = [];
     for (const file of files) {
       if (file.includes('deposit_data-')) {
         timestamps.push(parseInt(file.split('-', 2)[1].split('.', 1)[0]));
       } else {
-        this._fs.remove(file)
+        await this._fs.remove(file);
       }
     }
     const latestTimestamp = timestamps.reduce((a: number, b: number) => Math.max(a, b), 0);
     const depositJSON = JSON.parse(await this._fs.readFile(path.join(stakingDir, 'deposit_data-' + String(latestTimestamp) + '.json')));
-    const depositTXs: string[] = []
+    const depositTXs: string[] = [];
     if (depositJSON && Array.isArray(depositJSON) ) {
       for (const deposit of depositJSON) {
         try {
           depositTXs.push(await this.validatorDeposit(deposit, password, eth1AccountIndex, maxPriorityFeePerGas, maxFeePerGas));
         } catch(err) {
-          console.log("Transaction failed due to error:", err)
-          depositTXs.push("Pubkey {" + deposit.pubkey + "} " + err)
+          console.log('Transaction failed due to error:', err);
+          depositTXs.push(`Pubkey {${deposit.pubkey}} ${err.message}`);
         }
-      };
+      }
     } else {
       try {
         depositTXs.push(await this.validatorDeposit(depositJSON, password, eth1AccountIndex, maxPriorityFeePerGas, maxFeePerGas));
       } catch(err) {
-        console.log("Transaction failed due to error:", err)
-        depositTXs.push(err)
-      } 
+        console.log('Transaction failed due to error:', err);
+        depositTXs.push(err);
+      }
     }
     switch (this.consensusClient) {
       case NodeClient.PRYSM:
         await this.prysmImportValidators(password);
         break;
       case NodeClient.TEKU:
-        await this.tekuImportValidators(password)
+        await this.tekuImportValidators(password);
         break;
       case NodeClient.NIMBUS:
         await this.nimbusImportValidators(password);
@@ -1532,11 +1529,11 @@ export class Ethereum extends EthereumPreMerge {
         break;
     }
     if (!(this.consensusClient == NodeClient.NIMBUS)) {
-      const secretsDir = await getSecretsDir(uuid())
+      const secretsDir = await getSecretsDir(uuid());
       const passwordSecretPath = path.join(secretsDir, 'pass.pwd');
-      await this._fs.writeFile(passwordSecretPath, password)
-      const composeFilePath = path.join(this.configDir, 'docker-compose.yml')
-      const composeFile = JSON.parse(await this._fs.readFile(composeFilePath))
+      await this._fs.writeFile(passwordSecretPath, password);
+      const composeFilePath = path.join(this.configDir, 'docker-compose.yml');
+      const composeFile = JSON.parse(await this._fs.readFile(composeFilePath));
       composeFile.secrets.password.file = passwordSecretPath;
       await this._fs.writeJson(composeFilePath, composeFile, {spaces: 2});
       await new Promise<number>((resolve, reject) => {
@@ -1555,14 +1552,14 @@ export class Ethereum extends EthereumPreMerge {
           },
         );
       });
-      await this._fs.remove(secretsDir)
+      await this._fs.remove(secretsDir);
     }
-    await this.dockerAttach()
-    return depositTXs
+    await this.dockerAttach();
+    return depositTXs;
   } // end stakeValidator()
 
   async dockerAttach(): Promise<ChildProcess[]> {
-    const instances = []
+    const instances = [];
     const instance = this._docker.attach(
       this.id,
       output => this._logOutput('execution - ' + output),
@@ -1573,7 +1570,7 @@ export class Ethereum extends EthereumPreMerge {
         this._logClose(code);
       },
     );
-    instances.push(instance)
+    instances.push(instance);
     const consensusInstance = this._docker.attach(
       this.consensusDockerName(),
       output => this._logOutput('consensus - ' + output),
@@ -1585,7 +1582,7 @@ export class Ethereum extends EthereumPreMerge {
       },
     );
     instances.push(consensusInstance);
-    if(this.role == Role.VALIDATOR && [NodeClient.PRYSM,].includes(this.consensusClient)) {
+    if(this.role == Role.VALIDATOR && [NodeClient.PRYSM].includes(this.consensusClient)) {
       const validatorInstance = this._docker.attach(
         this.validatorDockerName(),
         output => this._logOutput('validator - ' + output),
@@ -1598,76 +1595,76 @@ export class Ethereum extends EthereumPreMerge {
       );
       instances.push(validatorInstance);
     }
-    return instances
+    return instances;
   }
 
   async validatorDeposit(depositJSON: DepositKeyInterface, password: string, eth1AccountIndex = 0, maxPriorityFeePerGas = 2, maxFeePerGas = 50, topUp?: false): Promise<string> {
-    const beaconSynced = await this.beaconSynced()
-    const executionSynced = await this.executionSynced()
+    const beaconSynced = await this.beaconSynced();
+    const executionSynced = await this.executionSynced();
     if (!beaconSynced || !executionSynced) {
       // executionSynced might show true when the node hasn't started syncing yet, but in that case beaconSynced should always be false
       const message = `In order to prevent duplicate deposits and loss of funds, we require your node to be fully synced before staking your validators. Execution synced: {${executionSynced.toString()}} Beacon synced: {${beaconSynced.toString()}} Pubkey: {${depositJSON.pubkey}}`;
-      console.log(message)
-      return message
+      console.log(message);
+      return message;
     }
     const ValidatorStatuses = ['pending_initialized', 'pending_queued', 'active_ongoing', 'active_exiting', 'active_slashed', 'exited_unslashed', 'exited_slashed', 'withdrawal_possible'];
-    const status = await this.validatorStatus(depositJSON.pubkey)
-    if (ValidatorStatuses.includes(status)){
-      const message = "A deposit already exists on the beacon chain for pubkey {" + depositJSON.pubkey + "} with current state {" + status + "}"
-      console.log(message)
-      if (topUp){
+    const status = await this.validatorStatus(depositJSON.pubkey);
+    if (ValidatorStatuses.includes(status)) {
+      const message = 'A deposit already exists on the beacon chain for pubkey {' + depositJSON.pubkey + '} with current state {' + status + '}';
+      console.log(message);
+      if (topUp) {
         // check deposit balance, if below 32 set amouunt to difference for transactionparameters
       } else {
-        return message
+        return message;
       }
     } else if (status == 'invalid') {
-      return 'Uh oh, there is a problem with the deposit.json data. Please reach out.'
-    } else if (status == 'not found'){
+      return 'Uh oh, there is a problem with the deposit.json data. Please reach out.';
+    } else if (status == 'not found') {
         // okay to proceed
-      const eth1DepositCheck = await this.checkDepositContract(depositJSON.pubkey)
-      if (!(eth1DepositCheck == 'Not found')){
-        return "A DepositEvent already exists in the anchor chain deposit contract, but hasn't yet reached the beacon chain for {" + depositJSON.pubkey
-          + "}. transactionHash for deposit: {" + eth1DepositCheck +"}"
+      const eth1DepositCheck = await this.checkDepositContract(depositJSON.pubkey);
+      if (!(eth1DepositCheck == 'Not found')) {
+        return 'A DepositEvent already exists in the anchor chain deposit contract, but hasn\'t yet reached the beacon chain for {' + depositJSON.pubkey
+          + '}. transactionHash for deposit: {' + eth1DepositCheck +'}';
       }
       const jsonUrl = `http://localhost:${this.rpcPort}`;
       const eth1DerivationPath = `m/44'/60'/0'/0/${eth1AccountIndex.toString()}`; //m/44/60/0/0/i is eth1 wallet (aka account aka withdrawal) for account number i
       const eth1Wallet = Wallet.fromMnemonic(decrypt(this.mnemonicEncrypted, password), eth1DerivationPath);
       const web3 = new Web3(new Web3.providers.HttpProvider(jsonUrl));
-      const eth1Account = web3.eth.accounts.privateKeyToAccount(eth1Wallet.privateKey) // 
-      web3.eth.accounts.wallet.add(eth1Account)
+      const eth1Account = web3.eth.accounts.privateKeyToAccount(eth1Wallet.privateKey); //
+      web3.eth.accounts.wallet.add(eth1Account);
       const mainnetStakingAddress = '0x00000000219ab540356cBB839Cbe05303d7705Fa';
       const goerliStakingAddress = '0xff50ed3d0ec03aC01D4C79aAd74928BFF48a7b2b';
       const depositContract = new web3.eth.Contract(contractAbi, this.network == NetworkType.MAINNET ? mainnetStakingAddress : goerliStakingAddress); //, signer);
       const transactionParameters = {
         // gasPrice: Web3.utils.toHex(await web3.eth.getGasPrice()), null in eip1559. maxFeePerGas set and maxPriorityFeePerGas to gasPrice when it's set
-        maxFeePerGas: web3.utils.toHex(web3.utils.toWei(maxFeePerGas.toString(10), 'gwei')),  // 2 * base fee + maxPriorityFeePerGas 
+        maxFeePerGas: web3.utils.toHex(web3.utils.toWei(maxFeePerGas.toString(10), 'gwei')),  // 2 * base fee + maxPriorityFeePerGas
         maxPriorityFeePerGas: web3.utils.toHex(web3.utils.toWei(maxPriorityFeePerGas.toString(10), 'gwei')), // tip paid to miner, default 1
         chain: this.network.toLowerCase(), // to prevent replay attacks on other networks
-        hardfork: "london", // must be supplied along with chain if either set
+        hardfork: 'london', // must be supplied along with chain if either set
         from: eth1Account.address,
         value: Web3.utils.toWei('32', 'ether'),
         gasLimit: 15000000,
         //gas: 750000,
-        data: {}
+        data: {},
       };
-      const gasEstimate = await depositContract.methods.deposit( 
+      const gasEstimate = await depositContract.methods.deposit(
           hexPrefix(depositJSON.pubkey),
           hexPrefix(depositJSON.withdrawal_credentials),
           hexPrefix(depositJSON.signature),
           hexPrefix(depositJSON.deposit_data_root)
         ).estimateGas(transactionParameters).catch(function(error: any) {
-          console.log("Estimategas() - catch error");
+          console.log('Estimategas() - catch error');
           console.log(error);
-          return "Pubkey {" + depositJSON.pubkey + "} " + error.message
+          return `Pubkey {${depositJSON.pubkey}} ${error.message}`;
         }); //.on('error', console.warn);
-      if ((typeof gasEstimate) === "string"){
-        return gasEstimate
-      } else if ((typeof gasEstimate) === "number" ) {
+      if ((typeof gasEstimate) === 'string') {
+        return gasEstimate;
+      } else if ((typeof gasEstimate) === 'number' ) {
         transactionParameters.gasLimit = Math.round(gasEstimate * 2);
       } else {
-        return "Unexpected error, gasEstimate: {" + gasEstimate + "} pubkey {" + depositJSON.pubkey + "}"
+        return `Unexpected error, gasEstimate: {${gasEstimate}} pubkey {${depositJSON.pubkey}}`;
       }
-        console.log(1611, transactionParameters.gasLimit, transactionParameters)
+      console.log(1611, transactionParameters.gasLimit, transactionParameters);
       // if error in estimate*, send won't take value but catch here only catches error responses, so input error throws error to catch in stake function
       const depositTX = await depositContract.methods.deposit(
         hexPrefix(depositJSON.pubkey),
@@ -1675,53 +1672,53 @@ export class Ethereum extends EthereumPreMerge {
         hexPrefix(depositJSON.signature),
         hexPrefix(depositJSON.deposit_data_root)
       ).send(transactionParameters).catch(function(error: any) {
-          console.log("Send() - catch error");
+          console.log('Send() - catch error');
           console.log(error);
-          return "Pubkey {" + depositJSON.pubkey + "} " + error.message
+          return `Pubkey {${depositJSON.pubkey}} ${error.message}`;
         });
 
     while (true) {
-      console.log(1625, 'Awaiting confirmation of deposit for pubkey ' + depositJSON.pubkey + ' and transactionHash ' + depositTX.transactionHash)
+      console.log(1625, `Awaiting confirmation of deposit for pubkey ${depositJSON.pubkey} and transactionHash ${depositTX.transactionHash}`);
       if (depositTX && depositTX.transactionHash) {
         const receipt = await web3.eth.getTransactionReceipt(depositTX.transactionHash);
         if (receipt && receipt.blockNumber) {
-          console.log("Deposit for pubkey " + depositJSON.pubkey + "has been confirmed at block number " + receipt.blockNumber);
-          console.log("Note that it might take 30 - 90 sceonds for the block to propagate before it's visible in etherscan.io");
+          console.log(`Deposit for pubkey ${depositJSON.pubkey} has been confirmed at block number ${receipt.blockNumber}`);
+          console.log('Note that it might take 30 - 90 sceonds for the block to propagate before it\'s visible in etherscan.io');
           break;
         } else {
-          console.log(1633, receipt,)
+          console.log(1633, receipt,);
         }
       } else { // no tx hash to wait for receipt
         //return 'Deposit failed for pubkey ' + depositJSON.pubkey + ' and transactionHash ' + depositTX.transactionHash)
         // getTransactionReceipt waits for receipt or failure, so here it failed
-        console.log(1636)
+        console.log(1636);
         //console.log(`Waiting for tx ${depositTX.transactionHash} to be mined, currently in block ` + await web3.eth.getBlockNumber());
         //await timeout(4000);
       }
     }
     //console.log(Object.getOwnPropertyNames(depositTX), depositTX);
-    return  "Deposit for pubkey {" + hexPrefix(depositJSON.pubkey) + "} confirmed with transactionHash: " + depositTX.transactionHash;
+    return  `Deposit for pubkey {${hexPrefix(depositJSON.pubkey)}} confirmed with transactionHash: ${depositTX.transactionHash}`;
   } else {
     return `We received an unexpected status: {${status}}`;
   }
     // if tracking validatorStartIndex, increment here
-    return 'success??'
+    return 'success??';
   } // end validatorDeposit()
 
   async beaconSynced(): Promise<boolean> {
     try {
       const apiEndpointPath = '/eth/v1/node/syncing';
-      const { body = {} } = await request.get(`0.0.0.0:${this.consensusRPCPort}${apiEndpointPath}`)
+      const { body = {} } = await request.get(`0.0.0.0:${this.consensusRPCPort}${apiEndpointPath}`);
       if (body.data && body.data.is_syncing) {
-        console.log('Beacon chain still syncing')
-        return false
+        console.log('Beacon chain still syncing');
+        return false;
       } else if (body.data && !(body.data.is_syncing)) {
-        return true
+        return true;
       } else
-        return false
+        return false;
     } catch(err) {
-      console.log(err)
-      return false
+      console.log(err);
+      return false;
     }
   }
 
@@ -1739,22 +1736,22 @@ export class Ethereum extends EthereumPreMerge {
           params: [],
         });
       if (!body.result) {
-        return true
+        return true;
       } else {
-        console.log("Sync your exeuction node")
-        return false
+        console.log('Sync your exeuction node');
+        return false;
       }
     } catch(err) {
-      console.log(err)
-      return false
+      console.log(err);
+      return false;
     }
   }
 
   async checkDepositContract(pubkey: string): Promise<string> {
     const jsonUrl = `http://localhost:${this.rpcPort}`;
     const web3 = new Web3(new Web3.providers.HttpProvider(jsonUrl));
-    let latest_block = await web3.eth.getBlockNumber();
-    let historical_block = latest_block - 10000; // about a day and a half
+    const latest_block = await web3.eth.getBlockNumber();
+    const historical_block = latest_block - 10000; // about a day and a half
     const mainnetStakingAddress = '0x00000000219ab540356cBB839Cbe05303d7705Fa';
     const goerliStakingAddress = '0xff50ed3d0ec03aC01D4C79aAd74928BFF48a7b2b';
     const depositContract = new web3.eth.Contract(contractAbi, this.network == NetworkType.MAINNET ? mainnetStakingAddress : goerliStakingAddress);
@@ -1762,43 +1759,43 @@ export class Ethereum extends EthereumPreMerge {
         'DepositEvent',
         { fromBlock: historical_block, toBlock: 'latest' }
     );
-    const deposit = events.filter(deposit => hexPrefix(deposit.returnValues.pubkey) == hexPrefix(pubkey))
-    if (deposit.length > 0){
-      return deposit[0].transactionHash
+    const deposit = events.filter(deposit => hexPrefix(deposit.returnValues.pubkey) == hexPrefix(pubkey));
+    if (deposit.length > 0) {
+      return deposit[0].transactionHash;
     } else {
-      return 'Not found'
-    };
-  };
+      return 'Not found';
+    }
+  }
 
   async validatorStatus(validatorPubKey: string): Promise<string> {
     try {
       const apiEndpointPath = '/eth/v1/beacon/states/head/validators/';
-      const { body = {} } = await request.get(`0.0.0.0:${this.consensusRPCPort}${apiEndpointPath}${hexPrefix(validatorPubKey)}`)
-      console.log(body)
+      const { body = {} } = await request.get(`0.0.0.0:${this.consensusRPCPort}${apiEndpointPath}${hexPrefix(validatorPubKey)}`);
+      console.log(body);
       if (body.data && body.data.status) {
-        console.log(body.data.status)
-        return body.data.status
+        console.log(body.data.status);
+        return body.data.status;
       } else if (body.code && body.message) {
-        console.log(body.code, body.message)
-        return body.message
+        console.log(body.code, body.message);
+        return body.message;
       }
     } catch(err) {
       if (err.status == 404) {
-        return 'not found'
+        return 'not found';
       }
       else if (err.status == 400) {
-        return 'invalid'
+        return 'invalid';
       } else {
-        console.log(err)
+        console.log(err);
       }
       return `Failed to query validator status, ensure that the beacon node is reachable at port ${this.consensusRPCPort}`;
     }
-    return `We shouldn't reach here`;
+    return 'We shouldn\'t reach here';
   }
 
   async prysmRunValidator(password: string): Promise<ChildProcess> {
-    await this.generatePrysmValidatorConfig()
-    const args = await this.generateConsensusArgs(password)
+    await this.generatePrysmValidatorConfig();
+    const args = await this.generateConsensusArgs(password);
     const validatorArgs = [
       ...args,
       '--name', this.validatorDockerName(),
@@ -1837,73 +1834,74 @@ export class Ethereum extends EthereumPreMerge {
     const versionData = versions.find(({ version }) => version === this.version) || versions[0]; //this.consensusVersion?
     const {
       walletDir: containerWalletDir,
-      passwordPath: containerPasswordPath
+      passwordPath: containerPasswordPath,
     } = versionData;
     const stakingDir = path.join(this.walletDir, 'validators');
     await this._fs.ensureDir(stakingDir);
     let tekuValidators = 'validator-keys: "';
-    const filename = `keystore-m_12381_3600_0_0_accountIndex.json`;
+    const filename = 'keystore-m_12381_3600_0_0_accountIndex.json';
     if (Object.keys(this.validators).length > 0) {
       for (const validatorIndex of Object.keys(this.validators)) {
-        const validator = this.validators[parseInt(validatorIndex) as keyof Validators]
-        const validatorKeystore = validator.keystore
-        validator.status = await this.validatorStatus(validator.pubkey)
-        const keyname = filename.replace('accountIndex', validatorIndex.toString())
-        await this._fs.writeFile(path.join(stakingDir, keyname), validatorKeystore, 'utf8')
-        tekuValidators += path.join(containerWalletDir, "validators", keyname) + ':/run/secrets/password,'
+        const validator = this.validators[parseInt(validatorIndex) ];
+        const validatorKeystore = validator.keystore;
+        validator.status = await this.validatorStatus(validator.pubkey);
+        const keyname = filename.replace('accountIndex', validatorIndex.toString());
+        await this._fs.writeFile(path.join(stakingDir, keyname), validatorKeystore, 'utf8');
+        tekuValidators += path.join(containerWalletDir, 'validators', keyname) + ':/run/secrets/password,';
       }
     } else {
-      return false
+      return false;
     }
-    tekuValidators += `"`
+    tekuValidators += '"';
     const consensusConfigPath = path.join(this.configDir, 'teku.yaml');
     const consensusConfigExists = await this._fs.pathExists(consensusConfigPath);
-    if(!consensusConfigExists){
+    if(!consensusConfigExists) {
       return false;
     }
     const consensusConfig = await this._fs.readFile(consensusConfigPath);
-    const newLineValidator = `\n${tekuValidators}`
+    const newLineValidator = `\n${tekuValidators}`;
     if (consensusConfig.match(/\nvalidator-keys:/)) {
-      const a = consensusConfig.replace(/\nvalidator-keys:.+/i, '\n' + tekuValidators)
+      const a = consensusConfig.replace(/\nvalidator-keys:.+/i, '\n' + tekuValidators);
       await this._fs.writeFile(consensusConfigPath, a);
     } else if (consensusConfig.match(/\n#validator-keys:.+/i)) {
-      const b = consensusConfig.replace(/#validator-keys:.+/i, '\n' + tekuValidators)
+      const b = consensusConfig.replace(/#validator-keys:.+/i, '\n' + tekuValidators);
       await this._fs.writeFile(consensusConfigPath, b);
     } else {
       await this._fs.writeFile(consensusConfigPath, consensusConfig + newLineValidator);
     }
-    return true
+    return true;
   }
 
   async prysmImportValidators(password: string): Promise<boolean> {
-    await this.generatePrysmValidatorConfig()
-    console.log(1804, 'prysmImportValidators')
+    await this.generatePrysmValidatorConfig();
+    console.log(1804, 'prysmImportValidators');
     //const args = await this.generateConsensusArgs(password)
     const stakingDir = path.join(this.walletDir, 'validators');
     await this._fs.ensureDir(stakingDir);
-    const filename = `keystore-m_12381_3600_0_0_accountIndex.json`;
+    const filename = 'keystore-m_12381_3600_0_0_accountIndex.json';
     if (Object.keys(this.validators).length > 0) {
       for (const validatorIndex of Object.keys(this.validators)) {
-        const validator = this.validators[parseInt(validatorIndex) as keyof Validators]
-        const validatorKeystore = validator.keystore
-        validator.status = await this.validatorStatus(validator.pubkey)
-        await this._fs.writeFile(path.join(stakingDir, filename.replace('accountIndex', validatorIndex.toString())), validatorKeystore, 'utf8')
+        const validator = this.validators[parseInt(validatorIndex) ];
+        const validatorKeystore = validator.keystore;
+        validator.status = await this.validatorStatus(validator.pubkey);
+        await this._fs.writeFile(path.join(stakingDir, filename.replace('accountIndex', validatorIndex.toString())), validatorKeystore, 'utf8');
       }
     }
-    const composeFilePath = path.join(this.configDir, 'docker-compose.yml')
-    const composeFile = JSON.parse(await this._fs.readFile(composeFilePath))
-    const secretsDir = await getSecretsDir(uuid())
+    const composeFilePath = path.join(this.configDir, 'docker-compose.yml');
+    const composeFile = JSON.parse(await this._fs.readFile(composeFilePath));
+    const secretsDir = await getSecretsDir(uuid());
     const passwordSecretPath = path.join(secretsDir, 'pass.pwd');
     composeFile.secrets.password.file = passwordSecretPath;
     const importName = this.validatorDockerName() + '-import';
     composeFile.services[importName] = { ...composeFile.services[this.validatorDockerName()] };
-    composeFile.services[importName].container_name = importName, composeFile.services[importName].ports = [];
+    composeFile.services[importName].container_name = importName;
+    composeFile.services[importName].ports = [];
     composeFile.services[importName].command = ` --config-file=/root/config/prysm-validator.yaml accounts import --${this.network.toLowerCase()}`;
-    await this._fs.ensureDir(secretsDir)
-    await this._fs.writeFile(passwordSecretPath, password)
+    await this._fs.ensureDir(secretsDir);
+    await this._fs.writeFile(passwordSecretPath, password);
     await this._fs.writeJson(composeFilePath, composeFile, {spaces: 2});
     await new Promise<number>((resolve, reject) => {
-      this._docker.composeDo(composeFilePath, 
+      this._docker.composeDo(composeFilePath,
       ['run', '--rm', importName],
       output => this._logOutput(output),
           err => {
@@ -1913,23 +1911,23 @@ export class Ethereum extends EthereumPreMerge {
           code => {
             resolve(code);
           },
-      )
+      );
     });
-    this._docker.attach(importName)
+    this._docker.attach(importName);
     while (await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(importName)) {
-      console.log(1916)
-      timeout(5000)
+      console.log(1916);
+      await timeout(5000);
     }
-    delete composeFile.services[importName]
+    delete composeFile.services[importName];
     // console.log(1884, composeFile.services)
     // await timeout(10000)
     await this._fs.writeJson(composeFilePath, composeFile, {spaces: 2});
-    await this._fs.remove(secretsDir)
-    await this._fs.ensureDir(secretsDir)
-    await this._fs.writeFile(passwordSecretPath, password)
+    await this._fs.remove(secretsDir);
+    await this._fs.ensureDir(secretsDir);
+    await this._fs.writeFile(passwordSecretPath, password);
     await this._fs.writeJson(composeFilePath, composeFile, {spaces: 2});
     await new Promise<number>((resolve, reject) => {
-      this._docker.composeDo(composeFilePath, 
+      this._docker.composeDo(composeFilePath,
       ['up', '-d', this.validatorDockerName()],
       output => this._logOutput(output),
           err => {
@@ -1939,38 +1937,38 @@ export class Ethereum extends EthereumPreMerge {
           code => {
             resolve(code);
           },
-      )
+      );
     });
-    this._docker.attach(this.validatorDockerName())
-    return true
+    this._docker.attach(this.validatorDockerName());
+    return true;
   }
 
   async nimbusImportValidators(password: string): Promise<boolean> {
-    const composeFilePath = path.join(this.configDir, 'docker-compose.yml')
-    const composeFile = JSON.parse(await this._fs.readFile(composeFilePath))
-    const secretsDir = await getSecretsDir(uuid())
+    const composeFilePath = path.join(this.configDir, 'docker-compose.yml');
+    const composeFile = JSON.parse(await this._fs.readFile(composeFilePath));
+    const secretsDir = await getSecretsDir(uuid());
     const passwordSecretPath = path.join(secretsDir, 'pass.pwd');
-    await this._fs.writeFile(passwordSecretPath, password)
-    await this._fs.chmod(passwordSecretPath, '0600')
-    const keyPathname = `keystore.json`;
+    await this._fs.writeFile(passwordSecretPath, password);
+    await this._fs.chmod(passwordSecretPath, '0600');
+    const keyPathname = 'keystore.json';
     if (Object.keys(this.validators).length > 0) {
-      composeFile.services[this.consensusDockerName()].secrets = []
-      composeFile.secrets = {}
+      composeFile.services[this.consensusDockerName()].secrets = [];
+      composeFile.secrets = {};
       for (const validatorIndex of Object.keys(this.validators)) {
-        const validator = this.validators[parseInt(validatorIndex) as keyof Validators]
-        const validatorKeystore = validator.keystore
-        validator.status = await this.validatorStatus(validator.pubkey)
-        const passwordFilename = hexPrefix(validator.pubkey)
-        composeFile.services[this.consensusDockerName()].secrets.push(passwordFilename)
-        composeFile.secrets[passwordFilename] = { file: passwordSecretPath }
-        const pubDir = path.join(this.walletDir, 'validators', hexPrefix(validator.pubkey))
-        await this._fs.ensureDir(pubDir)
-        await this._fs.writeFile(path.join(pubDir, keyPathname), validatorKeystore, 'utf8')
+        const validator = this.validators[parseInt(validatorIndex) ];
+        const validatorKeystore = validator.keystore;
+        validator.status = await this.validatorStatus(validator.pubkey);
+        const passwordFilename = hexPrefix(validator.pubkey);
+        composeFile.services[this.consensusDockerName()].secrets.push(passwordFilename);
+        composeFile.secrets[passwordFilename] = { file: passwordSecretPath };
+        const pubDir = path.join(this.walletDir, 'validators', hexPrefix(validator.pubkey));
+        await this._fs.ensureDir(pubDir);
+        await this._fs.writeFile(path.join(pubDir, keyPathname), validatorKeystore, 'utf8');
       }
     }
     await this._fs.writeFile(composeFilePath, JSON.stringify(composeFile));
     await new Promise<number>((resolve, reject) => {
-      this._docker.composeDo(composeFilePath, ['up', '-d', ], //'--remove-orphans'], 
+      this._docker.composeDo(composeFilePath, ['up', '-d' ], //'--remove-orphans'],
       output => this._logOutput(output),
           err => {
             this._logError(err);
@@ -1979,45 +1977,45 @@ export class Ethereum extends EthereumPreMerge {
           code => {
             resolve(code);
           },
-      )
+      );
     });
-    await this.dockerAttach()
-    await this._fs.remove(secretsDir)
+    await this.dockerAttach();
+    await this._fs.remove(secretsDir);
     return true;
   }
 
   async lighthouseImportValidators(password: string): Promise<boolean> {
-    const composeFilePath = path.join(this.configDir, 'docker-compose.yml')
-    const composeFile = JSON.parse(await this._fs.readFile(composeFilePath))
+    const composeFilePath = path.join(this.configDir, 'docker-compose.yml');
+    const composeFile = JSON.parse(await this._fs.readFile(composeFilePath));
     if (Object.keys(this.validators).length > 0) {
       for (const validatorIndex of Object.keys(this.validators)) {
-        const validator = this.validators[parseInt(validatorIndex) as keyof Validators]
-        const validatorKeystore = validator.keystore
-        validator.status = await this.validatorStatus(validator.pubkey)
+        const validator = this.validators[parseInt(validatorIndex) ];
+        const validatorKeystore = validator.keystore;
+        validator.status = await this.validatorStatus(validator.pubkey);
       }
     } else {
-      return false
+      return false;
     }
-    let flag = true
+    let flag = true;
     this._docker.composeDo(composeFilePath, ['down', this.validatorDockerName()]) // can't import while slashing db locked
       .on('close', (code) => {
-      flag = false
-    })
+      flag = false;
+    });
     while (flag) {
-      await timeout(10)
+      await timeout(10);
     }
-    const secretsDir = await getSecretsDir(uuid())
+    const secretsDir = await getSecretsDir(uuid());
     const passwordSecretPath = path.join(secretsDir, 'pass.pwd');
     composeFile.secrets.password.file = passwordSecretPath;
-    const command = composeFile.services[this.validatorDockerName()].command
-    composeFile.services[this.validatorDockerName()].command = ` lighthouse --network ${this.network.toLowerCase()} account validator --validators-dir=/root/keystore/validators import --reuse-password --stdin-inputs --password-file=/run/secrets/password  --directory=/root/keystore/validator_keys `
-    await this._fs.ensureDir(secretsDir)
-    await this._fs.writeFile(passwordSecretPath, password)
+    const command = composeFile.services[this.validatorDockerName()].command;
+    composeFile.services[this.validatorDockerName()].command = ` lighthouse --network ${this.network.toLowerCase()} account validator --validators-dir=/root/keystore/validators import --reuse-password --stdin-inputs --password-file=/run/secrets/password  --directory=/root/keystore/validator_keys `;
+    await this._fs.ensureDir(secretsDir);
+    await this._fs.writeFile(passwordSecretPath, password);
     await this._fs.writeJson(composeFilePath, composeFile, {spaces: 2});
     // import validators
     await new Promise<number>((resolve, reject) => {
-      this._docker.composeDo(composeFilePath, 
-      ['up', '-d', this.validatorDockerName(),],
+      this._docker.composeDo(composeFilePath,
+      ['up', '-d', this.validatorDockerName()],
       output => this._logOutput(output),
           err => {
             this._logError(err);
@@ -2026,41 +2024,41 @@ export class Ethereum extends EthereumPreMerge {
           code => {
             resolve(code);
           },
-      )
+      );
     });
-    this._docker.attach(this.validatorDockerName())
+    this._docker.attach(this.validatorDockerName());
     while (await this._docker.checkIfRunningAndRemoveIfPresentButNotRunning(this.validatorDockerName())) {
       //console.log(1916)
-      timeout(5000)
+      await timeout(5000);
     }
     composeFile.services[this.validatorDockerName()].command = command;
     await this._fs.writeJson(composeFilePath, composeFile, {spaces: 2});
     if (await this._fs.pathExists(path.join(this.walletDir, 'validators', 'validator_keys'))) {
-      const validatorDefinitions = await this._fs.readFile(path.join(this.walletDir, 'validators', 'validator_definitions.yml'), 'utf8')
-      await this._fs.writeFile(path.join(this.walletDir, 'validators'), validatorDefinitions.replace(password, '/run/secrets/password'))  
+      const validatorDefinitions = await this._fs.readFile(path.join(this.walletDir, 'validators', 'validator_definitions.yml'), 'utf8');
+      await this._fs.writeFile(path.join(this.walletDir, 'validators'), validatorDefinitions.replace(password, '/run/secrets/password'));
     }
-    await this._fs.remove(passwordSecretPath)
-    await this._fs.writeFile(passwordSecretPath, password)
+    await this._fs.remove(passwordSecretPath);
+    await this._fs.writeFile(passwordSecretPath, password);
 
     //console.log(1928)
-    this._docker.composeDo(composeFilePath, ['up', '-d', this.validatorDockerName(), ]) //'--remove-orphans'])
-    this._docker.attach(this.validatorDockerName())
-    await this._fs.remove(secretsDir)
+    this._docker.composeDo(composeFilePath, ['up', '-d', this.validatorDockerName() ]); //'--remove-orphans'])
+    this._docker.attach(this.validatorDockerName());
+    await this._fs.remove(secretsDir);
     return true;
   }
 
-  async generateConsensusArgs(password?: string): Promise<string[]> { // create service interface 
+  async generateConsensusArgs(password?: string): Promise<string[]> { // create service interface
     const versions = Ethereum.versions(this.consensusClient, this.network); //NodeClient.PRYSM
     const versionData = versions.find(({ version }) => version === this.version) || versions[0]; //this.consensusVersion?
     const {
       dataDir: containerDataDir,
       walletDir: containerWalletDir,
       configDir: containerConfigDir,
-      passwordPath: containerPasswordPath
+      passwordPath: containerPasswordPath,
     } = versionData;
     const args = [
       '-d',
-      '--rm', 
+      '--rm',
       '--memory', this.dockerMem.toString(10) + 'MB',
       '--cpus', this.dockerCPUs.toString(10),
       '--network', this.dockerNetwork,
@@ -2074,9 +2072,9 @@ export class Ethereum extends EthereumPreMerge {
       const passwordFileExists = await this._fs.pathExists(passwordPath);
       if(!passwordFileExists)
         await this._fs.writeFile(passwordPath, password, 'utf8');
-      return [...args, '-v', `${passwordPath}:${containerPasswordPath}`]
+      return [...args, '-v', `${passwordPath}:${containerPasswordPath}`];
     }
-    return args
+    return args;
   }
 
   async generatePrysmValidatorConfig(): Promise<void> {
@@ -2089,7 +2087,7 @@ export class Ethereum extends EthereumPreMerge {
       const validatorConfig = prysmConfig.validator
         .replace('{{ETH1_ADDRESS}}', this.eth1Address)
         .replace(/{{CONSENSUS}}/g, `${this.consensusDockerName()}:${prysmValidatorPort}`)
-        .replace('{{RPC_PORT}}', this.validatorRPCPort.toString(10))
+        .replace('{{RPC_PORT}}', this.validatorRPCPort.toString(10));
       await this._fs.writeFile(validatorConfigPath, validatorConfig, 'utf8');
     }
   }
@@ -2098,23 +2096,23 @@ export class Ethereum extends EthereumPreMerge {
 
  async encryptMnemonic(password: string, mnemonic?: string, eth1AccountIndex = 0): Promise<EncryptedKeystore> {
     const mnemonicExists = this.mnemonicEncrypted && JSON.stringify(this.mnemonicEncrypted) != '{}' &&  this.mnemonicEncrypted.message != ''; //await this._fs.pathExists(mnemonicPath);
-    if (mnemonic){
+    if (mnemonic) {
       this.mnemonicEncrypted = encrypt(mnemonic, password, this.id);
-    } else if (!mnemonic && !mnemonicExists){
+    } else if (!mnemonic && !mnemonicExists) {
       mnemonic = bip39.generateMnemonic(256);
       this.mnemonicEncrypted = encrypt(mnemonic, password, this.id);
     } else {
       mnemonic = decrypt(this.mnemonicEncrypted, password);
     }
-    const eth1DerivationPath = `m/44'/60'/0'/0/${eth1AccountIndex.toString()}`; 
+    const eth1DerivationPath = `m/44'/60'/0'/0/${eth1AccountIndex.toString()}`;
     if (!this.eth1Address || this.eth1Address == '') {
       this.eth1Address = Wallet.fromMnemonic(mnemonic, eth1DerivationPath).address;
-      console.log("Eth1 Wallet address to fund with 32ETH + gas to per Validator: " + this.eth1Address)
-      console.log("You should also be able to find this as the suggested-fee-recipient parameter in the validator config");
+      console.log('Eth1 Wallet address to fund with 32ETH + gas to per Validator: ' + this.eth1Address);
+      console.log('You should also be able to find this as the suggested-fee-recipient parameter in the validator config');
     }
     await timeout(5000);
-    console.log("Mnemonic encrypted"); //, mnemonic);
-    return this.mnemonicEncrypted
+    console.log('Mnemonic encrypted'); //, mnemonic);
+    return this.mnemonicEncrypted;
   }
 
   async enableSlasher(): Promise<boolean> {
@@ -2125,7 +2123,7 @@ export class Ethereum extends EthereumPreMerge {
     const consensusConfig = await this._fs.readFile(consensusConfigPath);
     await this._fs.writeFile(consensusConfigPath, consensusConfig.replace('historical-slasher-node: false', 'historical-slasher-node: true')
                                                                  .replace('slasher: false', 'slasher: true'), 'utf8');
-    console.log("Slashing altruist enabled")
+    console.log('Slashing altruist enabled');
     return true;
   }
 
@@ -2137,10 +2135,10 @@ export class Ethereum extends EthereumPreMerge {
     const consensusConfig = await this._fs.readFile(consensusConfigPath);
     await this._fs.writeFile(consensusConfigPath, consensusConfig.replace('historical-slasher-node: true', 'historical-slasher-node: false')
                                                                  .replace('slasher: true', 'slasher: false'), 'utf8');
-    console.log("Slashing altruist disabled")
+    console.log('Slashing altruist disabled');
     return true;
   }
-    
+
   consensusDockerName(): string {
     return Ethereum.consensusDockerName(this.id);
   }
@@ -2154,5 +2152,5 @@ export class Ethereum extends EthereumPreMerge {
   generateConfig(): string {
     return Ethereum.generateConfig(this);
   }
-  
+
 }

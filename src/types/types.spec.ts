@@ -287,7 +287,7 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
           it('should start a node', async function() {
 
             this.timeout(360000);
-            
+
             const id = uuid();
             node = new NodeConstructor({
               id,
