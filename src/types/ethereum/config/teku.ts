@@ -14,7 +14,7 @@ log-file: "/opt/teku/data/teku.log"
 
 # execution engine
 ee-endpoint: "{{EXEC}}"
-ee-jwt-secret-file: "/opt/teku/config/jwt.hex" 
+ee-jwt-secret-file: "/opt/teku/config/jwt.hex"
 
 # rpc
 rest-api-enabled: true
@@ -39,6 +39,4 @@ validators-proposer-default-fee-recipient: "{{ETH1_ADDRESS}}"
 # metrics
 metrics-enabled: true
 metrics-port: 8008
-`
-
-
+`;

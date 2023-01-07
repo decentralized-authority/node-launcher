@@ -128,7 +128,7 @@ export const goerli = `
     "Enabled": true
   }
 }
-`
+`;
 
 export const rinkeby = `
 {
@@ -239,4 +239,4 @@ export const xdai = `{
     ]
   }
 }
-`
+`;

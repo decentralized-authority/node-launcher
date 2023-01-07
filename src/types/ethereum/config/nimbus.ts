@@ -10,7 +10,7 @@ rest-address = "0.0.0.0"
 web3-url = ["{{EXEC}}"]
 jwt-secret = "/var/lib/config/jwt.hex"
 
-`
+`;
 // [trustedNodeSync]
 // trusted-node-url = "{{CHECKPOINT_SYNC_URL}}"
 
@@ -21,4 +21,4 @@ secrets-dir = "/run/secrets"
 suggested-fee-recipient = {{ETH1_ADDRESS}}
 doppelganger-detection = true
 in-process-validators = true
-`
+`;

@@ -283,7 +283,7 @@ export class Docker extends EventEmitter {
     const spawnArgs = [
       '--compatibility',
       '-f',
-      configPath, 
+      configPath,
       // 'up', rather than create a new function for docker-compose run --rm, or down or whatever else, should just specify command as first arg of args
       ...args,
     ];

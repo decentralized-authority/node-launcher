@@ -58,11 +58,11 @@ export const getSecretsDir = async (id: string): Promise<string> => {
   tmpfs = tmpfs || tmpdir;
   let secretsDir = path.join(tmpfs, id);
   try {
-    await fs.remove(secretsDir)
+    await fs.remove(secretsDir);
     await fs.ensureDir(secretsDir);
   } catch(err) {
     secretsDir = path.join(tmpdir, id);
-    await fs.remove(secretsDir)
+    await fs.remove(secretsDir);
     await fs.ensureDir(secretsDir);
   }
   return secretsDir;
