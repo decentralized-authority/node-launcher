@@ -798,12 +798,14 @@ export class Ethereum extends EthereumPreMerge {
     [NetworkType.MAINNET]: 8755,
     [NetworkType.RINKEBY]: 18545,
     [NetworkType.GOERLI]: 16545,
+    [NetworkType.XDAI]: 8755,
   }; // 8545
 
   static defaultPeerPort = {
     [NetworkType.MAINNET]: 8756,
     [NetworkType.RINKEBY]: 18546,
     [NetworkType.GOERLI]: 16546,
+    [NetworkType.XDAI]: 8756,
   }; // 30303
 
   static defaultAuthPort = {
@@ -815,16 +817,19 @@ export class Ethereum extends EthereumPreMerge {
   static defaultConsensusRPCPort = {
     [NetworkType.MAINNET]: 8757,
     [NetworkType.GOERLI]: 16757,
+    [NetworkType.XDAI]: 8757,
   }; // 3500 grpc query api default --grpc-gateway-port (host must be enabled, cors modified), 4000 validator grpc default --rpc
 
   static defaultConsensusPeerPort = {
     [NetworkType.MAINNET]: 8758,
     [NetworkType.GOERLI]: 16758,
+    [NetworkType.XDAI]: 8758,
   }; // 1300tcp and 1200udp defaults (technical debt again), but can be same. need to open both tcp and udp
 
   static defaultValidatorRPCPort = {
     [NetworkType.MAINNET]: 7000,
     [NetworkType.GOERLI]: 16000,
+    [NetworkType.XDAI]: 7000,
   }; // validator grpc gateway
 
   static defaultCPUs = 8;
@@ -1040,8 +1045,8 @@ export class Ethereum extends EthereumPreMerge {
     this.rpcPort = data.rpcPort || Ethereum.defaultRPCPort[this.network];
     this.rpcUsername = data.rpcUsername || '';
     this.rpcPassword = data.rpcPassword || '';
-    this.client = data.client || Ethereum.clients[0];
-    this.consensusClient = data.consensusClient || Ethereum.consensusClients[0];
+    this.client = data.client ? data.client : this.network === NetworkType.XDAI ? NodeClient.NETHERMIND : Ethereum.clients[0];
+    this.consensusClient = data.consensusClient ? data.consensusClient : this.network === NetworkType.XDAI ? NodeClient.LIGHTHOUSE : Ethereum.consensusClients[0];
     this.dockerCPUs = data.dockerCPUs || this.dockerCPUs;
     this.dockerMem = data.dockerMem || this.dockerMem;
     this.dockerNetwork = data.dockerNetwork || this.dockerNetwork;
