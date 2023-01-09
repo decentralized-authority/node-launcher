@@ -1,6 +1,6 @@
 export const base = `
 [Eth]
-NetworkId = 1
+NetworkId = {{NETWORK_ID}}
 [Node]
 DataDir = "/root/data"
 KeyStoreDir = "/root/keystore"

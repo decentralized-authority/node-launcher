@@ -4,6 +4,7 @@ export const NetworkType = {
   RINKEBY: 'RINKEBY',
   GOERLI: 'GOERLI',
   ROPSTEN: 'ROPSTEN',
+  XDAI: 'XDAI',
 };
 
 export const NodeType = {
@@ -19,6 +20,9 @@ export const NodeClient = {
   NETHERMIND: 'NETHERMIND',
   ERIGON: 'ERIGON',
   PRYSM: 'PRYSM',
+  TEKU: 'TEKU',
+  NIMBUS: 'NIMBUS',
+  LIGHTHOUSE: 'LIGHTHOUSE'
 };
 
 export const Role = {

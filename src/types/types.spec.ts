@@ -330,6 +330,7 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
             await node.start(keyPassword);
             await new Promise(resolve => setTimeout(resolve, 10000));
             await node.stop();
+            await new Promise(resolve => setTimeout(resolve, 20000));
             for(const instance of node.instances()) {
               instance.exitCode.should.be.a.Number();
             }
@@ -442,6 +443,7 @@ chains.forEach(({ name, constructor: NodeConstructor }) => {
               runningStatus.should.not.equal(Status.STOPPED);
               Object.values(Status).includes(runningStatus).should.be.True();
               await node.stop();
+              await new Promise(resolve => setTimeout(resolve, 10000));
               const stoppedStatus = await node.getStatus();
               stoppedStatus.should.equal(Status.STOPPED);
             });

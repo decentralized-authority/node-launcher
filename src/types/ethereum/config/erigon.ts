@@ -1,11 +1,22 @@
 export const base = `
-datadir = "/erigon/data"
+datadir = "/erigon/data/erigon"
 port = "{{PEER_PORT}}"
 chain = "{{NETWORK}}"
 http = "true"
+externalcl = "true"
+prune = "htc"
 
 "http.addr" = "0.0.0.0"
-"http.api" = "engine,eth,erigon,web3,net,debug,trace,txpool"
+"http.api" = "eth,erigon,web3,net,debug,trace,txpool,miner"
 "http.port" = "{{RPC_PORT}}"
 "http.corsdomain" = "*"
+
+"authrpc.jwtsecret" = "/erigon/config/jwt.hex"
+"authrpc.addr" = "0.0.0.0"
+"authrpc.port" = {{AUTH_PORT}}
+"authrpc.vhosts" = "*"
 `;
+
+// "log.dir.verbosity" = 4
+// "log.console.verbosity" = 0
+// "log.dir.path" = "/erigon/data/"
