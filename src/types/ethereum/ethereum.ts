@@ -23,7 +23,7 @@ import os from 'os';
 import Web3 from 'web3';
 import { receiveMessageOnPort } from 'worker_threads';
 
-interface EthereumCryptoNodeData extends CryptoNodeData {
+export interface EthereumCryptoNodeData extends CryptoNodeData {
   jwt: string
   authPort?: number
   consensusClient?: string
@@ -39,23 +39,23 @@ interface EthereumCryptoNodeData extends CryptoNodeData {
   validators: Validators
 }
 
-interface EthereumVersionDockerImage extends VersionDockerImage {
+export interface EthereumVersionDockerImage extends VersionDockerImage {
   consensusImage?: string
   validatorImage?: string
   passwordPath?: string
 }
 
-interface ValidatorObject {
+export interface ValidatorObject {
   keystore: string
   pubkey: string
   status?: string
 }
 
-interface Validators {
+export interface Validators {
   [key: number]: ValidatorObject
 }
 
-interface DepositKeyInterface {
+export interface DepositKeyInterface {
   pubkey: string;
   withdrawal_credentials: string;
   amount: number;
@@ -66,11 +66,11 @@ interface DepositKeyInterface {
   deposit_cli_version: string;
 }
 
-interface Services {
+export interface Services {
   [key: string]: ContainerService
 }
 
-interface ContainerService {
+export interface ContainerService {
   container_name: string
   image:          string
   restart:        string
@@ -788,7 +788,7 @@ export class Ethereum extends EthereumPreMerge {
     NetworkType.MAINNET,
     //NetworkType.RINKEBY,
     NetworkType.GOERLI,
-    NetworkType.XDAI,
+    // NetworkType.XDAI,
   ];
 
   static roles = [
