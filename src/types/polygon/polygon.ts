@@ -10,7 +10,7 @@ import { ChildProcess } from 'child_process';
 import os from 'os';
 import path from 'path';
 import * as genesis from './config/genesis';
-import { pathExists } from 'fs-extra';
+import isString from 'lodash/isString';
 
 interface PolygonCryptoNodeData extends CryptoNodeData {
   heimdallDockerImage?: string
@@ -36,6 +36,27 @@ export class Polygon extends EthereumPreMerge {
     switch(client) {
       case NodeClient.CORE:
         versions = [
+          {
+            version: '0.3.3',
+            clientVersion: '0.3.3',
+            image: '0xpolygon/bor:0.3.3',
+            dataDir: '/var/lib/bor/data',
+            walletDir: '/var/lib/bor/keys',
+            configDir: '/var/lib/bor/config',
+            heimdallImage: '0xpolygon/heimdall:0.3.0',
+            heimdallDataDir: '/var/lib/heimdall/data',
+            heimdallWalletDir: '/var/lib/heimdall/keys',
+            heimdallConfigDir: '/var/lib/heimdall/config',
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              // return ` bor -config=${this.configDir}/${Polygon.fileName.config} -chain=mainnet -bor.heimdall http://${Polygon.generateHeimdallDockerName(id)}:1317 --pprof --pprof.port 7071 --pprof.addr 0.0.0.0`;
+              return ` server -config=${this.configDir}/${Polygon.fileName.config}`;
+            },
+            generateHeimdallRuntimeArgs(data: CryptoNodeData): string {
+              return ` start --home=/var/lib/heimdall --chain ${data.network === NetworkType.TESTNET ? 'mumbai' : 'mainnet'} --rest-server`;
+            },
+          },
           {
             version: '0.2.17',
             clientVersion: '0.2.17',
@@ -153,7 +174,7 @@ export class Polygon extends EthereumPreMerge {
 
   static heimdallDefaultMem = 2048;
 
-  static generateConfig(client: Polygon|string = Polygon.clients[0], network = NetworkType.MAINNET, peerPort = Polygon.defaultPeerPort[NetworkType.MAINNET], rpcPort = Polygon.defaultRPCPort[NetworkType.MAINNET]): string {
+  static generateConfig(client: Polygon|string = Polygon.clients[0], network = NetworkType.MAINNET, peerPort = Polygon.defaultPeerPort[NetworkType.MAINNET], rpcPort = Polygon.defaultRPCPort[NetworkType.MAINNET], id = ''): string {
     let clientStr: string;
     if(typeof client === 'string') {
       clientStr = client;
@@ -162,6 +183,7 @@ export class Polygon extends EthereumPreMerge {
       network = client.network || network;
       peerPort = client.peerPort || peerPort;
       rpcPort = client.rpcPort || rpcPort;
+      id = client.id || id;
     }
     let baseConfig: string;
     switch(clientStr) {
@@ -173,27 +195,29 @@ export class Polygon extends EthereumPreMerge {
     }
     let bootstrapNodes: string;
     if(network === NetworkType.MAINNET) {
-      bootstrapNodes = '"enode://0cb82b395094ee4a2915e9714894627de9ed8498fb881cec6db7c65e8b9a5bd7f2f25cc84e71e89d0947e51c76e85d0847de848c7782b13c0255247a6758178c@44.232.55.71:30303", "enode://88116f4295f5a31538ae409e4d44ad40d22e44ee9342869e7d68bdec55b0f83c1530355ce8b41fbec0928a7d75a5745d528450d30aec92066ab6ba1ee351d710@159.203.9.164:30303"';
+      bootstrapNodes = '"enode://0cb82b395094ee4a2915e9714894627de9ed8498fb881cec6db7c65e8b9a5bd7f2f25cc84e71e89d0947e51c76e85d0847de848c7782b13c0255247a6758178c@44.232.55.71:30303", "enode://88116f4295f5a31538ae409e4d44ad40d22e44ee9342869e7d68bdec55b0f83c1530355ce8b41fbec0928a7d75a5745d528450d30aec92066ab6ba1ee351d710@159.203.9.164:30303", "enode://3178257cd1e1ab8f95eeb7cc45e28b6047a0432b2f9412cff1db9bb31426eac30edeb81fedc30b7cd3059f0902b5350f75d1b376d2c632e1b375af0553813e6f@35.221.13.28:30303", "enode://16d9a28eadbd247a09ff53b7b1f22231f6deaf10b86d4b23924023aea49bfdd51465b36d79d29be46a5497a96151a1a1ea448f8a8666266284e004306b2afb6e@35.199.4.13:30303"';
     } else if(network === NetworkType.TESTNET) {
-      bootstrapNodes = '"enode://095c4465fe509bd7107bbf421aea0d3ad4d4bfc3ff8f9fdc86f4f950892ae3bbc3e5c715343c4cf60c1c06e088e621d6f1b43ab9130ae56c2cacfd356a284ee4@18.213.200.99:30303"';
+      bootstrapNodes = '"enode://320553cda00dfc003f499a3ce9598029f364fbb3ed1222fdc20a94d97dcc4d8ba0cd0bfa996579dcc6d17a534741fb0a5da303a90579431259150de66b597251@54.147.31.250:30303", "enode://095c4465fe509bd7107bbf421aea0d3ad4d4bfc3ff8f9fdc86f4f950892ae3bbc3e5c715343c4cf60c1c06e088e621d6f1b43ab9130ae56c2cacfd356a284ee4@18.213.200.99:30303", "enode://90676138b9823f4b834dd4fb2f95da9f54730a74ff9deb4782c4be98232f1797806a62375d9b6d305af49f7c0be69a9adcad7eb533091bd15b77dd5997b256e2@54.227.107.44:30303"';
     } else {
       bootstrapNodes = '';
     }
     return baseConfig
+      .replace(/{{IDENTITY}}/, !isString(client) ? client.id : 'bor-node')
       .replace(/{{BOOTSTRAP_NODES}}/, bootstrapNodes)
       .replace(/{{RPC_PORT}}/, rpcPort.toString(10))
       .replace(/{{PEER_PORT}}/g, peerPort.toString(10))
-      .replace(/{{NETWORK_ID}}/, Polygon.getBorChainId(network));
+      .replace(/{{CHAIN}}/, network === NetworkType.TESTNET ? 'mumbai' : 'mainnet')
+      .replace(/{{HEIMDALL_URL}}/, `http://${Polygon.generateHeimdallDockerName(id)}:1317`);
   }
 
   static generateHeimdallConfig(id: string, peerPort: number, network: string): string {
     let seeds: string;
     switch(network) {
       case NetworkType.MAINNET:
-        seeds = 'f4f605d60b8ffaaf15240564e58a81103510631c@159.203.9.164:26656,4fb1bc820088764a564d4f66bba1963d47d82329@44.232.55.71:26656';
+        seeds = 'f4f605d60b8ffaaf15240564e58a81103510631c@159.203.9.164:26656,4fb1bc820088764a564d4f66bba1963d47d82329@44.232.55.71:26656,2eadba4be3ce47ac8db0a3538cb923b57b41c927@35.199.4.13:26656,3b23b20017a6f348d329c102ddc0088f0a10a444@35.221.13.28:26656,25f5f65a09c56e9f1d2d90618aa70cd358aa68da@35.230.116.151:26656';
         break;
       case NetworkType.TESTNET:
-        seeds = '4cd60c1d76e44b05f7dfd8bab3f447b119e87042@54.147.31.250:26656,b18bbe1f3d8576f4b73d9b18976e71c65e839149@34.226.134.117:26656';
+        seeds = '4cd60c1d76e44b05f7dfd8bab3f447b119e87042@54.147.31.250:26656,9dfc12d9f39257cefc3d57a4d7302586e59a994e@18.213.200.99:26656,b18bbe1f3d8576f4b73d9b18976e71c65e839149@34.226.134.117:26656,7a6c7b5d25b13ce3448b047dbebeb1a19cc2e092@18.213.200.99:26656';
         break;
       default:
         seeds = '';
@@ -204,10 +228,11 @@ export class Polygon extends EthereumPreMerge {
       .replace(/{{SEEDS}}/, seeds);
   }
 
-  static generateHeimdallServerConfig(borName: string, borRPCPort: number): string {
+  static generateHeimdallServerConfig(borName: string, borRPCPort: number, network: string): string {
     return coreConfig.heimdallServerConfig
       .replace(/{{BOR_NAME}}/, borName)
-      .replace(/{{BOR_RPC_PORT}}/, borRPCPort.toString(10));
+      .replace(/{{BOR_RPC_PORT}}/, borRPCPort.toString(10))
+      .replace(/{{CHAIN}}/g, network === NetworkType.TESTNET ? 'mumbai' : 'mainnet');
   }
 
   static generateHeimdallDockerName(id: string): string {
@@ -341,6 +366,11 @@ export class Polygon extends EthereumPreMerge {
     }
   }
 
+  isV2(): boolean {
+    const splitVersion = this.version.split('.');
+    return splitVersion[1] === '2';
+  }
+
   async start(): Promise<ChildProcess[]> {
 
     const versions = Polygon.versions(this.client, this.network);
@@ -421,9 +451,7 @@ export class Polygon extends EthereumPreMerge {
 
     const tmpdir = os.tmpdir();
 
-    const heimdallStartScriptPath = path.join(tmpdir, uuid());
-    const heimdallStartScript = 'heimdalld start & heimdalld rest-server';
-    await fs.writeFile(heimdallStartScriptPath, heimdallStartScript, 'utf8');
+    const isV2 = this.isV2();
 
     let borArgs = [
       '--memory', `${this.dockerMem}MB`,
@@ -439,9 +467,18 @@ export class Polygon extends EthereumPreMerge {
       '--cpus', this.heimdallDockerCPUs.toString(10),
       '--name', this.polygonGenerateHeimdallDockerName(),
       '--network', this.dockerNetwork,
-      '-v', `${heimdallStartScriptPath}:/start.sh`,
       '-p', `${this.heimdallPeerPort}:${this.heimdallPeerPort}`,
     ];
+
+    if(isV2) {
+      const heimdallStartScriptPath = path.join(tmpdir, uuid());
+      const heimdallStartScript = 'heimdalld start & heimdalld rest-server';
+      await fs.writeFile(heimdallStartScriptPath, heimdallStartScript, 'utf8');
+      heimdallArgs = [
+        ...heimdallArgs,
+        '-v', `${heimdallStartScriptPath}:/start.sh`,
+      ];
+    }
 
     const dataDir = this.dataDir || path.join(tmpdir, uuid());
     await fs.ensureDir(dataDir);
@@ -493,7 +530,7 @@ export class Polygon extends EthereumPreMerge {
     if(!configExists) {
       await new Promise((resolve, reject) => {
         this._docker.run(
-          this.heimdallDockerImage + ` heimdalld init --chain-id ${Polygon.getHeimdallChainId(this.network)}`,
+          this.heimdallDockerImage + ` init --home=/var/lib/heimdall --chain ${this.network === NetworkType.TESTNET ? 'mumbai' : 'mainnet'}`,
           [
             ...heimdallArgs,
             '-i',
@@ -518,29 +555,6 @@ export class Polygon extends EthereumPreMerge {
     if(!borConfigExists) {
       await fs.writeFile(borGenesisPath, this.polygonGenerateBorGenesis(), 'utf8');
       await fs.writeFile(borConfigPath, this.generateConfig(), 'utf8');
-
-    }
-    const borDir = path.join(borDBDir, 'bor');
-    const borDataExists = await pathExists(borDir);
-    if(!borDataExists) {
-      await new Promise((resolve, reject) => {
-        this._docker.run(
-          this.dockerImage + ` bor --config=${versionData.configDir}/${Polygon.fileName.config} init ${versionData.configDir}/${Polygon.fileName.genesis}`,
-          [
-            ...borArgs,
-            '-i',
-            '--rm',
-          ],
-          output => this._logOutput(output),
-          err => {
-            this._logError(err);
-            reject(err);
-          },
-          code => {
-            resolve(code);
-          },
-        );
-      });
     }
 
     return {
@@ -550,14 +564,22 @@ export class Polygon extends EthereumPreMerge {
   }
 
   startHeimdall(versionData: PolygonVersionDockerImage, heimdallArgs: string[]): Promise<number> {
+    const isV2 = this.isV2();
+    let args = [
+      ...heimdallArgs,
+      '-d',
+      `--restart=on-failure:${this.restartAttempts}`,
+    ];
+    if(isV2) {
+      args = [
+        ...args,
+        '--entrypoint', '/bin/sh',
+      ];
+    }
     return new Promise<number>((resolve, reject) => {
       this._docker.run(
         this.heimdallDockerImage + versionData.generateHeimdallRuntimeArgs(this),
-        [
-          ...heimdallArgs,
-          '-d',
-          `--restart=on-failure:${this.restartAttempts}`,
-        ],
+        args,
         output => this._logOutput('heimdall - ' + output),
         err => {
           this._logError(err);
@@ -640,7 +662,7 @@ export class Polygon extends EthereumPreMerge {
   }
 
   polygonGenerateHeimdallServerConfig(): string {
-    return Polygon.generateHeimdallServerConfig(this.id, this.rpcPort);
+    return Polygon.generateHeimdallServerConfig(this.id, this.rpcPort, this.network);
   }
 
   polygonGenerateBorGenesis(): string {
