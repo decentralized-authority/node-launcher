@@ -343,6 +343,9 @@ syncer_poll_interval = "1m0s"
 noack_poll_interval = "16m50s"
 clerk_poll_interval = "10s"
 span_poll_interval = "1m0s"
+sh_state_synced_interval = "1m0s"
+sh_stake_update_interval = "5m0s"
+sh_max_depth_duration = "1h0m0s"
 
 #### gas limits ####
 main_chain_gas_limit = "5000000"
@@ -352,43 +355,149 @@ main_chain_max_gas_price = "400000000000"
 
 ##### Timeout Config #####
 no_ack_wait_time = "30m0s"
+
+##### chain - newSelectionAlgoHeight depends on this #####
+chain = "{{CHAIN}}"
 `;
 
 export const borConfig = `
-[Eth]
-NetworkId = {{NETWORK_ID}}
-SyncMode = "full"
+chain = "{{CHAIN}}"
+identity = "{{IDENTITY}}"
+log-level = "INFO"
+datadir = "/var/lib/bor/data"
+ancient = ""
+keystore = "/var/lib/bor/keys"
+syncmode = "full"
+gcmode = "full"
+snapshot = true
+"bor.logs" = false
+ethstats = ""
 
-[Eth.Miner]
-GasCeil = 20000000
-GasPrice = 30000000000
+["eth.requiredblocks"]
 
-[Eth.TxPool]
-NoLocals = true
-AccountSlots = 16
-GlobalSlots = 32768
-AccountQueue = 16
-GlobalQueue = 32768
-PriceLimit = 30000000000
-Lifetime = 5400000000000
+[p2p]
+  maxpeers = 50
+  maxpendpeers = 50
+  bind = "0.0.0.0"
+  port = {{PEER_PORT}}
+  nodiscover = false
+  nat = "any"
+  [p2p.discovery]
+    v5disc = false
+    bootnodes = [{{BOOTSTRAP_NODES}}]
+    bootnodesv4 = []
+    bootnodesv5 = []
+    static-nodes = []
+    trusted-nodes = []
+    dns = []
 
-[Node]
-HTTPHost = "0.0.0.0"
-HTTPVirtualHosts = ["*"]
-HTTPCors = ["*"]
-HTTPPort = {{RPC_PORT}}
-DataDir = "/root/data"
-IPCPath = "/root/data/bor.ipc"
-KeyStoreDir = "/root/keys"
-HTTPModules = ["eth", "net", "web3", "txpool", "bor"]
+[heimdall]
+  url = "{{HEIMDALL_URL}}"
+  "bor.without" = false
+  grpc-address = ""
 
-[Node.P2P]
-MaxPeers = 200
-BootstrapNodes = [{{BOOTSTRAP_NODES}}]
-ListenAddr = ":{{PEER_PORT}}"
+[txpool]
+  locals = []
+  nolocals = false
+  journal = "transactions.rlp"
+  rejournal = "1h0m0s"
+  pricelimit = 1
+  pricebump = 10
+  accountslots = 16
+  globalslots = 32768
+  accountqueue = 16
+  globalqueue = 32768
+  lifetime = "3h0m0s"
 
-[Metrics]
-Enabled = true
+[miner]
+  mine = false
+  etherbase = ""
+  extradata = ""
+  gaslimit = 30000000
+  gasprice = "1000000000"
+
+[jsonrpc]
+  ipcdisable = false
+  ipcpath = ""
+  gascap = 50000000
+  txfeecap = 5.0
+  [jsonrpc.http]
+    enabled = true
+    port = {{RPC_PORT}}
+    prefix = ""
+    host = "0.0.0.0"
+    api = ["eth", "net", "web3", "txpool", "bor"]
+    vhosts = ["*"]
+    corsdomain = ["*"]
+  [jsonrpc.ws]
+    enabled = false
+    port = 8546
+    prefix = ""
+    host = "localhost"
+    api = ["net", "web3"]
+    origins = ["localhost"]
+  [jsonrpc.graphql]
+    enabled = false
+    port = 0
+    prefix = ""
+    host = ""
+    vhosts = ["localhost"]
+    corsdomain = ["localhost"]
+  [jsonrpc.timeouts]
+    read = "30s"
+    write = "30s"
+    idle = "2m0s"
+
+[gpo]
+  blocks = 20
+  percentile = 60
+  maxprice = "5000000000000"
+  ignoreprice = "2"
+
+[telemetry]
+  metrics = false
+  expensive = false
+  prometheus-addr = "127.0.0.1:7071"
+  opencollector-endpoint = "127.0.0.1:4317"
+  [telemetry.influx]
+    influxdb = false
+    endpoint = ""
+    database = ""
+    username = ""
+    password = ""
+    influxdbv2 = false
+    token = ""
+    bucket = ""
+    organization = ""
+    [telemetry.influx.tags]
+
+[cache]
+  cache = 1024
+  gc = 25
+  snapshot = 10
+  database = 50
+  trie = 15
+  journal = "triecache"
+  rejournal = "1h0m0s"
+  noprefetch = false
+  preimages = false
+  txlookuplimit = 2350000
+  triesinmemory = 128
+  timeout = "1h0m0s"
+
+[accounts]
+  unlock = []
+  password = ""
+  allow-insecure-unlock = false
+  lightkdf = false
+  disable-bor-wallet = true
+
+[grpc]
+  addr = ":3131"
+
+[developer]
+  dev = false
+  period = 0
 `;
 
 // Recommended bor config dump
