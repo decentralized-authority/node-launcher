@@ -386,8 +386,8 @@ export class Avalanche extends Bitcoin {
         '--cpus', this.dockerCPUs.toString(10),
         '--name', this.id,
         '--network', this.dockerNetwork,
-        '-p', `${this.rpcPort}:${this.rpcPort}`,
-        '-p', `${this.peerPort}:${this.peerPort}`,
+        '-p', `${this.rpcPort}:${this.rpcPort}/tcp`,
+        '-p', `${this.peerPort}:${this.peerPort}/tcp`,
         '--entrypoint', '/avalanchego/build/avalanchego',
       ];
       const tmpdir = os.tmpdir();

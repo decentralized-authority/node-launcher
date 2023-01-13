@@ -317,8 +317,9 @@ export class BinanceSC extends EthereumPreMerge {
         '--cpus', this.dockerCPUs.toString(10),
         '--name', this.id,
         '--network', this.dockerNetwork,
-        '-p', `${this.rpcPort}:${this.rpcPort}`,
-        '-p', `${this.peerPort}:${this.peerPort}`,
+        '-p', `${this.rpcPort}:${this.rpcPort}/tcp`,
+        '-p', `${this.peerPort}:${this.peerPort}/tcp`,
+        '-p', `${this.peerPort}:${this.peerPort}/udp`,
       ];
       const tmpdir = os.tmpdir();
       const dataDir = this.dataDir || path.join(tmpdir, uuid());

@@ -1202,10 +1202,10 @@ export class Ethereum extends EthereumPreMerge {
           },
         },
         ports: [
-          `${this.rpcPort}:${this.rpcPort}`,
-            `${this.peerPort}:${this.peerPort}`,
-            `${this.peerPort}:${this.peerPort}/udp`,
-          ],
+          `${this.rpcPort}:${this.rpcPort}/tcp`,
+          `${this.peerPort}:${this.peerPort}/tcp`,
+          `${this.peerPort}:${this.peerPort}/udp`,
+        ],
         volumes: [
           `${this.configDir}:${containerConfigDir}`,
           `${this.dataDir}:${containerDataDir}`,
@@ -1228,8 +1228,8 @@ export class Ethereum extends EthereumPreMerge {
           },
         },
         ports: [
-          `${this.consensusRPCPort}:${this.consensusRPCPort}`,
-            `${this.consensusPeerPort}:${this.consensusPeerPort}`,
+          `${this.consensusRPCPort}:${this.consensusRPCPort}/tcp`,
+            `${this.consensusPeerPort}:${this.consensusPeerPort}/tcp`,
             `${this.consensusPeerPort}:${this.consensusPeerPort}/udp`,
           ],
         volumes: [

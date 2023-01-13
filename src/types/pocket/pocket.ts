@@ -597,8 +597,8 @@ export class Pocket extends Bitcoin {
               },
             },
             ports: [
-              `${this.rpcPort}:${this.rpcPort}`,
-              `${this.peerPort}:${this.peerPort}`,
+              `${this.rpcPort}:${this.rpcPort}/tcp`,
+              `${this.peerPort}:${this.peerPort}/tcp`,
             ],
             volumes: [
               `${configDir}:${containerConfigDir}`,

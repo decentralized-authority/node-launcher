@@ -342,7 +342,7 @@ export class Fuse extends EthereumPreMerge {
       '--cpus', this.dockerCPUs.toString(10),
       '--name', this.id,
       '--network', this.dockerNetwork,
-      '-p', `${this.rpcPort}:${this.rpcPort}`,
+      '-p', `${this.rpcPort}:${this.rpcPort}/tcp`,
       '-p', `${this.peerPort}:${this.peerPort}/tcp`,
       '-p', `${this.peerPort}:${this.peerPort}/udp`,
       '--entrypoint', '/usr/local/bin/parity',
