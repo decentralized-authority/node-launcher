@@ -458,8 +458,9 @@ export class Polygon extends EthereumPreMerge {
       '--cpus', this.dockerCPUs.toString(10),
       '--name', this.id,
       '--network', this.dockerNetwork,
-      '-p', `${this.peerPort}:${this.peerPort}`,
-      '-p', `${this.rpcPort}:${this.rpcPort}`,
+      '-p', `${this.peerPort}:${this.peerPort}/tcp`,
+      '-p', `${this.peerPort}:${this.peerPort}/udp`,
+      '-p', `${this.rpcPort}:${this.rpcPort}/tcp`,
     ];
 
     let heimdallArgs = [
@@ -467,7 +468,7 @@ export class Polygon extends EthereumPreMerge {
       '--cpus', this.heimdallDockerCPUs.toString(10),
       '--name', this.polygonGenerateHeimdallDockerName(),
       '--network', this.dockerNetwork,
-      '-p', `${this.heimdallPeerPort}:${this.heimdallPeerPort}`,
+      '-p', `${this.heimdallPeerPort}:${this.heimdallPeerPort}/tcp`,
     ];
 
     if(isV2) {

@@ -315,8 +315,8 @@ export class Xdai extends Ethereum {
           },
         },
         ports: [
-          `${this.rpcPort}:${this.rpcPort}`,
-          `${this.peerPort}:${this.peerPort}`,
+          `${this.rpcPort}:${this.rpcPort}/tcp`,
+          `${this.peerPort}:${this.peerPort}/tcp`,
           `${this.peerPort}:${this.peerPort}/udp`,
         ],
         volumes: [
@@ -341,8 +341,8 @@ export class Xdai extends Ethereum {
           },
         },
         ports: [
-          `${this.consensusRPCPort}:${this.consensusRPCPort}`,
-          `${this.consensusPeerPort}:${this.consensusPeerPort}`,
+          `${this.consensusRPCPort}:${this.consensusRPCPort}/tcp`,
+          `${this.consensusPeerPort}:${this.consensusPeerPort}/tcp`,
           `${this.consensusPeerPort}:${this.consensusPeerPort}/udp`,
         ],
         volumes: [

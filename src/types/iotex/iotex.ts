@@ -261,7 +261,8 @@ export class IOTEX extends EthereumPreMerge {
         '--cpus', this.dockerCPUs.toString(10),
         '--name', coreDockerName,
         '--network', this.dockerNetwork,
-        '-p', `${this.peerPort}:${this.peerPort}`,
+        '-p', `${this.peerPort}:${this.peerPort}/tcp`,
+        '-p', `${this.peerPort}:${this.peerPort}/udp`,
       ];
       await fs.ensureDir(dataDir);
       await fs.ensureDir(dbDir);
@@ -376,7 +377,7 @@ export class IOTEX extends EthereumPreMerge {
             `--restart=on-failure:${this.restartAttempts}`,
             '--name', this.id,
             '--network', this.dockerNetwork,
-            '-p', `${this.rpcPort}:${this.rpcPort}`,
+            '-p', `${this.rpcPort}:${this.rpcPort}/tcp`,
             '-e', `PORT=${this.rpcPort}`,
             '-e', `CHAIN_ID=${this.network === NetworkType.TESTNET ? '4690' : '4689'}`,
             '-e', `END_POINT=http://${coreDockerName}:14014`,
