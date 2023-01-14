@@ -56,6 +56,31 @@ export class Polygon extends EthereumPreMerge {
             generateHeimdallRuntimeArgs(data: CryptoNodeData): string {
               return ` start --home=/var/lib/heimdall --chain ${data.network === NetworkType.TESTNET ? 'mumbai' : 'mainnet'} --rest-server`;
             },
+            async upgrade(data: PolygonCryptoNodeData): Promise<boolean> {
+              const fs = new FS(new Docker());
+              const node = new Polygon(data);
+              const { configDir } = node;
+
+              // Update Bor config
+              const borConfigDir = path.join(configDir, 'bor');
+              const borConfigConfigDir = path.join(borConfigDir, 'config');
+              const borConfigPath = path.join(borConfigConfigDir, Polygon.fileName.config);
+              const borGenesisPath = path.join(borConfigConfigDir, Polygon.fileName.genesis);
+              await fs.writeFile(borGenesisPath, node.polygonGenerateBorGenesis(), 'utf8');
+              await fs.writeFile(borConfigPath, node.generateConfig(), 'utf8');
+
+              // Update Heimdall config
+              const heimdallConfigDir = path.join(configDir, 'heimdall');
+              const heimdallConfigConfigDir = path.join(heimdallConfigDir, 'config');
+              const heimdallConfigPath = path.join(heimdallConfigConfigDir, Polygon.fileName.heimdallConfig);
+              const heimdallServerConfigPath = path.join(heimdallConfigConfigDir, Polygon.fileName.heimdallServerConfig);
+              const heimdallGenesisPath = path.join(heimdallConfigConfigDir, Polygon.fileName.genesis);
+              await fs.writeFile(heimdallConfigPath, node.polygonGenerateHeimdallConfig(), 'utf8');
+              await fs.writeFile(heimdallServerConfigPath, node.polygonGenerateHeimdallServerConfig(), 'utf8');
+              await fs.writeFile(heimdallGenesisPath, node.polygonGenerateHeimdallGenesis(), 'utf8');
+
+              return true;
+            },
           },
           {
             version: '0.2.17',
