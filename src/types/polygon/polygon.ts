@@ -565,22 +565,14 @@ export class Polygon extends EthereumPreMerge {
   }
 
   startHeimdall(versionData: PolygonVersionDockerImage, heimdallArgs: string[]): Promise<number> {
-    const isV2 = this.isV2();
-    let args = [
-      ...heimdallArgs,
-      '-d',
-      `--restart=on-failure:${this.restartAttempts}`,
-    ];
-    if(isV2) {
-      args = [
-        ...args,
-        '--entrypoint', '/bin/sh',
-      ];
-    }
     return new Promise<number>((resolve, reject) => {
       this._docker.run(
         this.heimdallDockerImage + versionData.generateHeimdallRuntimeArgs(this),
-        args,
+        [
+          ...heimdallArgs,
+          '-d',
+          `--restart=on-failure:${this.restartAttempts}`,
+        ],
         output => this._logOutput('heimdall - ' + output),
         err => {
           this._logError(err);
