@@ -48,7 +48,7 @@ export class Polygon extends EthereumPreMerge {
             heimdallWalletDir: '/var/lib/heimdall/keys',
             heimdallConfigDir: '/var/lib/heimdall/config',
             networks: [NetworkType.MAINNET, NetworkType.TESTNET],
-            breaking: false,
+            breaking: true,
             generateRuntimeArgs(data: CryptoNodeData): string {
               // return ` bor -config=${this.configDir}/${Polygon.fileName.config} -chain=mainnet -bor.heimdall http://${Polygon.generateHeimdallDockerName(id)}:1317 --pprof --pprof.port 7071 --pprof.addr 0.0.0.0`;
               return ` server -config=${this.configDir}/${Polygon.fileName.config}`;
