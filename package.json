@@ -1,6 +1,6 @@
 {
   "name": "da-node-runner",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "description": "Full crypto node runner used in Node Pilot.",
   "main": "./lib/index.js",
   "scripts": {
