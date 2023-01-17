@@ -279,8 +279,9 @@ export class Docker extends EventEmitter {
   }
 
   public composeDo(configPath: string, args: string[], onOutput?: (output: string) => void, onErr?: (err: Error) => void, onClose?: (statusCode: number) => void, silent = false): ChildProcess {
-    const command = 'docker-compose';
+    const command = 'docker';
     const spawnArgs = [
+      'compose',
       '--compatibility',
       '-f',
       configPath,
