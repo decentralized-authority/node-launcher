@@ -1255,7 +1255,8 @@ export class Ethereum extends EthereumPreMerge {
         services: services, //validatorService,
         networks: {
           [this.dockerNetwork]: {
-            external: 'true',
+            // external: true,
+            driver: 'bridge',
           },
         },
         secrets: {
