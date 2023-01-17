@@ -618,7 +618,7 @@ export class Pocket extends Bitcoin {
         },
         networks: {
           [this.dockerNetwork]: {
-            driver: 'bridge',
+            external: true,
           },
         },
         secrets: {
