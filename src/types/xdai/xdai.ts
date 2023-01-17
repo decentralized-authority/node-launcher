@@ -363,7 +363,7 @@ export class Xdai extends Ethereum {
         services: services,
         networks: {
           [this.dockerNetwork]: {
-            external: 'true',
+            external: true,
           },
         },
       };
