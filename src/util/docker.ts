@@ -399,10 +399,8 @@ export class Docker extends EventEmitter {
 
   async pull(image: string, onOutput?: (output: string)=>void): Promise<number> {
     const res = await this.imageInspect(image);
-    if(res) {
-      console.log('image already pulled');
+    if(res)
       return 0;
-    }
     return await new Promise((resolve, reject) => {
       const instance = spawn('docker', ['pull', image]);
       instance.stdout.on('data', data => {
