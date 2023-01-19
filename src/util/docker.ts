@@ -145,6 +145,26 @@ export class Docker extends EventEmitter {
     return true;
   }
 
+  async imageInspect(image: string): Promise<any> {
+    try {
+      const output: string = await new Promise((resolve, reject) => {
+        this._execFile('docker', ['inspect', image, '--format', '"{{json .}}"'], {}, (err, output) => {
+          if (err)
+            reject(err);
+          else
+            resolve(output.toString());
+        });
+      });
+      const matches = output.match(this._objectPatt);
+      if(!matches)
+        return null;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+      return JSON.parse(matches[1]);
+    } catch (err) {
+      return null;
+    }
+  }
+
   async containerExists(name: string): Promise<boolean> {
     try {
       const data = await this.containerInspect(name);
@@ -169,7 +189,6 @@ export class Docker extends EventEmitter {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       return JSON.parse(jsonStr);
     } catch (err) {
-      this._logError(err);
       return null;
     }
   }
@@ -189,7 +208,6 @@ export class Docker extends EventEmitter {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       return JSON.parse(jsonStr);
     } catch (err) {
-      this._logError(err);
       return {};
     }
   }
@@ -379,8 +397,11 @@ export class Docker extends EventEmitter {
     });
   }
 
-  pull(image: string, onOutput?: (output: string)=>void): Promise<number> {
-    return new Promise((resolve, reject) => {
+  async pull(image: string, onOutput?: (output: string)=>void): Promise<number> {
+    const res = await this.imageInspect(image);
+    if(res)
+      return 0;
+    return await new Promise((resolve, reject) => {
       const instance = spawn('docker', ['pull', image]);
       instance.stdout.on('data', data => {
         const str = data.toString();
