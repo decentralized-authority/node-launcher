@@ -329,6 +329,19 @@ export class Docker extends EventEmitter {
     return instance;
   }
 
+  async composeDown(filePath: string, containerName?: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      try {
+        const args = ['down'];
+        if(containerName)
+          args.push(containerName);
+        this.composeDo(filePath, args, undefined, undefined, () => resolve(true));
+      } catch(err) {
+        resolve(false);
+      }
+    });
+  }
+
   public exec(containerName: string, args: string[], command: string, onOutput: (output: string) => void, onErr: (err: Error) => void, onClose: (statusCode: number) => void, silent = false): ChildProcess {
     const spawnCommand = 'docker';
     const spawnArgs = [
