@@ -580,6 +580,12 @@ export class Pocket extends Bitcoin {
         }, {spaces: 2});
       }
 
+      const command = [
+        ...versionData.generateRuntimeArgs(this).trim().split(/\s+/),
+      ];
+      if(simulateRelay)
+        command.push('--simulateRelay');
+
       const composeConfig = {
         services: {
           [this.id]: {
@@ -607,8 +613,8 @@ export class Pocket extends Bitcoin {
             ],
             entrypoint: [
               'pocket',
-              ...versionData.generateRuntimeArgs(this).trim().split(/\s+/),
             ],
+            command,
             secrets: [
               'node_key_json',
               'priv_val_key_json',
