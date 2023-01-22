@@ -1378,7 +1378,7 @@ export class Ethereum extends EthereumPreMerge {
 
   async stop(): Promise<void> {
     try {
-      this._docker.composeDo(path.join(this.configDir, 'docker-compose.yml'), ['down']);
+      await this._docker.composeDown(path.join(this.configDir, 'docker-compose.yml'));
     } catch(err) {
       this._logError(err);
       try {
@@ -2003,14 +2003,7 @@ export class Ethereum extends EthereumPreMerge {
     } else {
       return false;
     }
-    let flag = true;
-    this._docker.composeDo(composeFilePath, ['down', this.validatorDockerName()]) // can't import while slashing db locked
-      .on('close', (code) => {
-      flag = false;
-    });
-    while (flag) {
-      await timeout(10);
-    }
+    await this._docker.composeDown(composeFilePath, this.validatorDockerName());
     const secretsDir = await getSecretsDir(uuid());
     const passwordSecretPath = path.join(secretsDir, 'pass.pwd');
     composeFile.secrets.password.file = passwordSecretPath;
