@@ -9,9 +9,11 @@ import os from 'os';
 import path from 'path';
 import request from 'superagent';
 import { FS } from '../../util/fs';
+import escapeRegExp from 'lodash/escapeRegExp';
+import dayjs from 'dayjs';
 
 const coreConfig = `
-Version = "2.5.0"
+Version = "2.5.7"
 
 [BLSKeys]
   KMSConfigFile = ""
@@ -35,14 +37,19 @@ Version = "2.5.0"
 
 [General]
   DataDir = "/root/data"
+  EnablePruneBeaconChain = false
   IsArchival = false
+  IsBackup = false
   IsBeaconArchival = false
   IsOffline = false
   NoStaking = true
   NodeType = "explorer"
+  RunElasticMode = false
   ShardID = {{SHARD}}
+  TraceEnable = false
 
 [HTTP]
+  AuthPort = 0
   Enabled = true
   IP = "0.0.0.0"
   Port = {{RPC_PORT}}
@@ -50,6 +57,7 @@ Version = "2.5.0"
   RosettaPort = 9700
 
 [Log]
+  Console = false
   FileName = "harmony.log"
   Folder = "/root/data"
   RotateCount = 0
@@ -65,18 +73,37 @@ Version = "2.5.0"
   NetworkType = "{{NETWORK}}"
 
 [P2P]
+  DisablePrivateIPScan = false
+  DiscConcurrency = 0
   IP = "0.0.0.0"
-  KeyFile = "./.hmykey"
+  KeyFile = "/harmony/config/.hmykey"
+  MaxConnsPerIP = 0
+  MaxPeers = 0
   Port = {{PEER_PORT}}
 
 [Pprof]
   Enabled = false
+  Folder = ""
   ListenAddr = "127.0.0.1:6060"
+  ProfileDebugValues = []
+  ProfileIntervals = []
+  ProfileNames = []
 
 [RPCOpt]
   DebugEnabled = false
+  EthRPCsEnabled = true
+  LegacyRPCsEnabled = true
   RateLimterEnabled = true
   RequestsPerSecond = 1000
+  RpcFilterFile = "/harmony/config/rpc_filter.txt"
+  StakingRPCsEnabled = true
+
+[ShardData]
+  CacheSize = 0
+  CacheTime = 0
+  DiskCount = 0
+  EnableShardData = false
+  ShardCount = 0
 
 [Sync]
   Concurrency = 6
@@ -90,9 +117,15 @@ Version = "2.5.0"
   MinPeers = 6
 
 [TxPool]
-  BlacklistFile = "./.hmy/blacklist.txt"
+  AccountSlots = 16
+  AllowedTxsFile = "/harmony/config/allowedtxs.txt"
+  BlacklistFile = "/harmony/config/blacklist.txt"
+  GlobalSlots = 5120
+  LocalAccountsFile = ""
+  RosettaFixFile = ""
 
 [WS]
+  AuthPort = 0
   Enabled = true
   IP = "127.0.0.1"
   Port = 9800
@@ -110,6 +143,93 @@ export class Harmony extends EthereumPreMerge {
     switch(client) {
       case NodeClient.CORE:
         versions = [
+          {
+            version: '4.3.13',
+            clientVersion: '4.3.13',
+            image: 'rburgett/harmony:4.3.13',
+            dataDir: '/root/data',
+            walletDir: '/root/keystore',
+            configDir: '/harmony/config',
+            networks: [NetworkType.MAINNET],
+            breaking: true,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              return ` -c ${path.join(this.configDir, Harmony.configName(data))}`;
+            },
+            async upgrade(data: CryptoNodeData) {
+              try {
+                const fs = new FS(new Docker());
+                // @ts-ignore
+                const configFilePath = path.join(data.configDir, Harmony.configName(data));
+                const contents = await fs.readFile(configFilePath, 'utf8');
+                let splitContents = contents
+                  .split('\n');
+                const versionPatt = /^Version\s*=\s*"(.+?)"/;
+                const versionIdx = splitContents.findIndex(s => versionPatt.test(s));
+                if(versionIdx >= 0) {
+                  const matches = splitContents[versionIdx].match(versionPatt);
+                  if(matches && matches[1] === '2.5.7')
+                    return true;
+                  splitContents[versionIdx] = 'Version = "2.5.7"';
+                }
+                const updates: [string, string[]][] = [
+                  ['[General]', ['EnablePruneBeaconChain = false', 'IsBackup = false', 'TraceEnable = false', 'RunElasticMode = false']],
+                  ['[HTTP]', ['AuthPort = 0']],
+                  ['[Log]', ['Console = false']],
+                  ['[P2P]', ['DisablePrivateIPScan = false', 'DiscConcurrency = 0', 'MaxConnsPerIP = 0', 'MaxPeers = 0']],
+                  ['[Pprof]', ['Folder = ""', 'ProfileDebugValues = []', 'ProfileIntervals = []', 'ProfileNames = []']],
+                  ['[RPCOpt]', ['EthRPCsEnabled = true', 'LegacyRPCsEnabled = true', 'RpcFilterFile = "/harmony/config/rpc_filter.txt"', 'StakingRPCsEnabled = true']],
+                  ['[ShardData]', ['CacheSize = 0', 'CacheTime = 0', 'DiskCount = 0', 'EnableShardData = false', 'ShardCount = 0']],
+                  ['[TxPool]', ['AccountSlots = 16', 'AllowedTxsFile = "/harmony/config/allowedtxs.txt"', 'GlobalSlots = 5120', 'LocalAccountsFile = ""', 'RosettaFixFile = ""']],
+                  ['[WS]', ['AuthPort = 0']],
+                ];
+                for(const [heading, items] of updates) {
+                  const patt = new RegExp(escapeRegExp(heading));
+                  const idx = splitContents.findIndex(s => patt.test(s));
+                  if(idx < 0) {
+                    splitContents = [
+                      ...splitContents,
+                      '',
+                      heading,
+                      ...items.map(i => `  ${i}`),
+                    ];
+                  } else {
+                    // let nextBlockIdx = splitContents.slice(idx + 1).findIndex(s => /\[\w+?]/.test(s)) || splitContents.length;
+                    let nextBlockIdx = -1;
+                    for(let i = idx + 1; i < splitContents.length; i++) {
+                      if(/\[.+?]/.test(splitContents[i])) {
+                        if(!splitContents[i - 1]) {
+                          nextBlockIdx = i - 1;
+                        } else {
+                          nextBlockIdx = i;
+                        }
+                        break;
+                      }
+                    }
+                    if(nextBlockIdx < 0)
+                      nextBlockIdx = splitContents.length;
+                    const toAdd: string[] = [];
+                    for(const item of items) {
+                      const splitItem = item.split('=').map(s => s.trim());
+                      const key = splitItem[0];
+                      const found = splitContents.slice(idx + 1, nextBlockIdx).find(s => s.includes(key));
+                      if(!found)
+                        toAdd.push('  ' + item);
+                    }
+                    splitContents = [
+                      ...splitContents.slice(0, nextBlockIdx),
+                      ...toAdd,
+                      ...splitContents.slice(nextBlockIdx),
+                    ];
+                  }
+                }
+                await fs.copy(configFilePath, configFilePath + `-bkp_${dayjs().format('YYYY-MM-DD')}`);
+                await fs.writeFile(configFilePath, splitContents.join('\n'), 'utf8');
+                return true;
+              } catch(err) {
+                return false;
+              }
+            },
+          },
           {
             version: '4.3.12',
             clientVersion: '4.3.12',
