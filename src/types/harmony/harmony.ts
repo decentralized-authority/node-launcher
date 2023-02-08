@@ -144,6 +144,19 @@ export class Harmony extends EthereumPreMerge {
       case NodeClient.CORE:
         versions = [
           {
+            version: '2023.1.0',
+            clientVersion: '2023.1.0',
+            image: 'rburgett/harmony:2023.1.0',
+            dataDir: '/root/data',
+            walletDir: '/root/keystore',
+            configDir: '/harmony/config',
+            networks: [NetworkType.MAINNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              return ` -c ${path.join(this.configDir, Harmony.configName(data))}`;
+            },
+          },
+          {
             version: '4.3.13',
             clientVersion: '4.3.13',
             image: 'rburgett/harmony:4.3.13',
@@ -520,48 +533,6 @@ export class Harmony extends EthereumPreMerge {
       this.peerPort,
       this.rpcPort,
       this.shard);
-  }
-
-  async _rpcGetBlockCount(): Promise<string> {
-    let blockHeight;
-    try {
-      this._runCheck('rpcGetBlockCount');
-      const res = await request
-        .post(this.endpoint())
-        .set('Accept', 'application/json')
-        .timeout(this._requestTimeout)
-        .send({
-          id: '',
-          jsonrpc: '2.0',
-          method: 'eth_syncing',
-          params: [],
-        });
-      if(res.body.result === false) {
-        const res = await request
-          .post(this.endpoint())
-          .set('Accept', 'application/json')
-          .timeout(this._requestTimeout)
-          .send({
-            id: '',
-            jsonrpc: '2.0',
-            method: 'eth_blockNumber',
-            params: [],
-          });
-        const currentBlock = res.body.result;
-        const blockNum = parseInt(currentBlock, 16);
-        blockHeight = blockNum > 0 ? blockNum.toString(10) : '';
-      } else {
-        const { difference } = res.body.result;
-        const networkHeight = res.body.result['network-height'];
-        const diff = BigInt(difference);
-        const total = BigInt(networkHeight);
-        blockHeight = (total - diff).toString(10);
-      }
-    } catch(err) {
-      this._logError(err);
-      blockHeight = '';
-    }
-    return blockHeight || '';
   }
 
   _makeSyncingCall(): Promise<any> {
