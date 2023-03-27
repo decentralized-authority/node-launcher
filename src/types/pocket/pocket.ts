@@ -559,6 +559,14 @@ export class Pocket extends Bitcoin {
         if(!nodeKeyFileExists || !privValKeyFileExists)
           throw new Error('Password must be sent into start() method on first run in order to unlock the node.');
       } else {
+        const privValStatePath = path.join(walletDir, 'priv_val_state.json');
+        const privValStateExists = await fs.pathExists(privValStatePath);
+        if(!privValStateExists)
+          await fs.writeJson(privValStatePath, {
+            height: '0',
+            round: '0',
+            step: 0,
+          }, {spaces: 2});
         const privateKey = await this.getRawPrivateKey(password);
         const privateKeyB64 = Buffer.from(privateKey, 'hex').toString('base64');
         await fs.writeJson(nodeKeySecretPath, {
@@ -616,8 +624,8 @@ export class Pocket extends Bitcoin {
             ],
             command,
             secrets: [
-              'node_key_json',
-              'priv_val_key_json',
+              'node_key.json',
+              'priv_val_key.json',
             ],
             restart: `on-failure:${this.restartAttempts}`,
           },
@@ -628,10 +636,10 @@ export class Pocket extends Bitcoin {
           },
         },
         secrets: {
-          node_key_json: {
+          'node_key.json': {
             file: nodeKeySecretPath,
           },
-          priv_val_key_json: {
+          'priv_val_key.json': {
             file: privValKeySecretPath,
           },
         },
