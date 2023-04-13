@@ -78,6 +78,19 @@ export class BinanceSC extends EthereumPreMerge {
       case NodeClient.GETH:
         versions = [
           {
+            version: '1.1.22',
+            clientVersion: '1.1.22',
+            image: 'rburgett/bsc_geth:v1.1.22',
+            dataDir: '/blockchain/data',
+            walletDir: '/blockchain/keys',
+            configDir: '/blockchain/config',
+            networks: [NetworkType.MAINNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              return ` --config=${path.join(this.configDir, BinanceSC.configName(data))}`;
+            },
+          },
+          {
             version: '1.1.18',
             clientVersion: '1.1.18',
             image: 'rburgett/bsc_geth:v1.1.18',
