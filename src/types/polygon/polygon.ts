@@ -37,6 +37,27 @@ export class Polygon extends EthereumPreMerge {
       case NodeClient.CORE:
         versions = [
           {
+            version: '0.3.7',
+            clientVersion: '0.3.7',
+            image: '0xpolygon/bor:0.3.7',
+            dataDir: '/var/lib/bor/data',
+            walletDir: '/var/lib/bor/keys',
+            configDir: '/var/lib/bor/config',
+            heimdallImage: '0xpolygon/heimdall:0.3.3',
+            heimdallDataDir: '/var/lib/heimdall/data',
+            heimdallWalletDir: '/var/lib/heimdall/keys',
+            heimdallConfigDir: '/var/lib/heimdall/config',
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              // return ` bor -config=${this.configDir}/${Polygon.fileName.config} -chain=mainnet -bor.heimdall http://${Polygon.generateHeimdallDockerName(id)}:1317 --pprof --pprof.port 7071 --pprof.addr 0.0.0.0`;
+              return ` server -config=${this.configDir}/${Polygon.fileName.config}`;
+            },
+            generateHeimdallRuntimeArgs(data: CryptoNodeData): string {
+              return ` start --home=/var/lib/heimdall --chain ${data.network === NetworkType.TESTNET ? 'mumbai' : 'mainnet'} --rest-server`;
+            },
+          },
+          {
             version: '0.3.3',
             clientVersion: '0.3.3',
             image: '0xpolygon/bor:0.3.3',
