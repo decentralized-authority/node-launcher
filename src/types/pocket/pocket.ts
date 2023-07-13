@@ -118,10 +118,10 @@ const coreConfig = `
             "Recheck": true,
             "Broadcast": true,
             "WalPath": "",
-            "Size": 9000,
-            "MaxTxsBytes": 1073741824,
-            "CacheSize": 9000,
-            "MaxTxBytes": 1048576
+            "Size": 18000,
+            "MaxTxsBytes": 2147483648,
+            "CacheSize": 18000,
+            "MaxTxBytes": 2097152
         },
         "FastSync": {
             "Version": "v1"
@@ -180,7 +180,8 @@ const coreConfig = `
         "show_relay_errors": true,
         "disable_tx_events": true,
         "iavl_cache_size": 5000000,
-        "chains_hot_reload": true
+        "chains_hot_reload": true,
+        "client_session_sync_allowance": 1
     }
 }
 `;
@@ -193,6 +194,42 @@ export class Pocket extends Bitcoin {
     switch(client) {
       case NodeClient.CORE:
         versions = [
+          {
+            version: 'RC-0.10.4',
+            clientVersion: 'RC-0.10.4',
+            image: 'rburgett/pocketcore:RC-0.10.4',
+            dataDir: '/root/pocket-data',
+            walletDir: '/root/pocket-keys',
+            configDir: '/root/.pocket/config',
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              const { network = '' } = data;
+              return ` start --${network.toLowerCase()}`;
+            },
+            async upgrade(data: CryptoNodeData): Promise<boolean> {
+              const fs = new FS(new Docker());
+              if(!data.configDir)
+                return false;
+              const configPath = path.join(data.configDir, Pocket.configName(data));
+              const configExists = await fs.pathExists(configPath);
+              if(!configExists)
+                return false;
+              const configJson = await fs.readFile(configPath);
+              const config = JSON.parse(configJson);
+              config.tendermint_config.Mempool = {
+                ...config.tendermint_config.Mempool,
+                Size: 18000,
+                MaxTxsBytes: 2147483648,
+                CacheSize: 18000,
+                MaxTxBytes: 2097152,
+              };
+              if(!Object.keys(config.pocket_config).includes('client_session_sync_allowance'))
+                config.pocket_config.client_session_sync_allowance = 1;
+              await fs.writeFile(configPath, JSON.stringify(config, null, '    '), 'utf8');
+              return true;
+            },
+          },
           {
             version: 'RC-0.9.2',
             clientVersion: 'RC-0.9.2',
