@@ -226,6 +226,11 @@ export class Pocket extends Bitcoin {
               };
               if(!Object.keys(config.pocket_config).includes('client_session_sync_allowance'))
                 config.pocket_config.client_session_sync_allowance = 1;
+              if(data.network === NetworkType.TESTNET) {
+                config.tendermint_config.P2P.Seeds = Pocket.defaultSeeds[NetworkType.TESTNET];
+              } else {
+                config.tendermint_config.P2P.Seeds = Pocket.defaultSeeds[NetworkType.MAINNET];
+              }
               await fs.writeFile(configPath, JSON.stringify(config, null, '    '), 'utf8');
               return true;
             },
