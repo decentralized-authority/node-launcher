@@ -36,6 +36,45 @@ export class Bitcoin extends EventEmitter implements CryptoNodeData, CryptoNode,
       case NodeClient.CORE:
         versions = [
           {
+            version: '24.1.0',
+            clientVersion: '24.1.0',
+            image: 'rburgett/bitcoin:v24.1.0',
+            dataDir: '/opt/blockchain/data',
+            walletDir: '/opt/blockchain/wallets',
+            configDir: '/opt/blockchain/config',
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              return ` bitcoind -conf=${path.join(this.configDir, Bitcoin.configName(data))}` + (data.network === NetworkType.TESTNET ? ' -testnet' : '');
+            },
+          },
+          {
+            version: '23.2.0',
+            clientVersion: '23.2.0',
+            image: 'rburgett/bitcoin:v23.2.0',
+            dataDir: '/opt/blockchain/data',
+            walletDir: '/opt/blockchain/wallets',
+            configDir: '/opt/blockchain/config',
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              return ` bitcoind -conf=${path.join(this.configDir, Bitcoin.configName(data))}` + (data.network === NetworkType.TESTNET ? ' -testnet' : '');
+            },
+          },
+          {
+            version: '22.1.0',
+            clientVersion: '22.1.0',
+            image: 'rburgett/bitcoin:v22.1.0',
+            dataDir: '/opt/blockchain/data',
+            walletDir: '/opt/blockchain/wallets',
+            configDir: '/opt/blockchain/config',
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              return ` bitcoind -conf=${path.join(this.configDir, Bitcoin.configName(data))}` + (data.network === NetworkType.TESTNET ? ' -testnet' : '');
+            },
+          },
+          {
             version: '0.21.0',
             clientVersion: '0.21.0',
             image: 'rburgett/bitcoin:v0.21.0',
