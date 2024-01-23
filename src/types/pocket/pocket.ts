@@ -195,6 +195,20 @@ export class Pocket extends Bitcoin {
       case NodeClient.CORE:
         versions = [
           {
+            version: 'BETA-0.11.1',
+            clientVersion: 'BETA-0.11.1',
+            image: 'rburgett/pocketcore:BETA-0.11.1',
+            dataDir: '/root/pocket-data',
+            walletDir: '/root/pocket-keys',
+            configDir: '/root/.pocket/config',
+            networks: [NetworkType.MAINNET, NetworkType.TESTNET],
+            breaking: false,
+            generateRuntimeArgs(data: CryptoNodeData): string {
+              const { network = '' } = data;
+              return ` start --${network.toLowerCase()}`;
+            },
+          },
+          {
             version: 'BETA-0.11.0',
             clientVersion: 'BETA-0.11.0',
             image: 'rburgett/pocketcore:BETA-0.11.0',
