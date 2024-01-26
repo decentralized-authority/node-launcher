@@ -948,23 +948,23 @@ export class Ethereum extends EthereumPreMerge {
               return ` --config-file=${path.join(this.configDir, Ethereum.configName(data, consensusFlag))} --${network.toLowerCase()}`;
             },
           },
-          // {
-          //   version: '4.1.1',
-          //   clientVersion: '4.1.1',
-          //   image: 'prysmaticlabs/prysm-beacon-chain:v4.1.1',
-          //   consensusImage: 'prysmaticlabs/prysm-beacon-chain:v4.1.1',
-          //   validatorImage: 'prysmaticlabs/prysm-validator:v4.1.1',
-          //   //passwordPath: '/.hidden/pass.pwd',
-          //   dataDir: '/root/data',
-          //   walletDir: '/root/keystore',
-          //   configDir: '/root/config',
-          //   networks: [NetworkType.MAINNET, NetworkType.GOERLI],
-          //   breaking: false,
-          //   generateRuntimeArgs(data: EthereumCryptoNodeData): string {
-          //     const { network = 'mainnet'} = data;
-          //     return ` --config-file=${path.join(this.configDir, Ethereum.configName(data, consensusFlag))} --${network.toLowerCase()}`;
-          //   },
-          // },
+          {
+            version: '4.1.1',
+            clientVersion: '4.1.1',
+            image: 'prysmaticlabs/prysm-beacon-chain:v4.1.1',
+            consensusImage: 'prysmaticlabs/prysm-beacon-chain:v4.1.1',
+            validatorImage: 'prysmaticlabs/prysm-validator:v4.1.1',
+            //passwordPath: '/.hidden/pass.pwd',
+            dataDir: '/root/data',
+            walletDir: '/root/keystore',
+            configDir: '/root/config',
+            networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+            breaking: false,
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+              const { network = 'mainnet'} = data;
+              return ` --config-file=${path.join(this.configDir, Ethereum.configName(data, consensusFlag))} --${network.toLowerCase()}`;
+            },
+          },
           {
             version: '4.0.1',
             clientVersion: '4.0.1',
@@ -1602,6 +1602,27 @@ export class Ethereum extends EthereumPreMerge {
         }
         switch (this.consensusClient) {
           case NodeClient.PRYSM: {
+
+            {
+              // Update chain-id and network-id in config to be numbers rather than strings
+              // this is necessary in order to be compatible with Prysm 4.x.x
+              const origConsensusConfig = await fs.readFile(consensusConfigPath, 'utf8');
+              let consensusConfig = origConsensusConfig;
+              const chainIdPatt = /chain-id:\s*"(.+?)"/;
+              if(chainIdPatt.test(consensusConfig)) {
+                consensusConfig = consensusConfig
+                  .replace(chainIdPatt, 'chain-id: $1');
+              }
+              const networkIdPatt = /network-id:\s*"(.+?)"/;
+              if(networkIdPatt.test(consensusConfig)) {
+                consensusConfig = consensusConfig
+                  .replace(networkIdPatt, 'network-id: $1');
+              }
+              if(consensusConfig !== origConsensusConfig) {
+                await fs.writeFile(consensusConfigPath, consensusConfig, 'utf8');
+              }
+            }
+
             if (slasher) {
               await this.enableSlasher();
             } else {
@@ -1695,7 +1716,6 @@ export class Ethereum extends EthereumPreMerge {
       };
       const composeConfigPath = path.join(this.configDir, 'docker-compose.yml');
       await fs.writeJson(composeConfigPath, composeConfig, {spaces: 2});
-      console.log('composeConfigPath');
       if (this.role === Role.VALIDATOR && password) {
         switch (this.consensusClient) {
           case NodeClient.PRYSM: {

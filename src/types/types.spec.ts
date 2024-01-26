@@ -23,12 +23,12 @@ import { IOTEX } from './iotex/iotex';
 import { Polygon } from './polygon/polygon';
 
 const chains: [{name: string, constructor: any}] = [
-  {name: 'Bitcoin', constructor: Bitcoin},
+  // {name: 'Bitcoin', constructor: Bitcoin},
   // {name: 'BitcoinCash', constructor: BitcoinCash},
   // {name: 'Dash', constructor: Dash},
   // {name: 'LBRY', constructor: LBRY},
   // {name: 'Litecoin', constructor: Litecoin},
-  // {name: 'Ethereum', constructor: Ethereum},
+  {name: 'Ethereum', constructor: Ethereum},
   // {name: 'BinanceSC', constructor: BinanceSC},
   // {name: 'Xdai', constructor: Xdai},
   // {name: 'Avalanche', constructor: Avalanche},
