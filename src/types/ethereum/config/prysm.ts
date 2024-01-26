@@ -3,8 +3,8 @@ datadir: "/root/data"
 accept-terms-of-use: true
 rpc-http-enabled: true
 http-modules: "prysm,eth"
-network-id: "{{NETWORK_ID}}"
-chain-id: "{{CHAIN_ID}}"
+network-id: {{NETWORK_ID}}
+chain-id: {{CHAIN_ID}}
 rpc-host: "0.0.0.0"
 rpc-port: {{VALIDATOR_RPC_PORT}} # this is the port the validator needs to connect to. (they both use grpc, but this is technical debt) I think this should not be exposed to user in docker and be closed to the world
 grpc-gateway-corsdomain: "*"
@@ -18,7 +18,7 @@ checkpoint-sync-url: "{{CHECKPOINT_SYNC_URL}}" # syncs in ~12 hours, should we s
 genesis-beacon-api-url: "{{GENESIS_BEACON_API_URL}}"
 jwt-secret: /root/config/jwt.hex
 
-# will add 1TB + 
+# will add 1TB +
 historical-slasher-node: false
 slasher: false
 

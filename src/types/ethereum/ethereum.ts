@@ -1695,6 +1695,7 @@ export class Ethereum extends EthereumPreMerge {
       };
       const composeConfigPath = path.join(this.configDir, 'docker-compose.yml');
       await fs.writeJson(composeConfigPath, composeConfig, {spaces: 2});
+      console.log('composeConfigPath');
       if (this.role === Role.VALIDATOR && password) {
         switch (this.consensusClient) {
           case NodeClient.PRYSM: {
