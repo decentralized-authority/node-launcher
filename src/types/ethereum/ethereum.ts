@@ -470,6 +470,20 @@ export class Ethereum extends EthereumPreMerge {
       case NodeClient.NETHERMIND:
         versions = [
           {
+            version: '1.25.3',
+            clientVersion: '1.25.3',
+            image: 'nethermind/nethermind:1.25.3',
+            dataDir: '/nethermind/nethermind_db',
+            walletDir: '/nethermind/keystore',
+            configDir: '/nethermind/config',
+            networks: [NetworkType.MAINNET, NetworkType.GOERLI, NetworkType.XDAI],
+            breaking: false,
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+              const { network = '' } = data;
+              return ` --configsDirectory ${this.configDir} --config ${network.toLowerCase()}`;
+            },
+          },
+          {
             version: '1.21.1',
             clientVersion: '1.21.1',
             image: 'nethermind/nethermind:1.21.1',
@@ -1197,7 +1211,7 @@ export class Ethereum extends EthereumPreMerge {
 
   static clients = [
     NodeClient.GETH,
-    // NodeClient.NETHERMIND,
+    NodeClient.NETHERMIND,
     // NodeClient.ERIGON,
   ];
 
