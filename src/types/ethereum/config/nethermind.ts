@@ -8,17 +8,15 @@ export const mainnet = `
     "MemoryHint": 2048000000
   },
   "Network": {
-    "MaxActivePeers": 100,
+    "ActivePeersMaxCount": 100,
     "P2PPort": {{PEER_PORT}}
   },
   "Sync": {
-    "FastSync": true,
-    "PivotNumber": 15830000,
-    "PivotHash": "0xb917d75ec90eaa8d1f41dd416e014f56d7ba5e056a947f9e66744fa49f63f3b7",
+    "SnapSync": true,
+    "PivotNumber": 18900000,
+    "PivotHash": "0x84bd4976f299d9343a18a1088f1cec0dbcac72b6d51a6fc9b901921a55449fc6",
     "PivotTotalDifficulty": "58750003716598352816469",
     "FastBlocks": true,
-    "AncientBodiesBarrier": 11052984,
-    "AncientReceiptsBarrier": 11052984,
     "FastSyncCatchUpHeightDelta": "10000000000"
   },
   "EthStats": {
@@ -26,6 +24,9 @@ export const mainnet = `
   },
   "Metrics": {
     "NodeName": "Mainnet"
+  },
+  "Blocks": {
+    "TargetBlockGasLimit": 30000000
   },
   "JsonRpc": {
     "Enabled": true,
@@ -48,8 +49,7 @@ export const mainnet = `
     "EnginePort": {{AUTH_PORT}},
     "EngineHost": "0.0.0.0",
     "JwtSecretFile": "/nethermind/config/jwt.hex",
-    "AdditionalRpcUrls": [
-    ]
+    "AdditionalRpcUrls": []
   },
   "Merge": {
     "Enabled": true
@@ -67,19 +67,20 @@ export const goerli = `
     "MemoryHint": 768000000
   },
   "Network": {
-    "MaxActivePeers": 100,
+    "ActivePeersMaxCount": 100,
     "P2PPort": {{PEER_PORT}}
   },
   "TxPool": {
-    "Size": 1024
+    "Size": 1024,
+    "BlobsSupport": "StorageWithReorgs"
   },
   "Db": {
     "EnableMetricsUpdater": true
   },
   "Sync": {
-    "FastSync": true,
-    "PivotNumber": 7800000,
-    "PivotHash": "0xe58afae321f270bdde6dac2e2ba2beab5fc5a1dcaaa82569f6a0bf97f707a341",
+    "SnapSync": true,
+    "PivotNumber": 10260000,
+    "PivotHash": "0xfd7265da4de69c506d16eb67eb41018c4dd11e3a0a8198cee0c5308e655b61db",
     "PivotTotalDifficulty": "10790000",
     "FastBlocks": true,
     "UseGethLimitsInFastBlocks": true,
@@ -91,6 +92,9 @@ export const goerli = `
   },
   "Metrics": {
     "NodeName": "Goerli"
+  },
+  "Blocks": {
+    "TargetBlockGasLimit": 30000000
   },
   "Bloom": {
     "IndexLevelBucketSizes": [
