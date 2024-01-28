@@ -77,7 +77,6 @@ export const goerli = `
     "EnableMetricsUpdater": true
   },
   "Sync": {
-    "FastSync": true,
     "SnapSync": true,
     "PivotNumber": 7800000,
     "PivotHash": "0xe58afae321f270bdde6dac2e2ba2beab5fc5a1dcaaa82569f6a0bf97f707a341",
