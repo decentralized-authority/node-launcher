@@ -3,6 +3,8 @@
   "version": "0.8.12",
   "description": "Full crypto node runner used in Node Pilot.",
   "main": "./lib/index.js",
+  "source": "./src/index.ts",
+  "types": "./lib/index.d.ts",
   "scripts": {
     "test-harmony-block": "node harmony-block-height",
     "postinstall": "npm run build",

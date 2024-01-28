@@ -21,7 +21,6 @@ import request from 'superagent';
 import path from 'path';
 import os from 'os';
 import Web3 from 'web3';
-import { receiveMessageOnPort } from 'worker_threads';
 
 export interface EthereumCryptoNodeData extends CryptoNodeData {
   jwt: string
@@ -99,6 +98,48 @@ export class Ethereum extends EthereumPreMerge {
     switch(client) {
       case NodeClient.GETH:
         versions = [
+          {
+            version: '1.13.11',
+            clientVersion: '1.13.11',
+            image: 'ethereum/client-go:v1.13.11',
+            dataDir: '/root/data',
+            walletDir: '/root/keystore',
+            configDir: '/root/config',
+            networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+            breaking: false,
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+              const { network = '' } = data;
+              return ` --config=${path.join(this.configDir, Ethereum.configName(data))}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
+            },
+          },
+          {
+            version: '1.13.4',
+            clientVersion: '1.13.4',
+            image: 'ethereum/client-go:v1.13.4',
+            dataDir: '/root/data',
+            walletDir: '/root/keystore',
+            configDir: '/root/config',
+            networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+            breaking: false,
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+              const { network = '' } = data;
+              return ` --config=${path.join(this.configDir, Ethereum.configName(data))}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
+            },
+          },
+          {
+            version: '1.12.2',
+            clientVersion: '1.12.2',
+            image: 'ethereum/client-go:v1.12.2',
+            dataDir: '/root/data',
+            walletDir: '/root/keystore',
+            configDir: '/root/config',
+            networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+            breaking: false,
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+              const { network = '' } = data;
+              return ` --config=${path.join(this.configDir, Ethereum.configName(data))}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
+            },
+          },
           {
             version: '1.11.0',
             clientVersion: '1.11.0',
@@ -428,6 +469,76 @@ export class Ethereum extends EthereumPreMerge {
       case NodeClient.NETHERMIND:
         versions = [
           {
+            version: '1.25.3',
+            clientVersion: '1.25.3',
+            image: 'nethermind/nethermind:1.25.3',
+            dataDir: '/nethermind/nethermind_db',
+            walletDir: '/nethermind/keystore',
+            configDir: '/nethermind/config',
+            networks: [NetworkType.MAINNET, NetworkType.GOERLI, NetworkType.XDAI],
+            breaking: false,
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+              const { network = '' } = data;
+              return ` --configsDirectory ${this.configDir} --config ${network.toLowerCase()}`;
+            },
+          },
+          {
+            version: '1.21.1',
+            clientVersion: '1.21.1',
+            image: 'nethermind/nethermind:1.21.1',
+            dataDir: '/nethermind/nethermind_db',
+            walletDir: '/nethermind/keystore',
+            configDir: '/nethermind/config',
+            networks: [NetworkType.MAINNET, NetworkType.GOERLI, NetworkType.XDAI],
+            breaking: false,
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+              const { network = '' } = data;
+              return ` --configsDirectory ${this.configDir} --config ${network.toLowerCase()}`;
+            },
+          },
+          {
+            version: '1.20.4',
+            clientVersion: '1.20.4',
+            image: 'nethermind/nethermind:1.20.4',
+            dataDir: '/nethermind/nethermind_db',
+            walletDir: '/nethermind/keystore',
+            configDir: '/nethermind/config',
+            networks: [NetworkType.MAINNET, NetworkType.GOERLI, NetworkType.XDAI],
+            breaking: false,
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+              const { network = '' } = data;
+              return ` --configsDirectory ${this.configDir} --config ${network.toLowerCase()}`;
+            },
+          },
+          {
+            version: '1.19.3',
+            clientVersion: '1.19.3',
+            image: 'nethermind/nethermind:1.19.3',
+            dataDir: '/nethermind/nethermind_db',
+            walletDir: '/nethermind/keystore',
+            configDir: '/nethermind/config',
+            networks: [NetworkType.MAINNET, NetworkType.GOERLI, NetworkType.XDAI],
+            breaking: false,
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+              const { network = '' } = data;
+              return ` --configsDirectory ${this.configDir} --config ${network.toLowerCase()}`;
+            },
+          },
+          {
+            version: '1.18.2',
+            clientVersion: '1.18.2',
+            image: 'nethermind/nethermind:1.18.2',
+            dataDir: '/nethermind/nethermind_db',
+            walletDir: '/nethermind/keystore',
+            configDir: '/nethermind/config',
+            networks: [NetworkType.MAINNET, NetworkType.GOERLI, NetworkType.XDAI],
+            breaking: false,
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+              const { network = '' } = data;
+              return ` --configsDirectory ${this.configDir} --config ${network.toLowerCase()}`;
+            },
+          },
+          {
             version: '1.17.3',
             clientVersion: '1.17.3',
             image: 'nethermind/nethermind:1.17.3',
@@ -505,6 +616,196 @@ export class Ethereum extends EthereumPreMerge {
         break;
       case NodeClient.ERIGON:
         versions = [
+          {
+            version: '2.57.1',
+            clientVersion: '2.57.1',
+            image: 'thorax/erigon:v2.57.1',
+            dataDir: '/erigon/data',
+            walletDir: '/erigon/keystore',
+            configDir: '/erigon/config',
+            networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+            breaking: true,
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+              const { network = '' } = data;
+              return ` --config=${path.join(this.configDir, Ethereum.configName(data))}  `;
+            },
+            async upgrade(data: EthereumCryptoNodeData): Promise<boolean> {
+              const fs = new FS(new Docker());
+              if(!data.configDir)
+                return false;
+              const configPath = path.join(data.configDir, Ethereum.configName(data));
+              const configExists = await fs.pathExists(configPath);
+              if(!configExists)
+                return false;
+              const config = await fs.readFile(configPath);
+              const splitConfig = config.split('\n');
+              const externalclIdx = splitConfig
+                .findIndex(l => /^externalcl/.test(l.trim()));
+              if(externalclIdx >= 0) {
+                const newSplitConfig = [
+                  ...splitConfig.slice(0, externalclIdx),
+                  ...splitConfig.slice(externalclIdx + 1),
+                ];
+                const newConfig = newSplitConfig.join('\n');
+                await fs.writeFile(configPath, newConfig, 'utf8');
+              }
+              return true;
+            },
+          },
+          // {
+          //   version: '2.53.4',
+          //   clientVersion: '2.53.4',
+          //   image: 'thorax/erigon:v2.53.4',
+          //   dataDir: '/erigon/data',
+          //   walletDir: '/erigon/keystore',
+          //   configDir: '/erigon/config',
+          //   networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+          //   breaking: false,
+          //   generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+          //     const { network = '' } = data;
+          //     return ` --config=${path.join(this.configDir, Ethereum.configName(data))}  `;
+          //   },
+          // },
+          // {
+          //   version: '2.52.5',
+          //   clientVersion: '2.52.5',
+          //   image: 'thorax/erigon:v2.52.5',
+          //   dataDir: '/erigon/data',
+          //   walletDir: '/erigon/keystore',
+          //   configDir: '/erigon/config',
+          //   networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+          //   breaking: false,
+          //   generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+          //     const { network = '' } = data;
+          //     return ` --config=${path.join(this.configDir, Ethereum.configName(data))}  `;
+          //   },
+          // },
+          // {
+          //   version: '2.51.0',
+          //   clientVersion: '2.51.0',
+          //   image: 'thorax/erigon:v2.51.0',
+          //   dataDir: '/erigon/data',
+          //   walletDir: '/erigon/keystore',
+          //   configDir: '/erigon/config',
+          //   networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+          //   breaking: false,
+          //   generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+          //     const { network = '' } = data;
+          //     return ` --config=${path.join(this.configDir, Ethereum.configName(data))}  `;
+          //   },
+          // },
+          // {
+          //   version: '2.50.2',
+          //   clientVersion: '2.50.2',
+          //   image: 'thorax/erigon:v2.50.2',
+          //   dataDir: '/erigon/data',
+          //   walletDir: '/erigon/keystore',
+          //   configDir: '/erigon/config',
+          //   networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+          //   breaking: false,
+          //   generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+          //     const { network = '' } = data;
+          //     return ` --config=${path.join(this.configDir, Ethereum.configName(data))}  `;
+          //   },
+          // },
+          // {
+          //   version: '2.49.3',
+          //   clientVersion: '2.49.3',
+          //   image: 'thorax/erigon:v2.49.3',
+          //   dataDir: '/erigon/data',
+          //   walletDir: '/erigon/keystore',
+          //   configDir: '/erigon/config',
+          //   networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+          //   breaking: false,
+          //   generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+          //     const { network = '' } = data;
+          //     return ` --config=${path.join(this.configDir, Ethereum.configName(data))}  `;
+          //   },
+          // },
+          // {
+          //   version: '2.48.1',
+          //   clientVersion: '2.48.1',
+          //   image: 'thorax/erigon:v2.48.1',
+          //   dataDir: '/erigon/data',
+          //   walletDir: '/erigon/keystore',
+          //   configDir: '/erigon/config',
+          //   networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+          //   breaking: false,
+          //   generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+          //     const { network = '' } = data;
+          //     return ` --config=${path.join(this.configDir, Ethereum.configName(data))}  `;
+          //   },
+          // },
+          // {
+          //   version: '2.47.0',
+          //   clientVersion: '2.47.0',
+          //   image: 'thorax/erigon:v2.47.0',
+          //   dataDir: '/erigon/data',
+          //   walletDir: '/erigon/keystore',
+          //   configDir: '/erigon/config',
+          //   networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+          //   breaking: false,
+          //   generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+          //     const { network = '' } = data;
+          //     return ` --config=${path.join(this.configDir, Ethereum.configName(data))}  `;
+          //   },
+          // },
+          // {
+          //   version: '2.46.0',
+          //   clientVersion: '2.46.0',
+          //   image: 'thorax/erigon:v2.46.0',
+          //   dataDir: '/erigon/data',
+          //   walletDir: '/erigon/keystore',
+          //   configDir: '/erigon/config',
+          //   networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+          //   breaking: false,
+          //   generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+          //     const { network = '' } = data;
+          //     return ` --config=${path.join(this.configDir, Ethereum.configName(data))}  `;
+          //   },
+          // },
+          // {
+          //   version: '2.45.3',
+          //   clientVersion: '2.45.3',
+          //   image: 'thorax/erigon:v2.45.3',
+          //   dataDir: '/erigon/data',
+          //   walletDir: '/erigon/keystore',
+          //   configDir: '/erigon/config',
+          //   networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+          //   breaking: false,
+          //   generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+          //     const { network = '' } = data;
+          //     return ` --config=${path.join(this.configDir, Ethereum.configName(data))}  `;
+          //   },
+          // },
+          // {
+          //   version: '2.44.0',
+          //   clientVersion: '2.44.0',
+          //   image: 'thorax/erigon:v2.44.0',
+          //   dataDir: '/erigon/data',
+          //   walletDir: '/erigon/keystore',
+          //   configDir: '/erigon/config',
+          //   networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+          //   breaking: false,
+          //   generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+          //     const { network = '' } = data;
+          //     return ` --config=${path.join(this.configDir, Ethereum.configName(data))}  `;
+          //   },
+          // },
+          // {
+          //   version: '2.43.1',
+          //   clientVersion: '2.43.1',
+          //   image: 'thorax/erigon:v2.43.1',
+          //   dataDir: '/erigon/data',
+          //   walletDir: '/erigon/keystore',
+          //   configDir: '/erigon/config',
+          //   networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+          //   breaking: false,
+          //   generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+          //     const { network = '' } = data;
+          //     return ` --config=${path.join(this.configDir, Ethereum.configName(data))}  `;
+          //   },
+          // },
           {
             version: '2.42.0',
             clientVersion: '2.42.0',
@@ -679,6 +980,40 @@ export class Ethereum extends EthereumPreMerge {
         break;
       case NodeClient.PRYSM:
         versions = [
+          {
+            version: '4.2.0',
+            clientVersion: '4.2.0',
+            image: 'prysmaticlabs/prysm-beacon-chain:v4.2.0',
+            consensusImage: 'prysmaticlabs/prysm-beacon-chain:v4.2.0',
+            validatorImage: 'prysmaticlabs/prysm-validator:v4.2.0',
+            //passwordPath: '/.hidden/pass.pwd',
+            dataDir: '/root/data',
+            walletDir: '/root/keystore',
+            configDir: '/root/config',
+            networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+            breaking: false,
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+              const { network = 'mainnet'} = data;
+              return ` --config-file=${path.join(this.configDir, Ethereum.configName(data, consensusFlag))} --${network.toLowerCase()}`;
+            },
+          },
+          {
+            version: '4.1.1',
+            clientVersion: '4.1.1',
+            image: 'prysmaticlabs/prysm-beacon-chain:v4.1.1',
+            consensusImage: 'prysmaticlabs/prysm-beacon-chain:v4.1.1',
+            validatorImage: 'prysmaticlabs/prysm-validator:v4.1.1',
+            //passwordPath: '/.hidden/pass.pwd',
+            dataDir: '/root/data',
+            walletDir: '/root/keystore',
+            configDir: '/root/config',
+            networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+            breaking: false,
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+              const { network = 'mainnet'} = data;
+              return ` --config-file=${path.join(this.configDir, Ethereum.configName(data, consensusFlag))} --${network.toLowerCase()}`;
+            },
+          },
           {
             version: '4.0.1',
             clientVersion: '4.0.1',
@@ -1316,6 +1651,27 @@ export class Ethereum extends EthereumPreMerge {
         }
         switch (this.consensusClient) {
           case NodeClient.PRYSM: {
+
+            {
+              // Update chain-id and network-id in config to be numbers rather than strings
+              // this is necessary in order to be compatible with Prysm 4.x.x
+              const origConsensusConfig = await fs.readFile(consensusConfigPath, 'utf8');
+              let consensusConfig = origConsensusConfig;
+              const chainIdPatt = /chain-id:\s*"(.+?)"/;
+              if(chainIdPatt.test(consensusConfig)) {
+                consensusConfig = consensusConfig
+                  .replace(chainIdPatt, 'chain-id: $1');
+              }
+              const networkIdPatt = /network-id:\s*"(.+?)"/;
+              if(networkIdPatt.test(consensusConfig)) {
+                consensusConfig = consensusConfig
+                  .replace(networkIdPatt, 'network-id: $1');
+              }
+              if(consensusConfig !== origConsensusConfig) {
+                await fs.writeFile(consensusConfigPath, consensusConfig, 'utf8');
+              }
+            }
+
             if (slasher) {
               await this.enableSlasher();
             } else {

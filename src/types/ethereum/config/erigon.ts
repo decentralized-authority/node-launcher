@@ -3,11 +3,10 @@ datadir = "/erigon/data/erigon"
 port = "{{PEER_PORT}}"
 chain = "{{NETWORK}}"
 http = "true"
-externalcl = "true"
 prune = "htc"
 
 "http.addr" = "0.0.0.0"
-"http.api" = "eth,erigon,web3,net,debug,trace,txpool,miner"
+"http.api" = "eth,erigon,web3,net,debug,trace,txpool"
 "http.port" = "{{RPC_PORT}}"
 "http.corsdomain" = "*"
 
