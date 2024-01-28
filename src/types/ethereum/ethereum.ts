@@ -21,7 +21,6 @@ import request from 'superagent';
 import path from 'path';
 import os from 'os';
 import Web3 from 'web3';
-import { receiveMessageOnPort } from 'worker_threads';
 
 export interface EthereumCryptoNodeData extends CryptoNodeData {
   jwt: string
@@ -617,6 +616,42 @@ export class Ethereum extends EthereumPreMerge {
         break;
       case NodeClient.ERIGON:
         versions = [
+          {
+            version: '2.57.1',
+            clientVersion: '2.57.1',
+            image: 'thorax/erigon:v2.57.1',
+            dataDir: '/erigon/data',
+            walletDir: '/erigon/keystore',
+            configDir: '/erigon/config',
+            networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+            breaking: true,
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+              const { network = '' } = data;
+              return ` --config=${path.join(this.configDir, Ethereum.configName(data))}  `;
+            },
+            async upgrade(data: EthereumCryptoNodeData): Promise<boolean> {
+              const fs = new FS(new Docker());
+              if(!data.configDir)
+                return false;
+              const configPath = path.join(data.configDir, Ethereum.configName(data));
+              const configExists = await fs.pathExists(configPath);
+              if(!configExists)
+                return false;
+              const config = await fs.readFile(configPath);
+              const splitConfig = config.split('\n');
+              const externalclIdx = splitConfig
+                .findIndex(l => /^externalcl/.test(l.trim()));
+              if(externalclIdx >= 0) {
+                const newSplitConfig = [
+                  ...splitConfig.slice(0, externalclIdx),
+                  ...splitConfig.slice(externalclIdx + 1),
+                ];
+                const newConfig = newSplitConfig.join('\n');
+                await fs.writeFile(configPath, newConfig, 'utf8');
+              }
+              return true;
+            },
+          },
           // {
           //   version: '2.53.4',
           //   clientVersion: '2.53.4',
@@ -1212,7 +1247,7 @@ export class Ethereum extends EthereumPreMerge {
   static clients = [
     NodeClient.GETH,
     NodeClient.NETHERMIND,
-    // NodeClient.ERIGON,
+    NodeClient.ERIGON,
   ];
 
   static consensusClients = [

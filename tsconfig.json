@@ -2,7 +2,8 @@
   "compilerOptions": {
     "target": "es6",
     "module": "commonjs",
-    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
     "rootDir": "./src",
     "outDir": "./lib",
     "strict": true,
@@ -10,5 +11,6 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "exclude": ["./src/**/*.spec.ts"]
+  "exclude": ["./src/**/*.spec.ts"],
+  "include": ["./src"]
 }
