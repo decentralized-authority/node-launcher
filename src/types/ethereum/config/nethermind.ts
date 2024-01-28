@@ -12,7 +12,7 @@ export const mainnet = `
     "P2PPort": {{PEER_PORT}}
   },
   "Sync": {
-    "SnapSync": true,
+    "FastSync": true,
     "PivotNumber": 15830000,
     "PivotHash": "0xb917d75ec90eaa8d1f41dd416e014f56d7ba5e056a947f9e66744fa49f63f3b7",
     "PivotTotalDifficulty": "58750003716598352816469",
@@ -77,7 +77,7 @@ export const goerli = `
     "EnableMetricsUpdater": true
   },
   "Sync": {
-    "SnapSync": true,
+    "FastSync": true,
     "PivotNumber": 7800000,
     "PivotHash": "0xe58afae321f270bdde6dac2e2ba2beab5fc5a1dcaaa82569f6a0bf97f707a341",
     "PivotTotalDifficulty": "10790000",
