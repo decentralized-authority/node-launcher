@@ -12,7 +12,6 @@ export const mainnet = `
     "P2PPort": {{PEER_PORT}}
   },
   "Sync": {
-    "FastSync": true,
     "SnapSync": true,
     "PivotNumber": 15830000,
     "PivotHash": "0xb917d75ec90eaa8d1f41dd416e014f56d7ba5e056a947f9e66744fa49f63f3b7",
