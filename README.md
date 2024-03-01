@@ -8,7 +8,7 @@ https://docs.docker.com/engine/install/
 
 #### Clone the library
 ```bash
-$ git clone https://github.com/decentralized-authority/node-launcher
+$ git clone https://github.com/decentralized-authority/node-launcher.git
 $ cd node-launcher
 ```
 
