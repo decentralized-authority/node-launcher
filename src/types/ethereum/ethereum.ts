@@ -99,6 +99,20 @@ export class Ethereum extends EthereumPreMerge {
       case NodeClient.GETH:
         versions = [
           {
+            version: '1.13.14',
+            clientVersion: '1.13.14',
+            image: 'ethereum/client-go:v1.13.14',
+            dataDir: '/root/data',
+            walletDir: '/root/keystore',
+            configDir: '/root/config',
+            networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+            breaking: false,
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+              const { network = '' } = data;
+              return ` --config=${path.join(this.configDir, Ethereum.configName(data))}` + (network === NetworkType.MAINNET ? '' : ` -${network.toLowerCase()}`);
+            },
+          },
+          {
             version: '1.13.11',
             clientVersion: '1.13.11',
             image: 'ethereum/client-go:v1.13.11',
@@ -469,6 +483,20 @@ export class Ethereum extends EthereumPreMerge {
       case NodeClient.NETHERMIND:
         versions = [
           {
+            version: '1.25.4',
+            clientVersion: '1.25.4',
+            image: 'nethermind/nethermind:1.25.4',
+            dataDir: '/nethermind/nethermind_db',
+            walletDir: '/nethermind/keystore',
+            configDir: '/nethermind/config',
+            networks: [NetworkType.MAINNET, NetworkType.GOERLI, NetworkType.XDAI],
+            breaking: false,
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+              const { network = '' } = data;
+              return ` --configsDirectory ${this.configDir} --config ${network.toLowerCase()}`;
+            },
+          },
+          {
             version: '1.25.3',
             clientVersion: '1.25.3',
             image: 'nethermind/nethermind:1.25.3',
@@ -616,6 +644,20 @@ export class Ethereum extends EthereumPreMerge {
         break;
       case NodeClient.ERIGON:
         versions = [
+          {
+            version: '2.58.2',
+            clientVersion: '2.58.2',
+            image: 'thorax/erigon:v2.58.2',
+            dataDir: '/erigon/data',
+            walletDir: '/erigon/keystore',
+            configDir: '/erigon/config',
+            networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+            breaking: true,
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+              const { network = '' } = data;
+              return ` --config=${path.join(this.configDir, Ethereum.configName(data))}  `;
+            },
+          },
           {
             version: '2.57.1',
             clientVersion: '2.57.1',
@@ -980,6 +1022,23 @@ export class Ethereum extends EthereumPreMerge {
         break;
       case NodeClient.PRYSM:
         versions = [
+          {
+            version: '5.0.1',
+            clientVersion: '5.0.1',
+            image: 'prysmaticlabs/prysm-beacon-chain:v5.0.1',
+            consensusImage: 'prysmaticlabs/prysm-beacon-chain:v5.0.1',
+            validatorImage: 'prysmaticlabs/prysm-validator:v5.0.1',
+            //passwordPath: '/.hidden/pass.pwd',
+            dataDir: '/root/data',
+            walletDir: '/root/keystore',
+            configDir: '/root/config',
+            networks: [NetworkType.MAINNET, NetworkType.GOERLI],
+            breaking: false,
+            generateRuntimeArgs(data: EthereumCryptoNodeData): string {
+              const { network = 'mainnet'} = data;
+              return ` --config-file=${path.join(this.configDir, Ethereum.configName(data, consensusFlag))} --${network.toLowerCase()}`;
+            },
+          },
           {
             version: '4.2.0',
             clientVersion: '4.2.0',
