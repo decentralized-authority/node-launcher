@@ -652,7 +652,7 @@ export class Ethereum extends EthereumPreMerge {
             walletDir: '/erigon/keystore',
             configDir: '/erigon/config',
             networks: [NetworkType.MAINNET, NetworkType.GOERLI],
-            breaking: true,
+            breaking: false,
             generateRuntimeArgs(data: EthereumCryptoNodeData): string {
               const { network = '' } = data;
               return ` --config=${path.join(this.configDir, Ethereum.configName(data))}  `;
