@@ -8,8 +8,8 @@ https://docs.docker.com/engine/install/
 
 #### Clone the library
 ```bash
-$ git clone https://github.com/rBurgett/da-node-runner.git
-$ cd da-node-runner
+$ git clone https://github.com/decentralized-authority/node-launcher.git
+$ cd node-launcher
 ```
 
 #### Build the library
@@ -21,7 +21,7 @@ $ npm run build
 #### Try it out!
 ```js
 // Start a mainnet node
-const nr = require('[path to da-node-runner]/lib');
+const nr = require('[path to node-launcher]/lib');
 
 const bitcoin = new nr.BTC({});
 
@@ -37,7 +37,7 @@ bitcoin.start();
 
 ```js
 // Start a mainnet node and stop it after thirty seconds
-const nr = require('[path to da-node-runner]/lib');
+const nr = require('[path to node-launcher]/lib');
 
 const bitcoin = new nr.BTC({});
 
@@ -59,7 +59,7 @@ setTimeout(() => {
 
 ```js
 // Start a testnet node
-const nr = require('[path to da-node-runner]/lib');
+const nr = require('[path to node-launcher]/lib');
 const { NetworkType } = nr.constants;
 
 const bitcoin = new nr.BTC({
@@ -80,7 +80,7 @@ bitcoin.start();
 // Start a testnet node and persist data
 const fs = require('fs-extra');
 const path = require('path');
-const nr = require('[path to da-node-runner]/lib');
+const nr = require('[path to node-launcher]/lib');
 const { NetworkType } = nr.constants;
 
 const rootPath = path.join(process.env.HOME, 'my-bitcoin-node');
@@ -123,7 +123,7 @@ bitcoin.start();
 
 ```js
 // use the rpcGetVersion() method to get the node client version and test that the RPC server is live
-const nr = require('[path to da-node-runner]/lib');
+const nr = require('[path to node-launcher]/lib');
 
 const bitcoin = new nr.BTC({});
 
