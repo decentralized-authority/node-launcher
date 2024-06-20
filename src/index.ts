@@ -13,6 +13,8 @@ import { Harmony as ONE } from './types/harmony/harmony';
 import { OKEX as OEC } from './types/oec/okex';
 import { IOTEX } from './types/iotex/iotex';
 import { Polygon as MATIC } from './types/polygon/polygon';
+import { Moonbeam as GLMR } from './types/moonbeam/moonbeam';
+import { Moonriver as MOVR } from './types/moonriver/moonriver';
 import * as constants from './constants';
 import { Docker } from './util/docker';
 
@@ -34,4 +36,6 @@ export {
   OEC,
   IOTEX,
   MATIC,
+  GLMR,
+  MOVR,
 };
