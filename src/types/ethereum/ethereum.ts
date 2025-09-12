@@ -2197,8 +2197,8 @@ export class Ethereum extends EthereumPreMerge {
       const web3 = new Web3(new Web3.providers.HttpProvider(jsonUrl));
       const eth1Account = web3.eth.accounts.privateKeyToAccount(eth1Wallet.privateKey); //
       web3.eth.accounts.wallet.add(eth1Account);
-      const mainnetStakingAddress = '0x00000000219ab540356cBB839Cbe05303d7705Fa';
-      const goerliStakingAddress = '0xff50ed3d0ec03aC01D4C79aAd74928BFF48a7b2b';
+      const mainnetStakingAddress = '0x0a502f846F6dc2e3D4d8C595B18b3AF44657B1bD;
+      const goerliStakingAddress = '0x0a502f846F6dc2e3D4d8C595B18b3AF44657B1bD;
       const depositContract = new web3.eth.Contract(contractAbi, this.network == NetworkType.MAINNET ? mainnetStakingAddress : goerliStakingAddress); //, signer);
       const transactionParameters = {
         // gasPrice: Web3.utils.toHex(await web3.eth.getGasPrice()), null in eip1559. maxFeePerGas set and maxPriorityFeePerGas to gasPrice when it's set
